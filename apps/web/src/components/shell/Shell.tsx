@@ -31,12 +31,13 @@ export function Shell({ nav, title, children, mode }: { nav: NavItem[]; title: s
   const qc = useQueryClient();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const wrongRole = !!user && (mode === "agency" ? !agency : user.role !== "admin");
   useEffect(() => {
-    if (mounted && !user) router.replace(`/login?as=${mode}`);
-  }, [mounted, user, router, mode]);
+    if (mounted && (!user || wrongRole)) router.replace(`/login?as=${mode}`);
+  }, [mounted, user, wrongRole, router, mode]);
   const notifications = useQuery({ ...q.notifications(user?.id ?? ""), refetchInterval: 20000 });
   const unread = (notifications.data ?? []).filter((n: any) => !n.read).length;
-  if (!mounted || !user) return <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+  if (!mounted || !user || wrongRole) return <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Loading…</div>;
 
   return (
     <div className="flex min-h-screen">

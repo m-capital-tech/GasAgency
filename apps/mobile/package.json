@@ -39,9 +39,9 @@
     "typescript": "~5.9.3"
   },
   "scripts": {
-    "dev": "expo start",
+    "dev": "expo start --port ${EXPO_PORT:-8081}",
     "start": "expo start",
-    "ios": "expo start --ios",
+    "ios": "expo start --ios --port ${EXPO_PORT:-8081}",
     "android": "expo start --android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"

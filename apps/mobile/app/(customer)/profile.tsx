@@ -5,13 +5,15 @@ import { toast } from "@/components/Toast";
 import { useCustomer } from "@/features/hooks";
 import { post } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { Avatar, Card, Divider, ListItem, OmcBadge, Row, Screen, Text } from "@/ui";
+import { Avatar, Card, Chip, Divider, ListItem, OmcBadge, Row, Screen, Sheet, Text } from "@/ui";
+import { useState } from "react";
 
 /** C16 — Profile & settings */
 export default function ProfileScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { user, language, logout, login, setMode } = useSession();
+  const { user, language, setLanguage, logout, login, setMode } = useSession();
+  const [langOpen, setLangOpen] = useState(false);
   const customer = useCustomer();
   const c = customer.data;
   const addr = c?.addresses.find((a) => a.id === c.defaultAddressId);
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
         <ListItem icon="storefront-outline" title="My agency" subtitle={c?.agencyName ?? "Not assigned"} onPress={() => router.push("/agency")} />
         <ListItem icon="swap-horizontal-outline" title="Request agency change" subtitle="Transfer to a different distributor" onPress={() => router.push("/agency?change=1")} />
         <ListItem icon="alarm-outline" title="Reminders & Auto-book" subtitle={c?.reminder.enabled ? "On" : "Off"} onPress={() => router.push("/reminders")} />
-        <ListItem icon="language-outline" title="Language" subtitle={language === "en" ? "English" : language === "hi" ? "हिंदी" : "తెలుగు"} onPress={() => { logout(); router.replace("/"); }} />
+        <ListItem icon="language-outline" title="Language" subtitle={language === "en" ? "English" : language === "hi" ? "हिंदी" : "తెలుగు"} onPress={() => setLangOpen(true)} />
         <ListItem icon="help-circle-outline" title="Support & safety" subtitle="FAQ, complaints, emergency helpline" onPress={() => router.push("/support")} />
       </Card>
 
@@ -86,6 +88,16 @@ export default function ProfileScreen() {
       <Text variant="caption" tone="faint" center style={{ marginTop: 20 }}>
         GasSetu prototype · v1.0 · all data is illustrative
       </Text>
+      <Sheet open={langOpen} onClose={() => setLangOpen(false)} title="Language">
+        <Row gap={8} style={{ flexWrap: "wrap", marginBottom: 8 }}>
+          {([["en", "English"], ["hi", "हिंदी"], ["te", "తెలుగు"]] as const).map(([k, label]) => (
+            <Chip key={k} label={label} active={language === k} onPress={() => { setLanguage(k); setLangOpen(false); }} />
+          ))}
+        </Row>
+        <Text variant="caption" tone="faint">
+          Prototype: Hindi and Telugu are labels only — the UI stays in English.
+        </Text>
+      </Sheet>
     </Screen>
   );
 }

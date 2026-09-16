@@ -3,10 +3,15 @@
   "private": true,
   "packageManager": "pnpm@11.1.2",
   "scripts": {
-    "demo": "turbo run dev --parallel",
+    "demo": "turbo run dev --parallel --filter=@gassetu/mock-api --filter=@gassetu/web --filter=@gassetu/mobile",
+    "demo:ios": "turbo run dev --parallel --filter=@gassetu/mock-api --filter=@gassetu/web & pnpm --filter @gassetu/mobile ios",
     "dev": "turbo run dev --parallel",
+    "api": "pnpm --filter @gassetu/mock-api dev",
+    "web": "pnpm --filter @gassetu/web dev",
+    "mobile": "pnpm --filter @gassetu/mobile dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
+    "test": "pnpm --filter @gassetu/engine test",
     "seed:check": "pnpm --filter @gassetu/mock-data check"
   },
   "devDependencies": {

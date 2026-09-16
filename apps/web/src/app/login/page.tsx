@@ -62,6 +62,14 @@ function LoginForm() {
             </p>
             <p className="mt-1">Other agencies: kukatpally@demo, gachibowli@demo, secunderabad@demo, lbnagar@demo, mehdipatnam@demo</p>
           </div>
+          {as === "agency" ? (
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              New distributor?{" "}
+              <a href="/agency/register" className="font-semibold text-primary">
+                Register your agency
+              </a>
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </main>

@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { get, getMode, onModeChange, post } from "@/lib/api";
+import { forceRemote, get, getMode, onModeChange, post } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { Button, Chip, Row, Sheet, Text, shadowStrong, t } from "@/ui";
 import { toast } from "./Toast";
@@ -72,7 +72,7 @@ export function DemoFab() {
 
   return (
     <>
-      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel="Open demo controls" style={[styles.fab, shadowStrong, { top: insets.top + 300 }]}>
+      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel="Open demo controls" style={[styles.fab, shadowStrong, { top: insets.top + 420 }]}>
         <Ionicons name="flask" size={16} color="#fff" />
         <Text variant="caption" style={{ color: "#fff", fontSize: 10 }}>
           Demo
@@ -86,6 +86,20 @@ export function DemoFab() {
           <Row gap={6}>
             <View style={[styles.dot, { backgroundColor: mode === "remote" ? t.colors.success : t.colors.warning }]} />
             <Text variant="caption">{mode === "remote" ? "Live mock API" : "Offline (bundled engine)"}</Text>
+            {mode === "local" ? (
+              <Pressable
+                onPress={() => {
+                  forceRemote();
+                  qc.invalidateQueries();
+                  toast.info("Retrying live API", "Falls back to offline again if it's unreachable.");
+                }}
+                accessibilityRole="button"
+              >
+                <Text variant="caption" tone="primary">
+                  · Retry live
+                </Text>
+              </Pressable>
+            ) : null}
           </Row>
         </Row>
 

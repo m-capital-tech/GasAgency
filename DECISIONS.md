@@ -11,7 +11,7 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 6. **Relative seed dates.** History is generated relative to the run date with a fixed faker seed (names/addresses stable, charts always "last 90 days").
 
 ## Seed data
-- **60 customers (45 domestic / 15 commercial) instead of 40** so that realistic ordering frequency (domestic ≈ monthly, commercial 2–3×/week) yields ~570 bookings over 90 days. With 40 customers the history came out at ~350.
+- **~100 customers (75 domestic / 25 commercial) instead of 40** so that realistic ordering frequency (domestic ≈ monthly, commercial 2–3×/week) yields ~970 bookings over 90 days and the agency's daily chart isn't dwarfed by the 14 "live" orders seeded for today. (With 40 customers the history came out at ~350 bookings / ~3 per day for Suresh.) 57 % of customers belong to Suresh's agency.
 - Riya's history: four 14.2 kg deliveries exactly 30 days apart, last one 26 days ago → gauge shows **~13 % left, refill in ~4 days** (PRD script says "~15 %, 3 days" — same story, computed rather than hard-coded).
 - `reminderLeadDays = 2` so that a delivery today schedules the reminder 28 days out (PRD script: "14 Oct" for a 16 Sep delivery).
 - Historical `DELIVERY_FAILED` orders older than a day are auto-cancelled in the seed so they don't linger as open orders on the board; one live failed order from today remains for the demo.
@@ -26,3 +26,11 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 - Complete-delivery for COD requires the "cash collected" confirmation; wrong OTP is rejected with HTTP 422.
 - "Reset demo" regenerates the seed relative to *now* and clears in-flight trips.
 - `/demo/simulate payment_failure`: fails the newest `PENDING_PAYMENT` booking if one exists; otherwise arms "next checkout fails".
+
+## Web / mobile implementation notes
+- **Map tiles:** CARTO basemaps now return "API key required" tiles, so the web uses plain OpenStreetMap tiles (`tile.openstreetmap.org`) — fine for a local demo, would need a paid tile provider in production. iOS uses Apple Maps via `react-native-maps` (no key); the Expo web build uses a key-free SVG map card.
+- **Today's seed for Suresh's agency** is 14 orders in various states, arranged so every delivery partner except Ramesh already carries a drop → **Auto-assign picks Ramesh**, matching the demo script. Ramesh also has the best on-time % as a tie-breaker.
+- **Demo button placement (mobile):** a small right-edge tab rather than a bottom FAB, so it never covers the floating tab bar or footer CTAs.
+- **Turbo env:** `EXPO_PORT`, `EXPO_PUBLIC_*`, `NEXT_PUBLIC_*` are passed through in `turbo.json` (Turbo 2 strict env mode strips them otherwise) so `EXPO_PORT=8091 pnpm demo` works when 8081 is busy.
+- **Nested buttons on web:** React Native Web renders `Pressable` as `<button>`; cards that contain a call/checkbox button use a pressable inner region (mobile) or `div role="button"` (web) to avoid invalid nested buttons.
+- **Language picker:** Hindi/Telugu are selectable labels only (PRD says English text is enough for the prototype); the choice persists but the UI stays English, with a note.

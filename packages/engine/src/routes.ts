@@ -172,7 +172,10 @@ add("PATCH", "/admin/config", (e, _p, r) => e.updateConfig(r.body));
 add("GET", "/demo/personas", (e) => e.personas());
 add("GET", "/demo/state", (e) => ({ ...e.demo, trips: [...e.trips.values()].map((t) => ({ staffId: t.staffId, bookingId: t.bookingId, index: t.index, total: t.route.length })) }));
 add("POST", "/demo/reset", (e) => (e.reset(), { ok: true }));
-add("POST", "/demo/advance/:bookingId", (e, p) => e.expandBooking(e.booking(p.bookingId)) && e.advance(p.bookingId) && e.expandBooking(e.booking(p.bookingId)));
+add("POST", "/demo/advance/:bookingId", (e, p) => {
+  e.advance(p.bookingId);
+  return e.expandBooking(e.booking(p.bookingId));
+});
 add("POST", "/demo/simulate", (e, _p, r) => e.simulate(r.body?.kind as SimulationKind, r.body?.agencyId));
 add("POST", "/demo/speed", (e, _p, r) => e.setSpeed(num(r.body?.speed, "speed")));
 add("GET", "/health", () => ({ ok: true, ts: Date.now() }));

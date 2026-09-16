@@ -74,7 +74,7 @@ export function useLiveSync() {
     switch (e.type) {
       case "booking.created":
       case "booking.updated": {
-        qc.setQueryData(keys.booking(e.booking.id), (old: ExpandedBooking | undefined) => (old ? { ...old, ...e.booking, route: old.route, routeIndex: old.routeIndex } : old));
+        qc.setQueryData(keys.booking(e.booking.id), (old: ExpandedBooking | undefined) => (old ? { ...old, ...e.booking, items: old.items, staff: e.booking.assignedStaffId === old.assignedStaffId ? old.staff : null, route: old.route, routeIndex: old.routeIndex } : old));
         qc.invalidateQueries({ queryKey: keys.booking(e.booking.id) });
         qc.invalidateQueries({ queryKey: ["bookings"] });
         qc.invalidateQueries({ queryKey: ["drops"] });
