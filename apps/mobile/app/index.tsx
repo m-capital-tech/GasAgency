@@ -32,7 +32,7 @@ export default function SplashScreen() {
         <View style={styles.logoWrap}>
           <Cylinder size={120} color="#C6953F" dark="#9C7328" />
         </View>
-        <Text variant="hero" style={{ color: "#fff", marginTop: 8 }}>
+        <Text variant="hero" style={{ color: "#C6953F", marginTop: 8 }}>
           GasSetu
         </Text>
         <Text variant="body" style={{ color: "#E9E3D6" }} center>

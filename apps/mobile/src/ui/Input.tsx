@@ -93,9 +93,9 @@ export function OtpInput({ length = 6, value, onChange, error }: { length?: numb
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: "row", alignItems: "center", backgroundColor: t.colors.surface, borderWidth: 1.5, borderColor: t.colors.border, borderRadius: 14, paddingHorizontal: 14, minHeight: 52, gap: 8 },
-  focused: { borderColor: t.colors.primary },
+  focused: { borderColor: t.colors.gold },
   error: { borderColor: t.colors.danger },
-  input: { flex: 1, fontSize: 16, color: t.colors.ink, paddingVertical: 12 },
+  input: { flex: 1, fontSize: 16, color: t.colors.ink, paddingVertical: 12, outlineStyle: "none" } as any,
   otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
   otpBox: { flex: 1, aspectRatio: 0.85, maxWidth: 56, borderRadius: 14, borderWidth: 1.5, borderColor: t.colors.border, backgroundColor: t.colors.surface, alignItems: "center", justifyContent: "center" },
   hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: "transparent", fontSize: 1 },
