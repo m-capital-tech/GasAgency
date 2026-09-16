@@ -10,7 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <QueryClientProvider client={client}>
         {children}
-        <Toaster position="top-right" richColors closeButton toastOptions={{ className: "rounded-xl" }} />
+        <Toaster position="top-right" closeButton toastOptions={{ className: "rounded-xl", style: { background: "var(--card)", color: "var(--foreground)", border: "1px solid var(--border)" } }} />
       </QueryClientProvider>
     </ThemeProvider>
   );
