@@ -52,7 +52,7 @@ export function Screen({ children, title, subtitle, back, right, scroll = true, 
     );
 
   const inner = (
-    <View style={[padded && styles.padded, { paddingBottom: (footer ? 12 : insets.bottom + 24) + (tabBar ? 92 : 0) }, contentStyle]}>{children}</View>
+    <View style={[padded && styles.padded, { paddingBottom: (footer ? 12 : insets.bottom + 24) + (tabBar ? 8 : 0) }, contentStyle]}>{children}</View>
   );
 
   const body = scroll ? (

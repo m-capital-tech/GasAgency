@@ -30,7 +30,7 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 ## Web / mobile implementation notes
 - **Map tiles:** CARTO basemaps now return "API key required" tiles, so the web uses plain OpenStreetMap tiles (`tile.openstreetmap.org`) — fine for a local demo, would need a paid tile provider in production. iOS uses Apple Maps via `react-native-maps` (no key); the Expo web build uses a key-free SVG map card.
 - **Today's seed for Suresh's agency** is 14 orders in various states, arranged so every delivery partner except Ramesh already carries a drop → **Auto-assign picks Ramesh**, matching the demo script. Ramesh also has the best on-time % as a tie-breaker.
-- **Demo button placement (mobile):** a small right-edge tab rather than a bottom FAB, so it never covers the floating tab bar or footer CTAs.
+- **Tab bar (mobile):** static, labelled bottom tab bar (the floating pill from the reference screenshot was replaced on request, 16 Sep). Demo button is a small right-edge tab so it never covers footer CTAs.
 - **Turbo env:** `EXPO_PORT`, `EXPO_PUBLIC_*`, `NEXT_PUBLIC_*` are passed through in `turbo.json` (Turbo 2 strict env mode strips them otherwise) so `EXPO_PORT=8091 pnpm demo` works when 8081 is busy.
 - **Nested buttons on web:** React Native Web renders `Pressable` as `<button>`; cards that contain a call/checkbox button use a pressable inner region (mobile) or `div role="button"` (web) to avoid invalid nested buttons.
 - **Language picker:** Hindi/Telugu are selectable labels only (PRD says English text is enough for the prototype); the choice persists but the UI stays English, with a note.
