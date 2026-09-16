@@ -260,11 +260,11 @@ export function generateSeed(now: Date = new Date(), seed = 4242): SeedData {
   imran.addresses[0] = { ...imran.addresses[0], label: "Al-Madina Tiffin Centre", line1: "3-5-1093, Nallakunta Main Road", line2: "Amberpet", pincode: "500044", lat: 17.4012, lng: 78.5089 };
   imran.defaultAddressId = imran.addresses[0].id;
 
-  // 60 customers total (45 domestic / 15 commercial) — see DECISIONS.md
-  const weights = approved.map((a) => (a.id === sureshAgency.id ? 3 : 1));
+  // 100 customers total (75 domestic / 25 commercial) — see DECISIONS.md
+  const weights = approved.map((a) => (a.id === sureshAgency.id ? 4 : 1));
   const weightedAgency = () => faker.helpers.weightedArrayElement(approved.map((a, i) => ({ value: a, weight: weights[i] })));
   let bizIdx = 0;
-  for (let i = 0; i < 43; i++) {
+  for (let i = 0; i < 73; i++) {
     const female = faker.datatype.boolean();
     const ag = weightedAgency();
     mkCustomer({
@@ -277,14 +277,15 @@ export function generateSeed(now: Date = new Date(), seed = 4242): SeedData {
         : undefined,
     });
   }
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 24; i++) {
     const ag = weightedAgency();
     mkCustomer({
-      name: BUSINESS_NAMES[bizIdx++ % BUSINESS_NAMES.length],
+      name: `${BUSINESS_NAMES[bizIdx % BUSINESS_NAMES.length]}${bizIdx >= BUSINESS_NAMES.length ? " " + ["II", "Annexe", "Express"][bizIdx % 3] : ""}`,
       phone: "9" + faker.string.numeric({ length: 9 }),
       type: "commercial",
       agencyId: ag.id,
     });
+    bizIdx++;
   }
   // fix phones to valid Indian mobiles
   users.forEach((u) => {

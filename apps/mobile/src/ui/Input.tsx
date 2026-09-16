@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 import { Text } from "./Text";
 import { t } from "./theme";
 
@@ -57,7 +57,7 @@ export function OtpInput({ length = 6, value, onChange, error }: { length?: numb
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 8 }}>
-      <Pressable onPress={() => ref.current?.focus()} style={styles.otpRow} accessibilityLabel="One time password">
+      <View style={styles.otpRow} accessibilityLabel="One time password">
         {Array.from({ length }).map((_, i) => {
           const active = focused && value.length === i;
           return (
@@ -66,9 +66,8 @@ export function OtpInput({ length = 6, value, onChange, error }: { length?: numb
             </View>
           );
         })}
-      </Pressable>
-      <TextInput
-        ref={ref}
+        <TextInput
+          ref={ref}
         value={value}
         onChangeText={(v) => onChange(v.replace(/\D/g, "").slice(0, length))}
         keyboardType="number-pad"
@@ -79,7 +78,10 @@ export function OtpInput({ length = 6, value, onChange, error }: { length?: numb
         onBlur={() => setFocused(false)}
         style={styles.hidden}
         autoFocus
-      />
+        caretHidden
+        accessibilityLabel="One time password input"
+        />
+      </View>
       {error ? (
         <Text variant="caption" tone="danger" center>
           {error}
@@ -96,5 +98,5 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: t.colors.ink, paddingVertical: 12 },
   otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
   otpBox: { flex: 1, aspectRatio: 0.85, maxWidth: 56, borderRadius: 14, borderWidth: 1.5, borderColor: t.colors.border, backgroundColor: t.colors.surface, alignItems: "center", justifyContent: "center" },
-  hidden: { position: "absolute", opacity: 0, height: 1, width: 1 },
+  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: "transparent", fontSize: 1 },
 });
