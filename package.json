@@ -1,0 +1,16 @@
+{
+  "name": "gassetu",
+  "private": true,
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "demo": "turbo run dev --parallel",
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "seed:check": "pnpm --filter @gassetu/mock-data check"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.13",
+    "typescript": "~5.9.3"
+  }
+}
