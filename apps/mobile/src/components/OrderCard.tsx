@@ -40,7 +40,7 @@ export function ActiveOrderCard({ b }: { b: ExpandedBooking }) {
     <Card onPress={() => router.push(`/order/${b.id}`)} tone="navy">
       <Row between>
         <View>
-          <Text variant="label" style={{ color: "#9FB3C8" }}>
+          <Text variant="label" style={{ color: "#C6953F" }}>
             Active order · {b.code}
           </Text>
           <Text variant="h3" style={{ color: "#fff", marginTop: 2 }}>
@@ -61,7 +61,7 @@ export function ActiveOrderCard({ b }: { b: ExpandedBooking }) {
           ))}
         </View>
       ) : null}
-      <Text variant="small" style={{ color: "#C9D6E3", marginTop: 8 }}>
+      <Text variant="small" style={{ color: "#CFC7BB", marginTop: 8 }}>
         {b.status === "OUT_FOR_DELIVERY" && b.staff
           ? `${b.staff.name} is on the way · ETA ${b.etaMinutes ?? "—"} min`
           : b.status === "DELIVERY_FAILED"

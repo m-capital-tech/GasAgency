@@ -2,7 +2,7 @@ import { useId } from "react";
 import Svg, { Defs, Ellipse, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 
 /** Stylised LPG cylinder illustration (no brand colours). */
-export function Cylinder({ size = 140, color = "#F26B1D", dark = "#C4520D" }: { size?: number; color?: string; dark?: string }) {
+export function Cylinder({ size = 140, color = "#A31E21", dark = "#620A1A" }: { size?: number; color?: string; dark?: string }) {
   const w = size;
   const h = size * 1.35;
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
@@ -23,10 +23,10 @@ export function Cylinder({ size = 140, color = "#F26B1D", dark = "#C4520D" }: { 
           <Stop offset="1" stopColor="#fff" stopOpacity="0" />
         </LinearGradient>
       </Defs>
-      <Ellipse cx="50" cy="128" rx="34" ry="6" fill="#12263A" opacity="0.12" />
+      <Ellipse cx="50" cy="128" rx="34" ry="6" fill="#1D1D1E" opacity="0.12" />
       {/* valve */}
-      <Rect x="44" y="4" width="12" height="10" rx="2" fill="#5B6B7B" />
-      <Rect x="38" y="12" width="24" height="6" rx="3" fill="#93A0AD" />
+      <Rect x="44" y="4" width="12" height="10" rx="2" fill="#3A3633" />
+      <Rect x="38" y="12" width="24" height="6" rx="3" fill="#8B837A" />
       {/* collar */}
       <Path d="M30 30 Q30 18 50 18 Q70 18 70 30 L70 34 L30 34 Z" fill={dark} />
       <Path d="M36 34 L36 22 M64 34 L64 22 M50 34 L50 18" stroke={color} strokeWidth="3" strokeLinecap="round" opacity="0.6" />

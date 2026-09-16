@@ -55,7 +55,7 @@ export interface SeedData {
 }
 
 const DAY = 86_400_000;
-const AVATAR_COLORS = ["#F26B1D", "#2F6FED", "#1E9E5A", "#9A6B00", "#6A3FC7", "#D93B3B", "#0E8A8A"];
+const AVATAR_COLORS = ["#A31E21", "#C6953F", "#620A1A", "#1D1D1E", "#9C7328", "#2E7D4F", "#5F5852"];
 
 export function generateSeed(now: Date = new Date(), seed = 4242): SeedData {
   const faker = new Faker({ locale: [en_IN, en] });

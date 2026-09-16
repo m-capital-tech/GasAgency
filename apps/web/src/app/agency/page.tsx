@@ -32,7 +32,7 @@ export default function AgencyDashboard() {
     <>
       <PageHeader title={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, ${(user?.name ?? agency.name).split(" ")[0]}`} subtitle={`${agency.name} · ${agency.omc} · ${agency.area}`}>
         {d.data.lowStock.length ? (
-          <Link href="/agency/inventory" className="flex items-center gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-[#9a6b00] dark:text-warning">
+          <Link href="/agency/inventory" className="flex items-center gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-[#9c7328] dark:text-warning">
             <AlertTriangle className="size-4" /> Low stock: {d.data.lowStock.map((l: any) => l.name).join(", ")}
           </Link>
         ) : null}
@@ -42,7 +42,7 @@ export default function AgencyDashboard() {
         <Kpi label="Pending" value={kpis.pending} icon={Clock} tone="warning" sub="awaiting accept" />
         <Kpi label="Out for delivery" value={kpis.outForDelivery} icon={Truck} tone="primary" sub={`${kpis.accepted} accepted/assigned`} />
         <Kpi label="Delivered today" value={kpis.deliveredToday} icon={CheckCircle2} tone="success" />
-        <Kpi label="Revenue today" value={formatCompactINR(kpis.revenueToday)} icon={IndianRupee} tone="success" sub={`${formatCompactINR(kpis.revenue30)} last 30 days`} />
+        <Kpi label="Revenue today" value={formatCompactINR(kpis.revenueToday)} icon={IndianRupee} tone="warning" sub={`${formatCompactINR(kpis.revenue30)} last 30 days`} />
         <Kpi label="COD outstanding" value={formatCompactINR(kpis.codOutstanding)} icon={Banknote} tone="warning" sub="cash with staff" />
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -60,7 +60,7 @@ export default function AgencyDashboard() {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <OrdersAreaChart data={series} keys={[{ key: "orders", name: "Orders", color: "#F26B1D" }, { key: "delivered", name: "Delivered", color: "#1E9E5A" }]} />
+            <OrdersAreaChart data={series} keys={[{ key: "orders", name: "Orders", color: "#A31E21" }, { key: "delivered", name: "Delivered", color: "#C6953F" }]} />
           </CardContent>
         </Card>
         <Card>

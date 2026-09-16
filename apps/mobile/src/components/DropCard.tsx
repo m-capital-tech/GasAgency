@@ -33,8 +33,8 @@ export function DropCard({ b, index, from }: { b: ExpandedBooking; index?: numbe
               </Text>
             </Row>
             <Row gap={4}>
-              <Ionicons name={b.payment.method === "cod" ? "cash-outline" : "checkmark-circle-outline"} size={13} color={b.payment.method === "cod" ? "#9A6B00" : t.colors.success} />
-              <Text variant="caption" style={{ color: b.payment.method === "cod" ? "#9A6B00" : t.colors.success }}>
+              <Ionicons name={b.payment.method === "cod" ? "cash-outline" : "checkmark-circle-outline"} size={13} color={b.payment.method === "cod" ? "#9C7328" : t.colors.success} />
+              <Text variant="caption" style={{ color: b.payment.method === "cod" ? "#9C7328" : t.colors.success }}>
                 {b.payment.method === "cod" ? `Collect ${formatINR(b.charges.total, { decimals: false })}` : "Prepaid"}
               </Text>
             </Row>

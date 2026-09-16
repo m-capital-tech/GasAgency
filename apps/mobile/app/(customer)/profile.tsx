@@ -72,7 +72,7 @@ export default function ProfileScreen() {
       </Card>
 
       <Card style={{ marginTop: 14, paddingVertical: 4 }}>
-        <ListItem icon="bicycle-outline" title="Switch to Delivery mode (demo)" subtitle="See the app as Ramesh, a delivery partner" onPress={switchToDelivery} iconColor="#2F6FED" />
+        <ListItem icon="bicycle-outline" title="Switch to Delivery mode (demo)" subtitle="See the app as Ramesh, a delivery partner" onPress={switchToDelivery} iconColor="#C6953F" />
         <ListItem
           icon="log-out-outline"
           title="Log out"

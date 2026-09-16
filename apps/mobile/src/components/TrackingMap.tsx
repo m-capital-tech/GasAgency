@@ -67,7 +67,7 @@ export function TrackingMap({ from, to, route, staff, others = [], height = 260,
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#E8EDF2" },
+  wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#EDE7DC" },
   pin: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#fff" },
   staffPin: { width: 34, height: 34, borderRadius: 17, backgroundColor: t.colors.primary, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "#fff" },
 });

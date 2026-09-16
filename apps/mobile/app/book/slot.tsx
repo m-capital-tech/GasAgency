@@ -23,7 +23,7 @@ export default function SlotScreen() {
           const active = draft.slot === s.key;
           return (
             <Pressable key={s.key} onPress={() => draft.set({ slot: s.key })} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.opt, active && styles.optActive, s.key === "express" && styles.express]}>
-              <View style={[styles.icon, s.key === "express" && { backgroundColor: t.colors.primary }]}>
+              <View style={[styles.icon, s.key === "express" && { backgroundColor: t.colors.gold }]}>
                 <Ionicons name={s.icon} size={20} color={s.key === "express" ? "#fff" : t.colors.ink} />
               </View>
               <View style={{ flex: 1 }}>
@@ -31,7 +31,7 @@ export default function SlotScreen() {
                   <Text variant="bodyStrong">{s.title}</Text>
                   {s.tag ? (
                     <View style={styles.tag}>
-                      <Text variant="caption" style={{ color: t.colors.primaryDark }}>
+                      <Text variant="caption" style={{ color: t.colors.goldDark }}>
                         {s.tag}
                       </Text>
                     </View>
@@ -53,11 +53,11 @@ export default function SlotScreen() {
       </View>
       {draft.slot !== "express" ? (
         <Pressable onPress={() => draft.set({ slot: "express" })} style={styles.upsell} accessibilityRole="button">
-          <Ionicons name="flash" size={18} color={t.colors.primary} />
+          <Ionicons name="flash" size={18} color={t.colors.goldDark} />
           <Text variant="small" style={{ flex: 1 }}>
             Running low? <Text variant="small" style={{ fontWeight: "700" }}>Get it today with Express</Text> for just ₹49.
           </Text>
-          <Ionicons name="chevron-forward" size={16} color={t.colors.primary} />
+          <Ionicons name="chevron-forward" size={16} color={t.colors.goldDark} />
         </Pressable>
       ) : null}
     </Screen>
@@ -69,6 +69,6 @@ const styles = StyleSheet.create({
   optActive: { borderColor: t.colors.primary, backgroundColor: "#FFFAF7" },
   express: {},
   icon: { width: 42, height: 42, borderRadius: 14, backgroundColor: t.colors.surfaceAlt, alignItems: "center", justifyContent: "center" },
-  tag: { backgroundColor: t.colors.primarySoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
-  upsell: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16, padding: 14, borderRadius: 16, backgroundColor: t.colors.primarySoft },
+  tag: { backgroundColor: t.colors.goldSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  upsell: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16, padding: 14, borderRadius: 16, backgroundColor: t.colors.goldSoft },
 });

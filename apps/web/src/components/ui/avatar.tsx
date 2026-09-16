@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export function Avatar({ name, color = "#F26B1D", size = 32, className }: { name: string; color?: string; size?: number; className?: string }) {
+export function Avatar({ name, color = "#A31E21", size = 32, className }: { name: string; color?: string; size?: number; className?: string }) {
   const initials = name
     .split(" ")
     .filter(Boolean)

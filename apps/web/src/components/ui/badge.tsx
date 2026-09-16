@@ -2,11 +2,11 @@ import { STATUS_LABELS, type BookingStatus } from "@gassetu/shared";
 import { cn } from "@/lib/utils";
 
 const STATUS_CLASSES: Record<BookingStatus, string> = {
-  PENDING_PAYMENT: "bg-warning-soft text-[#9a6b00] dark:text-warning",
+  PENDING_PAYMENT: "bg-warning-soft text-[#9c7328] dark:text-warning",
   PAYMENT_FAILED: "bg-danger-soft text-danger",
   PLACED: "bg-info-soft text-info",
-  ACCEPTED: "bg-info-soft text-[#1d4fb8] dark:text-info",
-  ASSIGNED: "bg-[#f1e9ff] text-[#6a3fc7] dark:bg-[#2a1f45] dark:text-[#c3a8ff]",
+  ACCEPTED: "bg-info-soft text-[#3a3633] dark:text-info",
+  ASSIGNED: "bg-gold-soft text-[#9c7328] dark:text-gold",
   OUT_FOR_DELIVERY: "bg-primary-soft text-primary",
   DELIVERED: "bg-success-soft text-success",
   DELIVERY_FAILED: "bg-danger-soft text-danger",
@@ -19,7 +19,7 @@ export function Badge({ className, children, tone = "muted", dot }: { className?
     muted: "bg-muted text-muted-foreground",
     primary: "bg-primary-soft text-primary",
     success: "bg-success-soft text-success",
-    warning: "bg-warning-soft text-[#9a6b00] dark:text-warning",
+    warning: "bg-warning-soft text-[#9c7328] dark:text-warning",
     danger: "bg-danger-soft text-danger",
     info: "bg-info-soft text-info",
   };
@@ -41,6 +41,6 @@ export function StatusBadge({ status, className }: { status: BookingStatus; clas
 }
 
 export function OmcBadge({ omc }: { omc: string }) {
-  const c: Record<string, string> = { HP: "bg-info-soft text-info", IOCL: "bg-primary-soft text-primary", BPCL: "bg-warning-soft text-[#9a6b00] dark:text-warning" };
+  const c: Record<string, string> = { HP: "bg-info-soft text-info", IOCL: "bg-primary-soft text-primary", BPCL: "bg-warning-soft text-[#9c7328] dark:text-warning" };
   return <span className={cn("inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide", c[omc] ?? "bg-muted")}>{omc}</span>;
 }

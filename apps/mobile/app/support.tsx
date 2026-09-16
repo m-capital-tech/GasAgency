@@ -26,7 +26,7 @@ const CATS: { key: ComplaintCategory; label: string }[] = [
 ];
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   open: { bg: t.colors.infoSoft, fg: t.colors.info },
-  in_progress: { bg: t.colors.warningSoft, fg: "#9A6B00" },
+  in_progress: { bg: t.colors.warningSoft, fg: "#9C7328" },
   resolved: { bg: t.colors.successSoft, fg: t.colors.success },
   escalated: { bg: t.colors.dangerSoft, fg: t.colors.danger },
 };
@@ -73,20 +73,20 @@ export default function SupportScreen() {
 
   return (
     <Screen title="Support" back>
-      <Card style={{ backgroundColor: t.colors.dangerSoft, borderColor: "#F5C2C2" }} onPress={() => Linking.openURL("tel:1906")}>
+      <Card style={{ backgroundColor: t.colors.dangerSoft, borderColor: "#D9B4B4" }} onPress={() => Linking.openURL("tel:1906")}>
         <Row gap={12}>
           <View style={styles.sos}>
             <Ionicons name="warning" size={22} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="bodyStrong" style={{ color: "#8A1F1F" }}>
+            <Text variant="bodyStrong" style={{ color: "#620A1A" }}>
               Gas leak emergency? Call 1906
             </Text>
-            <Text variant="caption" style={{ color: "#8A1F1F" }}>
+            <Text variant="caption" style={{ color: "#620A1A" }}>
               24×7 LPG emergency helpline. Don't switch on lights or fans.
             </Text>
           </View>
-          <Ionicons name="call" size={20} color="#8A1F1F" />
+          <Ionicons name="call" size={20} color="#620A1A" />
         </Row>
       </Card>
 

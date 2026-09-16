@@ -28,8 +28,8 @@ export function TrackingMap({ from, to, route, staff, others = [], height = 260 
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
         <Defs>
           <Pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
-            <Rect width="28" height="28" fill="#EEF2F5" />
-            <Path d="M 28 0 L 0 0 0 28" fill="none" stroke="#DFE5EA" strokeWidth="1" />
+            <Rect width="28" height="28" fill="#F1ECE3" />
+            <Path d="M 28 0 L 0 0 0 28" fill="none" stroke="#DCD3C4" strokeWidth="1" />
           </Pattern>
         </Defs>
         <Rect width={W} height={H} fill="url(#grid)" />
@@ -54,4 +54,4 @@ export function TrackingMap({ from, to, route, staff, others = [], height = 260 
   );
 }
 
-const styles = StyleSheet.create({ wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#EEF2F5" } });
+const styles = StyleSheet.create({ wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#F1ECE3" } });

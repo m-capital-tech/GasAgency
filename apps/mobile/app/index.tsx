@@ -27,20 +27,20 @@ export default function SplashScreen() {
   }
 
   return (
-    <LinearGradient colors={["#FF8A4C", t.colors.primary, "#D4550C"]} style={{ flex: 1, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20, paddingHorizontal: 24 }}>
+    <LinearGradient colors={["#A31E21", "#620A1A", "#1D1D1E"]} style={{ flex: 1, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20, paddingHorizontal: 24 }}>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 6 }}>
         <View style={styles.logoWrap}>
-          <Cylinder size={120} color="#fff" dark="#FFE0CC" />
+          <Cylinder size={120} color="#C6953F" dark="#9C7328" />
         </View>
         <Text variant="hero" style={{ color: "#fff", marginTop: 8 }}>
           GasSetu
         </Text>
-        <Text variant="body" style={{ color: "#FFE9DC" }} center>
+        <Text variant="body" style={{ color: "#E9E3D6" }} center>
           LPG refills, booked in a tap.{"\n"}Tracked live. Any oil company.
         </Text>
       </View>
       <View style={{ gap: 14 }}>
-        <Text variant="label" style={{ color: "#FFD9C2" }} center>
+        <Text variant="label" style={{ color: "#C6953F" }} center>
           Choose your language
         </Text>
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -48,16 +48,16 @@ export default function SplashScreen() {
             const active = language === l.key;
             return (
               <Pressable key={l.key} onPress={() => setLanguage(l.key)} accessibilityRole="radio" accessibilityState={{ selected: active }} accessibilityLabel={l.label} style={[styles.lang, active && styles.langActive]}>
-                <Text variant="h3" style={{ color: active ? t.colors.primaryDark : "#fff" }}>
+                <Text variant="h3" style={{ color: active ? t.colors.ink : "#fff" }}>
                   {l.native}
                 </Text>
-                {active ? <Ionicons name="checkmark-circle" size={16} color={t.colors.primaryDark} style={{ position: "absolute", top: 6, right: 6 }} /> : null}
+                {active ? <Ionicons name="checkmark-circle" size={16} color={t.colors.gold} style={{ position: "absolute", top: 6, right: 6 }} /> : null}
               </Pressable>
             );
           })}
         </View>
         {language !== "en" ? (
-          <Text variant="caption" style={{ color: "#FFE9DC" }} center>
+          <Text variant="caption" style={{ color: "#E9E3D6" }} center>
             Prototype note: full translations coming — UI stays in English for now.
           </Text>
         ) : null}

@@ -26,7 +26,7 @@ export function GasGauge({ pct, daysLeft, size = 200 }: { pct: number; daysLeft:
   const cx = size / 2, cy = size / 2;
   const startA = 180, sweep = 180;
   const endA = startA + (sweep * Math.max(0, Math.min(100, shown))) / 100;
-  const color = pct <= 20 ? t.colors.danger : pct <= 40 ? t.colors.warning : t.colors.success;
+  const color = pct <= 20 ? t.colors.primary : pct <= 40 ? t.colors.gold : t.colors.success;
   const tipA = (endA * Math.PI) / 180;
   return (
     <View style={{ alignItems: "center" }} accessibilityLabel={`Gas left ${pct} percent, about ${daysLeft} days`}>

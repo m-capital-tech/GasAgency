@@ -57,5 +57,5 @@ export default function FailScreen() {
 
 const styles = StyleSheet.create({
   opt: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: t.colors.surface, borderWidth: 1.5, borderColor: t.colors.border },
-  optActive: { borderColor: t.colors.danger, backgroundColor: "#FFF8F8" },
+  optActive: { borderColor: t.colors.danger, backgroundColor: "#F6EFEE" },
 });

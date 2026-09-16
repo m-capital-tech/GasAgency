@@ -31,6 +31,6 @@ export function MapPicker({ value, onChange, height = 220 }: MapPickerProps) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderRadius: 20, backgroundColor: "#EEF2F5", alignItems: "center", justifyContent: "center", gap: 8 },
+  wrap: { borderRadius: 20, backgroundColor: "#F1ECE3", alignItems: "center", justifyContent: "center", gap: 8 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: t.colors.border },
 });

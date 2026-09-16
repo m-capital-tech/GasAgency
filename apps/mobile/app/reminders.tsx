@@ -83,7 +83,7 @@ export default function RemindersScreen() {
                       {formatDateShort(iso)}
                     </Text>
                     {i === 1 ? (
-                      <Text variant="caption" style={{ color: active ? "#FFD9C2" : t.colors.inkFaint }}>
+                      <Text variant="caption" style={{ color: active ? "#E9E3D6" : t.colors.inkFaint }}>
                         suggested
                       </Text>
                     ) : null}

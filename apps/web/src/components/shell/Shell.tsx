@@ -87,7 +87,7 @@ export function Shell({ nav, title, children, mode }: { nav: NavItem[]; title: s
             ))}
           </nav>
           <div className="flex-1" />
-          <span className={cn("hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium sm:inline-flex", live === "open" ? "bg-success-soft text-success" : "bg-warning-soft text-[#9a6b00]")} title="WebSocket to the mock API">
+          <span className={cn("hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium sm:inline-flex", live === "open" ? "bg-success-soft text-success" : "bg-warning-soft text-[#9c7328]")} title="WebSocket to the mock API">
             {live === "open" ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
             {live === "open" ? "Live" : "Reconnecting"}
           </span>

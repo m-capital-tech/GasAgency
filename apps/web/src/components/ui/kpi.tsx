@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Kpi({ label, value, sub, icon: Icon, tone = "muted", className }: { label: string; value: string | number; sub?: string; icon?: LucideIcon; tone?: "muted" | "primary" | "success" | "warning" | "danger" | "info"; className?: string }) {
-  const tones = { muted: "bg-muted text-muted-foreground", primary: "bg-primary-soft text-primary", success: "bg-success-soft text-success", warning: "bg-warning-soft text-[#9a6b00] dark:text-warning", danger: "bg-danger-soft text-danger", info: "bg-info-soft text-info" };
+  const tones = { muted: "bg-muted text-muted-foreground", primary: "bg-primary-soft text-primary", success: "bg-success-soft text-success", warning: "bg-warning-soft text-[#9c7328] dark:text-warning", danger: "bg-danger-soft text-danger", info: "bg-info-soft text-info" };
   return (
     <div className={cn("rounded-2xl border bg-card p-4", className)}>
       <div className="flex items-center justify-between">

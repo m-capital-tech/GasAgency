@@ -130,7 +130,7 @@ export default function OrderScreen() {
         {b.staff && !terminal ? (
           <Card>
             <Row gap={12}>
-              <Avatar name={b.staff.name} color={t.colors.info} size={46} />
+              <Avatar name={b.staff.name} color={t.colors.gold} size={46} />
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong">{b.staff.name}</Text>
                 <Text variant="caption" tone="muted">

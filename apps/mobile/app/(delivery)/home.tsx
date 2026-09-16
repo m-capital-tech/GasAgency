@@ -30,7 +30,7 @@ export default function DeliveryHome() {
     <Screen tabBar padded={false} refreshing={drops.isRefetching} onRefresh={() => { staff.refetch(); drops.refetch(); }}>
       <Row between style={{ paddingHorizontal: 20, paddingTop: 6 }}>
         <Row gap={12}>
-          <Avatar name={user?.name || "?"} color={t.colors.info} size={42} />
+          <Avatar name={user?.name || "?"} color={t.colors.gold} size={42} />
           <View>
             <Text variant="h3">{user?.name}</Text>
             <Text variant="caption" tone="muted">

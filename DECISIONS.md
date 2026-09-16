@@ -34,3 +34,12 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 - **Turbo env:** `EXPO_PORT`, `EXPO_PUBLIC_*`, `NEXT_PUBLIC_*` are passed through in `turbo.json` (Turbo 2 strict env mode strips them otherwise) so `EXPO_PORT=8091 pnpm demo` works when 8081 is busy.
 - **Nested buttons on web:** React Native Web renders `Pressable` as `<button>`; cards that contain a call/checkbox button use a pressable inner region (mobile) or `div role="button"` (web) to avoid invalid nested buttons.
 - **Language picker:** Hindi/Telugu are selectable labels only (PRD says English text is enough for the prototype); the choice persists but the UI stays English, with a note.
+
+## Colour palette (16 Sep, investor brief)
+Palette: charcoal `#1D1D1E`, maroon `#620A1A`, gold `#C6953F`, red `#A31E21`, sand `#E9E3D6`, off-white `#F9F7F5`. Applied as a mix, not a swap:
+- **Red** — primary actions & brand (Book Refill, Accept, active tab, cylinder illustration, order line on charts).
+- **Gold** — money and premium accents (revenue KPIs, settlement bars, ratings, Express tag/upsell, Assigned status, delivery-partner avatars, "delivered" chart line, gauge mid-range).
+- **Maroon** — depth and danger (primary pressed/dark, failed/rejected, emergency card, splash gradient).
+- **Charcoal** — text, dark cards (active-order card, Demo button), dark theme base, agency map pins.
+- **Sand / off-white** — page background / cards. Borders are a darker sand.
+- One exception outside the palette: a muted green `#2E7D4F` for *delivered / online / paid* so success never reads as the red primary. The mock Razorpay sheet keeps Razorpay's blue on purpose (it's a third-party checkout).

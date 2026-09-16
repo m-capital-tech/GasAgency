@@ -19,7 +19,7 @@ export default function AdminOverview() {
     <>
       <PageHeader title="Platform overview" subtitle="Hyderabad · last 90 days of seeded activity" />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="GMV" value={formatCompactINR(d.kpis.gmv)} icon={IndianRupee} tone="success" sub="delivered order value" />
+        <Kpi label="GMV" value={formatCompactINR(d.kpis.gmv)} icon={IndianRupee} tone="warning" sub="delivered order value" />
         <Kpi label="Orders" value={formatNumber(d.kpis.orders)} icon={Package} tone="info" sub={`${d.kpis.ordersToday} today`} />
         <Kpi label="Active customers" value={d.kpis.activeCustomers} icon={Users} tone="primary" sub={`of ${d.kpis.totalCustomers} registered`} />
         <Kpi label="Active agencies" value={d.kpis.activeAgencies} icon={Building2} tone="muted" sub={`${d.kpis.pendingAgencies} pending approval`} />
@@ -34,8 +34,8 @@ export default function AdminOverview() {
             </div>
           </CardHeader>
           <CardContent>
-            <OrdersAreaChart data={d.weekly} keys={[{ key: "orders", name: "Orders", color: "#F26B1D" }]} height={200} />
-            <MoneyBarChart data={d.weekly} dataKey="gmv" name="GMV" height={160} color="#1E9E5A" />
+            <OrdersAreaChart data={d.weekly} keys={[{ key: "orders", name: "Orders", color: "#A31E21" }]} height={200} />
+            <MoneyBarChart data={d.weekly} dataKey="gmv" name="GMV" height={160} color="#C6953F" />
           </CardContent>
         </Card>
         <Card>

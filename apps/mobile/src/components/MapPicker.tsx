@@ -35,7 +35,7 @@ export function MapPicker({ value, onChange, height = 220 }: MapPickerProps) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#E8EDF2" },
+  wrap: { borderRadius: 20, overflow: "hidden", backgroundColor: "#EDE7DC" },
   pinWrap: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", paddingBottom: 36 },
   hint: { position: "absolute", bottom: 10, alignSelf: "center", backgroundColor: "rgba(18,38,58,0.7)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
 });

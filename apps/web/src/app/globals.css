@@ -4,54 +4,59 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f4f5f7;
-  --foreground: #12263a;
-  --card: #ffffff;
-  --card-foreground: #12263a;
-  --muted: #eef0f3;
-  --muted-foreground: #5b6b7b;
-  --faint: #93a0ad;
-  --border: #e6e9ed;
-  --primary: #f26b1d;
+  /* palette: charcoal #1D1D1E · maroon #620A1A · gold #C6953F · red #A31E21 · sand #E9E3D6 · off-white #F9F7F5 */
+  --background: #e9e3d6;
+  --foreground: #1d1d1e;
+  --card: #f9f7f5;
+  --card-foreground: #1d1d1e;
+  --muted: #ede7dc;
+  --muted-foreground: #5f5852;
+  --faint: #9a918a;
+  --border: #d9d0c1;
+  --primary: #a31e21;
   --primary-foreground: #ffffff;
-  --primary-soft: #fff1e8;
-  --navy: #12263a;
-  --success: #1e9e5a;
-  --success-soft: #e6f6ec;
-  --warning: #e0a100;
-  --warning-soft: #fff7db;
-  --danger: #d93b3b;
-  --danger-soft: #fdecec;
-  --info: #2f6fed;
-  --info-soft: #eaf0fe;
-  --ring: #f26b1d;
-  --sidebar: #ffffff;
+  --primary-soft: #f3dfde;
+  --gold: #c6953f;
+  --gold-soft: #f3e8d2;
+  --navy: #1d1d1e;
+  --success: #2e7d4f;
+  --success-soft: #e0ede4;
+  --warning: #c6953f;
+  --warning-soft: #f3e8d2;
+  --danger: #620a1a;
+  --danger-soft: #f0dcdc;
+  --info: #1d1d1e;
+  --info-soft: #e6e0d5;
+  --ring: #a31e21;
+  --sidebar: #f9f7f5;
   --radius: 14px;
 }
 
 .dark {
-  --background: #0f1720;
-  --foreground: #e8edf2;
-  --card: #172230;
-  --card-foreground: #e8edf2;
-  --muted: #1f2c3b;
-  --muted-foreground: #9fb0c0;
-  --faint: #6c7d8e;
-  --border: #263445;
-  --primary: #f5803a;
+  --background: #1d1d1e;
+  --foreground: #f9f7f5;
+  --card: #2a2726;
+  --card-foreground: #f9f7f5;
+  --muted: #35312f;
+  --muted-foreground: #b9b0a6;
+  --faint: #7f776f;
+  --border: #3f3a37;
+  --primary: #c8362f;
   --primary-foreground: #ffffff;
-  --primary-soft: #3a2416;
-  --navy: #e8edf2;
-  --success: #34c17a;
-  --success-soft: #14301f;
-  --warning: #f0b429;
-  --warning-soft: #3a2f10;
-  --danger: #ef5c5c;
-  --danger-soft: #3b1a1a;
-  --info: #5b8def;
-  --info-soft: #172743;
-  --ring: #f5803a;
-  --sidebar: #131d28;
+  --primary-soft: #3d2222;
+  --gold: #d4a556;
+  --gold-soft: #3a3120;
+  --navy: #f9f7f5;
+  --success: #4fa672;
+  --success-soft: #1f3327;
+  --warning: #d4a556;
+  --warning-soft: #3a3120;
+  --danger: #c04a5a;
+  --danger-soft: #3d2226;
+  --info: #e9e3d6;
+  --info-soft: #33302d;
+  --ring: #c8362f;
+  --sidebar: #232120;
 }
 
 @theme inline {
@@ -66,6 +71,8 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
   --color-navy: var(--navy);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -103,7 +110,7 @@ body {
   background: var(--muted);
 }
 .dark .leaflet-tile {
-  filter: brightness(0.75) saturate(0.6) contrast(1.05);
+  filter: brightness(0.7) saturate(0.5) sepia(0.15) contrast(1.05);
 }
 .leaflet-div-icon {
   background: transparent;

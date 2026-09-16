@@ -37,7 +37,7 @@ export default function InventoryPage() {
     <>
       <PageHeader title="Inventory" subtitle="Filled and empty cylinders on hand">
         {low.length ? (
-          <span className="flex items-center gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-[#9a6b00] dark:text-warning">
+          <span className="flex items-center gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-[#9c7328] dark:text-warning">
             <AlertTriangle className="size-4" /> {low.length} type{low.length > 1 ? "s" : ""} below reorder level
           </span>
         ) : null}

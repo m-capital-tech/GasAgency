@@ -130,14 +130,14 @@ export default function ReviewScreen() {
       ) : (
         <View style={{ gap: 12 }}>
           {violation ? (
-            <Card style={{ backgroundColor: t.colors.warningSoft, borderColor: "#F1D98A" }}>
+            <Card style={{ backgroundColor: t.colors.warningSoft, borderColor: "#D9C28C" }}>
               <Row gap={10} center={false}>
                 <Ionicons name="alert-circle" size={22} color="#9A6B00" />
                 <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong" style={{ color: "#7A5400" }}>
+                  <Text variant="bodyStrong" style={{ color: "#7A5A1E" }}>
                     {violation.code === "DUPLICATE_OPEN" ? "You already have an open booking" : violation.code === "MIN_GAP" ? "Too soon for a domestic refill" : violation.code === "QUOTA" ? "Yearly quota reached" : "Can't place this booking"}
                   </Text>
-                  <Text variant="small" style={{ color: "#7A5400", marginTop: 2 }}>
+                  <Text variant="small" style={{ color: "#7A5A1E", marginTop: 2 }}>
                     {violation.message}
                   </Text>
                 </View>

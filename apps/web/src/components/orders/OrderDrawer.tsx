@@ -173,7 +173,7 @@ export function OrderDrawer({ id, onClose }: { id: string | null; onClose: () =>
 
             {b.staff ? (
               <div className="flex items-center gap-3 rounded-xl border p-3">
-                <Avatar name={b.staff.name} color="#2F6FED" size={36} />
+                <Avatar name={b.staff.name} color="#C6953F" size={36} />
                 <div className="flex-1">
                   <p className="text-sm font-semibold">{b.staff.name}</p>
                   <p className="text-xs text-muted-foreground">

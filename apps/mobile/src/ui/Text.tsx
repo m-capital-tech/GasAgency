@@ -18,7 +18,7 @@ const tones: Record<Tone, string> = {
   success: t.colors.success,
   danger: t.colors.danger,
   white: t.colors.white,
-  warning: "#9A6B00",
+  warning: "#9C7328",
 };
 
 export function Text({ variant = "body", tone = "ink", center, style, ...rest }: TextProps) {

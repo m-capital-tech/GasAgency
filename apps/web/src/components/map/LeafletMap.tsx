@@ -23,11 +23,11 @@ export interface LeafletMapProps {
 }
 
 const ICONS: Record<MapPin["kind"], (active?: boolean) => L.DivIcon> = {
-  agency: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [30, 30], iconAnchor: [15, 15], html: `<div style="width:30px;height:30px;border-radius:50%;background:#12263A;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">🏪</div>` }),
-  customer: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div style="width:26px;height:26px;border-radius:50%;background:#1E9E5A;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">🏠</div>` }),
-  pending: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [22, 22], iconAnchor: [11, 11], html: `<div style="width:22px;height:22px;border-radius:50%;background:#2F6FED;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>` }),
-  staff: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pulse-ring" style="position:relative;width:34px;height:34px;border-radius:50%;background:#F26B1D;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px">🛵</div>` }),
-  "staff-idle": () => L.divIcon({ className: "leaflet-div-icon", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div style="width:26px;height:26px;border-radius:50%;background:#5B6B7B;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">🛵</div>` }),
+  agency: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [30, 30], iconAnchor: [15, 15], html: `<div style="width:30px;height:30px;border-radius:50%;background:#1D1D1E;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">🏪</div>` }),
+  customer: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div style="width:26px;height:26px;border-radius:50%;background:#2E7D4F;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">🏠</div>` }),
+  pending: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [22, 22], iconAnchor: [11, 11], html: `<div style="width:22px;height:22px;border-radius:50%;background:#C6953F;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>` }),
+  staff: () => L.divIcon({ className: "leaflet-div-icon", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pulse-ring" style="position:relative;width:34px;height:34px;border-radius:50%;background:#A31E21;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px">🛵</div>` }),
+  "staff-idle": () => L.divIcon({ className: "leaflet-div-icon", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div style="width:26px;height:26px;border-radius:50%;background:#5F5852;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">🛵</div>` }),
 };
 
 function Fit({ pins, routes }: { pins: MapPin[]; routes?: LeafletMapProps["routes"] }) {
@@ -47,10 +47,10 @@ export default function LeafletMap({ pins, routes = [], center = { lat: 17.41, l
     <MapContainer center={[center.lat, center.lng]} zoom={zoom} className={className ?? "h-full w-full"} scrollWheelZoom={false} attributionControl={false}>
       <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
       {circles.map((c, i) => (
-        <CircleMarker key={i} center={[c.lat, c.lng]} radius={Math.max(20, c.radiusKm * 12)} pathOptions={{ color: "#F26B1D", fillColor: "#F26B1D", fillOpacity: 0.08, weight: 1.5, dashArray: "4 4" }} />
+        <CircleMarker key={i} center={[c.lat, c.lng]} radius={Math.max(20, c.radiusKm * 12)} pathOptions={{ color: "#C6953F", fillColor: "#C6953F", fillOpacity: 0.08, weight: 1.5, dashArray: "4 4" }} />
       ))}
       {routes.map((r) => (
-        <Polyline key={r.id} positions={r.points.map((p) => [p.lat, p.lng])} pathOptions={{ color: "#F26B1D", weight: 4, opacity: 0.85, dashArray: "1 8", lineCap: "round" }} />
+        <Polyline key={r.id} positions={r.points.map((p) => [p.lat, p.lng])} pathOptions={{ color: "#A31E21", weight: 4, opacity: 0.85, dashArray: "1 8", lineCap: "round" }} />
       ))}
       {pins.map((p) => (
         <Marker key={p.id} position={[p.lat, p.lng]} icon={ICONS[p.kind](p.active)} zIndexOffset={p.kind === "staff" ? 1000 : 0}>
