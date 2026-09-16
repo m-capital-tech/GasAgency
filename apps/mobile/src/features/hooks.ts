@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Booking, BookingStatus, Customer, Notification, SlotType } from "@gassetu/shared";
-import { get, patch, post, put } from "@/lib/api";
+import { get, onModeChange, patch, post, put } from "@/lib/api";
+import { useEffect } from "react";
 import { useLive } from "@/lib/live";
 import { useSession } from "@/lib/session";
 
@@ -70,6 +71,12 @@ export function useDrops(staffId: string | undefined) {
 export function useLiveSync() {
   const qc = useQueryClient();
   const userId = useUserId();
+  useEffect(() => {
+    const off = onModeChange(() => qc.invalidateQueries());
+    return () => {
+      off();
+    };
+  }, [qc]);
   useLive((e) => {
     switch (e.type) {
       case "booking.created":

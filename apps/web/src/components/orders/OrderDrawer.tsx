@@ -4,7 +4,7 @@ import { Ban, Check, ChevronRight, FileText, Phone, RotateCcw, UserPlus, Wand2, 
 import { useState } from "react";
 import { toast } from "sonner";
 import { Map } from "@/components/map/Map";
-import { Avatar, Badge, Button, Dialog, DialogContent, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, StatusBadge } from "@/components/ui";
+import { Avatar, Badge, Button, Dialog, DialogContent, ErrorState, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, StatusBadge } from "@/components/ui";
 import { useBooking, useOrderActions, useStaff } from "@/features/hooks";
 import { formatDateTime, formatINR } from "@/lib/format";
 
@@ -22,7 +22,9 @@ export function OrderDrawer({ id, onClose }: { id: string | null; onClose: () =>
   return (
     <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" title={b ? b.code : "Order"} description={b ? `${b.customerName} · ${formatDateTime(b.createdAt)}` : undefined} className="max-w-2xl">
-        {!b ? (
+        {q.isError ? (
+          <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />
+        ) : !b ? (
           <div className="space-y-3">
             <Skeleton className="h-40" />
             <Skeleton className="h-6 w-1/2" />

@@ -28,10 +28,31 @@ export function getLocalEngine(): DemoEngine {
   if (!localEngine) localEngine = new DemoEngine();
   return localEngine;
 }
+let recoverTimer: ReturnType<typeof setInterval> | null = null;
 function setMode(m: Mode) {
   if (mode === m) return;
   mode = m;
   modeListeners.forEach((l) => l(m));
+  if (m === "local") startRecovery();
+  else if (recoverTimer) {
+    clearInterval(recoverTimer);
+    recoverTimer = null;
+  }
+}
+/** While offline, ping the API every 8 s and switch back the moment it answers, so a brief API restart never strands the phone on stale local data. */
+function startRecovery() {
+  if (recoverTimer) return;
+  recoverTimer = setInterval(async () => {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch(`${API_URL}/health`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (res.ok) setMode("remote");
+    } catch {
+      /* still down */
+    }
+  }, 8000);
 }
 export function forceRemote() {
   setMode("remote");
