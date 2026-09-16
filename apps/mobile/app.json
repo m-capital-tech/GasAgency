@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "GasSetu",
+    "slug": "gassetu",
+    "scheme": "gassetu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#F26B1D" },
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.gassetu.demo", "infoPlist": { "NSLocationWhenInUseUsageDescription": "Used to find your nearest gas agency (demo)." } },
+    "android": { "package": "com.gassetu.demo", "adaptiveIcon": { "backgroundColor": "#F26B1D", "foregroundImage": "./assets/android-icon-foreground.png" } },
+    "web": { "favicon": "./assets/favicon.png", "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router", "expo-font", ["expo-splash-screen", { "backgroundColor": "#F26B1D", "image": "./assets/splash-icon.png", "imageWidth": 160 }]],
+    "experiments": { "typedRoutes": false }
+  }
+}

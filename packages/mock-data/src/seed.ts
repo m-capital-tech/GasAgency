@@ -169,8 +169,8 @@ export function generateSeed(now: Date = new Date(), seed = 4242): SeedData {
         vehicleNo: `TS ${faker.string.numeric({ length: 2 })} ${faker.string.alpha({ length: 2, casing: "upper" })} ${faker.string.numeric({ length: 4 })}`,
         online: s < 2 || faker.datatype.boolean(0.6),
         currentLocation: { lat: jitter(a.lat, 0.01), lng: jitter(a.lng, 0.01) },
-        onTimePct: faker.number.int({ min: 84, max: 99 }),
-        failedPct: faker.number.int({ min: 1, max: 7 }),
+        onTimePct: isRamesh ? 99 : faker.number.int({ min: 84, max: 97 }),
+        failedPct: isRamesh ? 1 : faker.number.int({ min: 1, max: 7 }),
         cashInHand: 0,
       });
     }
@@ -461,17 +461,24 @@ export function generateSeed(now: Date = new Date(), seed = 4242): SeedData {
 
   // Today's live board for Suresh's agency
   const sureshCustomers = customers.filter((c) => c.assignedAgencyId === sureshAgency.id && c.userId !== riya.userId && c.userId !== imran.userId);
-  const openCust = faker.helpers.shuffle(sureshCustomers).slice(0, 9);
+  const openCust = faker.helpers.shuffle(sureshCustomers).slice(0, 14);
+  const sureshStaff = staff.filter((x) => x.agencyId === sureshAgency.id && x.id !== "stf_ramesh");
+  // Every other staff member carries ≥1 current drop so "auto-assign (fewest drops)" picks Ramesh in the demo.
   const todayStatuses: { status: BookingStatus; hourAgo: number; staff?: string | null; slot?: SlotType; method?: PaymentMethod }[] = [
     { status: "PLACED", hourAgo: 0.3, slot: "express" },
     { status: "PLACED", hourAgo: 0.8 },
     { status: "ACCEPTED", hourAgo: 1.5 },
-    { status: "ASSIGNED", hourAgo: 2, staff: "stf_ramesh" },
-    { status: "ASSIGNED", hourAgo: 2.5, staff: "stf_ramesh", method: "cod" },
-    { status: "ASSIGNED", hourAgo: 3 },
-    { status: "OUT_FOR_DELIVERY", hourAgo: 3.5 },
+    { status: "ASSIGNED", hourAgo: 2, staff: "stf_ramesh", method: "cod" },
     { status: "DELIVERED", hourAgo: 5, staff: "stf_ramesh" },
-    { status: "DELIVERY_FAILED", hourAgo: 6 },
+    { status: "ASSIGNED", hourAgo: 2.2, staff: sureshStaff[0]?.id },
+    { status: "ASSIGNED", hourAgo: 2.4, staff: sureshStaff[1]?.id },
+    { status: "ASSIGNED", hourAgo: 2.6, staff: sureshStaff[2]?.id, method: "cod" },
+    { status: "ASSIGNED", hourAgo: 2.8, staff: sureshStaff[3]?.id },
+    { status: "ASSIGNED", hourAgo: 3.0, staff: sureshStaff[4]?.id },
+    { status: "ASSIGNED", hourAgo: 3.2, staff: sureshStaff[5]?.id },
+    { status: "OUT_FOR_DELIVERY", hourAgo: 3.5, staff: sureshStaff[6]?.id },
+    { status: "ASSIGNED", hourAgo: 1.2, staff: sureshStaff[6]?.id },
+    { status: "DELIVERY_FAILED", hourAgo: 6, staff: sureshStaff[1]?.id },
   ];
   // remove any open bookings those customers already have to respect the "one open booking" rule
   todayStatuses.forEach((ts, i) => {

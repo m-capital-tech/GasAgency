@@ -26,21 +26,22 @@ export function nearestAgency(agencies: Agency[], point: LatLng, pincode?: strin
   })[0];
 }
 
-/** Build a slightly wobbly polyline of n points between two coordinates (mock route). */
+/** Build a gently curved polyline of n points between two coordinates (mock road route). */
 export function buildRoute(from: LatLng, to: LatLng, n = 40, seed = 1): LatLng[] {
   const pts: LatLng[] = [];
-  let s = seed;
-  const rand = () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280 - 0.5;
-  };
+  const dLat = to.lat - from.lat;
+  const dLng = to.lng - from.lng;
+  const len = Math.hypot(dLat, dLng) || 0.001;
+  // unit perpendicular vector
+  const px = -dLng / len;
+  const py = dLat / len;
+  const sign = seed % 2 === 0 ? 1 : -1;
+  const amp = len * 0.18;
   for (let i = 0; i <= n; i++) {
     const t = i / n;
-    const wobble = Math.sin(t * Math.PI) * 0.004;
-    pts.push({
-      lat: from.lat + (to.lat - from.lat) * t + rand() * wobble,
-      lng: from.lng + (to.lng - from.lng) * t + rand() * wobble,
-    });
+    // one broad bend plus a smaller secondary bend — looks like following roads, no zig-zag
+    const off = sign * amp * (Math.sin(t * Math.PI) + 0.35 * Math.sin(t * Math.PI * 2 + seed));
+    pts.push({ lat: from.lat + dLat * t + py * off, lng: from.lng + dLng * t + px * off });
   }
   return pts;
 }

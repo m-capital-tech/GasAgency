@@ -103,6 +103,17 @@ export class DemoEngine {
     this.trips.clear();
     this.state = generateSeed(this.now());
     this.demo = { speed: 1, forceNextPaymentFail: false };
+    // seeded out-for-delivery orders get an in-progress trip so their markers move immediately
+    for (const b of this.state.bookings) {
+      if (b.status === "OUT_FOR_DELIVERY" && b.assignedStaffId && !this.trips.has(b.assignedStaffId)) {
+        const s = this.staff(b.assignedStaffId);
+        const route = buildRoute(s.currentLocation, this.addressOf(b), ROUTE_POINTS, b.id.length);
+        const index = Math.floor(ROUTE_POINTS * 0.35);
+        s.currentLocation = route[index];
+        b.etaMinutes = this.etaFor(index, route.length);
+        this.trips.set(s.id, { staffId: s.id, bookingId: b.id, agencyId: b.agencyId, route, index, startedAt: this.iso() });
+      }
+    }
     this.emit({ type: "demo.reset" });
     this.startTicker();
   }
@@ -386,7 +397,7 @@ export class DemoEngine {
     const priced = items.map((i) => {
       const p = this.state.prices.find((x) => x.agencyId === agency.id && x.cylinderTypeId === i.cylinderTypeId);
       if (!p) throw notFound("Price");
-      return { ...i, unitPrice: p.price, deliveryCharge: p.deliveryCharge };
+      return { ...i, unitPrice: p.price, deliveryCharge: p.deliveryCharge, name: this.state.cylinderTypes.find((t) => t.id === i.cylinderTypeId)?.name ?? i.cylinderTypeId };
     });
     const charges = computeCharges(priced, slot, Math.max(...priced.map((p) => p.deliveryCharge)), this.config);
     return { charges, violation, agency: this.agencyCard(agency), codAllowed: agency.codEnabled, items: priced };
