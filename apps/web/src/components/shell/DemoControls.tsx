@@ -1,11 +1,11 @@
 "use client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FlaskConical, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button, Dialog, DialogContent } from "@/components/ui";
-import { post } from "@/lib/api";
+import { Button, Dialog, DialogContent, Switch } from "@/components/ui";
+import { get, post } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ export function DemoControls() {
   const qc = useQueryClient();
   const router = useRouter();
   const { user, agency, login } = useSession();
+  const demoState = useQuery({ queryKey: ["demo-state"], queryFn: () => get("/demo/state"), enabled: open });
 
   const run = async (key: string, fn: () => Promise<any>, label?: string) => {
     setBusy(key);
@@ -83,6 +84,13 @@ export function DemoControls() {
                   <Chip key={s} k={`sp${s}`} label={`${s}×`} active={speed === s} onClick={() => run(`sp${s}`, () => post("/demo/speed", { speed: s }).then(() => setSpeed(s)), `Tracking at ${s}×`)} />
                 ))}
               </div>
+            </section>
+            <section className="flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold-soft/60 p-3">
+              <div>
+                <p className="text-sm font-semibold">Bypass refill rules</p>
+                <p className="text-xs text-muted-foreground">Skips the 21-day gap, yearly quota and one-open-order checks so Riya can rebook during the pitch.</p>
+              </div>
+              <Switch checked={!!demoState.data?.bypassRules} onCheckedChange={(v) => run("bypass", () => post("/demo/bypass-rules", { enabled: v }).then(() => qc.invalidateQueries({ queryKey: ["demo-state"] })), v ? "Refill rules bypassed" : "Refill rules back on")} aria-label="Bypass refill rules" />
             </section>
             <section className="rounded-xl border border-danger/30 bg-danger-soft/40 p-3">
               <div className="flex items-center justify-between gap-3">

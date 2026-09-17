@@ -46,7 +46,7 @@ Any other 10-digit mobile number creates a brand-new customer and walks through 
 
 ### Demo controls (PRD §6.5)
 
-Every app has a **Demo** button (right-edge tab on the phone, top bar on the web): switch persona, advance the current order to its next status, simulate payment failure / delivery failure / low stock / a burst of 5 orders, speed up tracking (1× / 3× / 6×), and **Reset demo data** to the seed.
+Every app has a **Demo** button (right-edge tab on the phone, top bar on the web): switch persona, advance the current order to its next status, simulate payment failure / delivery failure / low stock / a burst of 5 orders, speed up tracking (1× / 3× / 6×), **Bypass refill rules** (lets Riya rebook straight after a delivery), and **Reset demo data** to the seed.
 
 ---
 

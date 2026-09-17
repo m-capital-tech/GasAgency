@@ -43,3 +43,5 @@ Palette: charcoal `#1D1D1E`, maroon `#620A1A`, gold `#C6953F`, red `#A31E21`, sa
 - **Charcoal** — text, dark cards (active-order card, Demo button), dark theme base, agency map pins.
 - **Sand / off-white** — page background / cards. Borders are a darker sand.
 - One exception outside the palette: a muted green `#2E7D4F` for *delivered / online / paid* so success never reads as the red primary. The mock Razorpay sheet keeps Razorpay's blue on purpose (it's a third-party checkout).
+
+- **Bypass refill rules (demo switch, 17 Sep):** `POST /demo/bypass-rules {enabled}` makes `quote()` skip min-gap / quota / duplicate-open checks. Off by default and cleared by Reset, so the §13 rule messages still show unless the presenter flips it. Available in both Demo sheets.

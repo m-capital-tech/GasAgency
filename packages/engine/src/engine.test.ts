@@ -56,6 +56,12 @@ assert.ok(e.staff(b.assignedStaffId!).cashInHand > 0);
 const q2 = e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard");
 assert.equal(q2.violation?.code, "MIN_GAP");
 
+// bypass switch lifts the rule, and reset clears it
+e.setBypassRules(true);
+assert.equal(e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard").violation, null);
+e.setBypassRules(false);
+assert.equal(e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard").violation?.code, "MIN_GAP");
+
 // commercial: quantity > 1 allowed, no gap
 const imran = e.customer(imranId);
 const b2 = e.createBooking({ customerId: imranId, addressId: imran.defaultAddressId, items: [{ cylinderTypeId: "cyl_19", qty: 3 }], slot: "standard", paymentMethod: "cod" });

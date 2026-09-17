@@ -178,6 +178,7 @@ add("POST", "/demo/advance/:bookingId", (e, p) => {
 });
 add("POST", "/demo/simulate", (e, _p, r) => e.simulate(r.body?.kind as SimulationKind, r.body?.agencyId));
 add("POST", "/demo/speed", (e, _p, r) => e.setSpeed(num(r.body?.speed, "speed")));
+add("POST", "/demo/bypass-rules", (e, _p, r) => e.setBypassRules(!!r.body?.enabled));
 add("GET", "/health", () => ({ ok: true, ts: Date.now() }));
 
 export function handle(engine: DemoEngine, req: Req): { status: number; body: unknown } {

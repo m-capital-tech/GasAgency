@@ -53,6 +53,8 @@ export type SimulationKind = "payment_failure" | "delivery_failure" | "low_stock
 export interface DemoState {
   speed: number;
   forceNextPaymentFail: boolean;
+  /** Demo switch (§6.5): skip the min-gap / quota / duplicate-open checks so a persona can rebook freely on stage. */
+  bypassRules: boolean;
 }
 
 /**
@@ -62,7 +64,7 @@ export interface DemoState {
 export class DemoEngine {
   state!: SeedData;
   trips = new Map<string, TripRuntime>(); // keyed by staffId
-  demo: DemoState = { speed: 1, forceNextPaymentFail: false };
+  demo: DemoState = { speed: 1, forceNextPaymentFail: false, bypassRules: false };
   private listeners = new Set<Listener>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private counter = 1000;
@@ -102,7 +104,7 @@ export class DemoEngine {
     this.stopTicker();
     this.trips.clear();
     this.state = generateSeed(this.now());
-    this.demo = { speed: 1, forceNextPaymentFail: false };
+    this.demo = { speed: 1, forceNextPaymentFail: false, bypassRules: false };
     // seeded out-for-delivery orders get an in-progress trip so their markers move immediately
     for (const b of this.state.bookings) {
       if (b.status === "OUT_FOR_DELIVERY" && b.assignedStaffId && !this.trips.has(b.assignedStaffId)) {
@@ -393,7 +395,7 @@ export class DemoEngine {
     if (agency.status !== "approved") throw new EngineError("AGENCY_UNAVAILABLE", "Your agency is not accepting bookings right now.");
     const cylinder = this.state.cylinderTypes.find((t) => t.id === items[0].cylinderTypeId);
     if (!cylinder) throw notFound("Cylinder type");
-    const violation = checkRefillRules(c, this.state.bookings, cylinder, items[0].qty, this.config, this.now());
+    const violation = this.demo.bypassRules ? null : checkRefillRules(c, this.state.bookings, cylinder, items[0].qty, this.config, this.now());
     const priced = items.map((i) => {
       const p = this.state.prices.find((x) => x.agencyId === agency.id && x.cylinderTypeId === i.cylinderTypeId);
       if (!p) throw notFound("Price");
@@ -1091,6 +1093,11 @@ export class DemoEngine {
         return { message: `${n} new orders placed.` };
       }
     }
+  }
+
+  setBypassRules(enabled: boolean) {
+    this.demo.bypassRules = enabled;
+    return this.demo;
   }
 
   setSpeed(speed: number) {

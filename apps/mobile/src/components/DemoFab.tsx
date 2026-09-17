@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { forceRemote, get, getMode, onModeChange, post } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -30,6 +30,12 @@ export function DemoFab() {
   }, []);
 
   const userId = session.user?.id;
+  const demoState = useQuery({ queryKey: ["demo-state"], queryFn: () => get("/demo/state"), enabled: open });
+  const setBypass = async (enabled: boolean) => {
+    await run("bypass", () => post("/demo/bypass-rules", { enabled }), enabled ? "Refill rules bypassed — book freely" : "Refill rules back on");
+    qc.invalidateQueries({ queryKey: ["demo-state"] });
+    qc.invalidateQueries({ queryKey: ["quote"] });
+  };
   const activeQ = useQuery({
     queryKey: ["demo-active", userId, session.mode],
     queryFn: async (): Promise<ExpandedBooking | null> => {
@@ -141,6 +147,16 @@ export function DemoFab() {
           <Chip label="Delivery failure" icon="alert-circle-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "delivery_failure" }).then((r: any) => toast.info(r.message)))} />
           <Chip label="Low stock" icon="cube-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "low_stock" }).then((r: any) => toast.info(r.message)))} />
           <Chip label="Order burst" icon="flash-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "order_burst" }).then((r: any) => toast.info(r.message)))} />
+        </Row>
+
+        <Row between style={{ marginBottom: 16, backgroundColor: t.colors.goldSoft, padding: 12, borderRadius: 14 }}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text variant="bodyStrong">Bypass refill rules</Text>
+            <Text variant="caption" tone="muted">
+              Skips the 21-day gap, yearly quota and one-open-order checks so a persona can rebook during the pitch.
+            </Text>
+          </View>
+          <Switch value={!!demoState.data?.bypassRules} onValueChange={setBypass} trackColor={{ true: t.colors.gold }} accessibilityLabel="Bypass refill rules" />
         </Row>
 
         <Text variant="label" tone="faint" style={{ marginBottom: 8 }}>
