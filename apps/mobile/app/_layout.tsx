@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { DemoFab } from "@/components/DemoFab";
 import { RazorpaySheet } from "@/components/RazorpaySheet";
 import { ToastHost, toast } from "@/components/Toast";
@@ -53,6 +54,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
+          <AppErrorBoundary onReset={() => queryClient.clear()}>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.colors.bg }, animation: "slide_from_right" }}>
             <Stack.Screen name="index" />
@@ -79,6 +81,7 @@ export default function RootLayout() {
           <ToastHost />
           <RazorpaySheet />
           {user ? <DemoFab /> : null}
+          </AppErrorBoundary>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
