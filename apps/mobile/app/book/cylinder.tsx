@@ -4,112 +4,139 @@ import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Cylinder } from "@/components/Cylinder";
-import { useDraft } from "@/features/bookingDraft";
-import { useAgency, useCustomer } from "@/features/hooks";
-import { Button, Card, ErrorState, Row, Screen, SkeletonList, Text, t } from "@/ui";
+import { draftCount, useDraft } from "@/features/bookingDraft";
+import { useAgency, useBusiness } from "@/features/hooks";
+import { Button, Card, Chip, ErrorState, Row, Screen, SkeletonList, Text, t } from "@/ui";
 
-/** C6 — Choose cylinder & quantity */
+/** C6 — Build the order: outlet, cylinder mix, empties to return */
 export default function CylinderScreen() {
   const router = useRouter();
-  const customer = useCustomer();
-  const agency = useAgency(customer.data?.assignedAgencyId);
+  const biz = useBusiness();
+  const agency = useAgency(biz.data?.assignedAgencyId);
   const draft = useDraft();
   const types: CylinderType[] = agency.data?.cylinderTypes ?? [];
   const prices: AgencyPrice[] = agency.data?.prices ?? [];
-  const category = customer.data?.type ?? "domestic";
-  const visible = types.filter((x) => x.category === category);
-  const other = types.filter((x) => x.category !== category);
-  const selected = types.find((x) => x.id === draft.cylinderTypeId);
-  const isDomestic = selected?.category === "domestic";
+  const b = biz.data;
+  const count = draftCount(draft.qty);
+  const outlet = b?.outlets.find((o) => o.id === draft.outletId) ?? b?.outlets.find((o) => o.id === b.defaultOutletId);
+  const empties = draft.emptiesToCollect ?? Math.min(count, (outlet?.emptiesHeld ?? 0) + (outlet?.inUse ?? 0));
 
   useEffect(() => {
-    if (!draft.cylinderTypeId && visible.length) draft.set({ cylinderTypeId: visible[0].id, qty: 1 });
+    if (b && !draft.outletId) draft.set({ outletId: b.defaultOutletId });
+    if (b && count === 0 && types.length) {
+      const qty: Record<string, number> = {};
+      b.usualOrder.forEach((i) => (qty[i.cylinderTypeId] = i.qty));
+      draft.set({ qty });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible.length]);
+  }, [b?.userId, types.length]);
 
   const priceOf = (id: string) => prices.find((p) => p.cylinderTypeId === id);
-  const unit = selected ? (priceOf(selected.id)?.price ?? 0) : 0;
-
-  const Option = ({ c }: { c: CylinderType }) => {
-    const active = draft.cylinderTypeId === c.id;
-    const p = priceOf(c.id);
-    return (
-      <Pressable onPress={() => draft.set({ cylinderTypeId: c.id, qty: c.category === "domestic" ? 1 : Math.max(1, draft.qty) })} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.opt, active && styles.optActive]}>
-        <Cylinder size={44} color={c.category === "domestic" ? t.colors.primary : "#2F6FED"} dark={c.category === "domestic" ? "#C4520D" : "#1D4FB8"} />
-        <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">{c.name}</Text>
-          <Text variant="caption" tone="muted">
-            {c.category === "domestic" ? "Home use · 1 per booking" : "Commercial use"}
-            {p && p.deliveryCharge ? ` · delivery ${formatINR(p.deliveryCharge, { decimals: false })}` : " · free delivery"}
-          </Text>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <Text variant="h3">{p ? formatINR(p.price, { decimals: false }) : "—"}</Text>
-          <Ionicons name={active ? "checkmark-circle" : "ellipse-outline"} size={20} color={active ? t.colors.primary : t.colors.inkFaint} />
-        </View>
-      </Pressable>
-    );
-  };
+  const subtotal = types.reduce((s, c) => s + (draft.qty[c.id] ?? 0) * (priceOf(c.id)?.price ?? 0), 0);
 
   return (
     <Screen
-      title="Book a refill"
+      title="Order cylinders"
       subtitle={agency.data ? `From ${agency.data.name}` : undefined}
       back
       footer={
         <Row between>
           <View>
             <Text variant="caption" tone="muted">
-              {draft.qty} × {selected?.name ?? "cylinder"}
+              {count} cylinder{count === 1 ? "" : "s"} · {empties} empties back
             </Text>
-            <Text variant="h2">{formatINR(unit * draft.qty)}</Text>
+            <Text variant="h2">{formatINR(subtotal, { decimals: false })}</Text>
+            <Text variant="caption" tone="faint">
+              ex-GST · slab discount at review
+            </Text>
           </View>
-          <Button title="Choose slot" full={false} iconRight="arrow-forward" disabled={!selected} onPress={() => router.push("/book/slot")} />
+          <Button title="Choose slot" full={false} iconRight="arrow-forward" disabled={count === 0} onPress={() => router.push("/book/slot")} />
         </Row>
       }
     >
-      {agency.isLoading || customer.isLoading ? (
+      {agency.isLoading || biz.isLoading ? (
         <SkeletonList count={3} />
       ) : agency.isError ? (
         <ErrorState message={(agency.error as Error).message} onRetry={() => agency.refetch()} />
-      ) : !customer.data?.assignedAgencyId ? (
+      ) : !b?.assignedAgencyId ? (
         <ErrorState message="No agency linked yet. Link your connection first." onRetry={() => router.replace("/(onboarding)/connection")} />
       ) : (
-        <View style={{ gap: 10 }}>
-          <Text variant="label" tone="faint">
-            {category === "domestic" ? "Domestic cylinders" : "Commercial cylinders"}
-          </Text>
-          {visible.map((c) => (
-            <Option key={c.id} c={c} />
-          ))}
-          <Text variant="label" tone="faint" style={{ marginTop: 8 }}>
-            {category === "domestic" ? "Commercial (for businesses)" : "Domestic"}
-          </Text>
-          {other.map((c) => (
-            <Option key={c.id} c={c} />
-          ))}
+        <View style={{ gap: 12 }}>
+          {b.outlets.length > 1 ? (
+            <View>
+              <Text variant="label" tone="faint" style={{ marginBottom: 8 }}>
+                Deliver to
+              </Text>
+              <Row gap={8} style={{ flexWrap: "wrap" }}>
+                {b.outlets.map((o) => (
+                  <Chip key={o.id} label={`${o.label} · ${o.daysLeft}d left`} active={draft.outletId === o.id} onPress={() => draft.set({ outletId: o.id, emptiesToCollect: null })} icon="storefront-outline" />
+                ))}
+              </Row>
+            </View>
+          ) : null}
 
-          <Card style={{ marginTop: 8 }}>
+          <Text variant="label" tone="faint">
+            Cylinders
+          </Text>
+          {types.map((c) => {
+            const p = priceOf(c.id);
+            const q = draft.qty[c.id] ?? 0;
+            const slab = p?.slabs?.find((s) => q >= s.minQty);
+            return (
+              <Card key={c.id} style={q > 0 ? { borderColor: t.colors.primary, borderWidth: 1.5 } : undefined}>
+                <Row gap={12}>
+                  <Cylinder size={44} color={c.id === "cyl_19" ? t.colors.primary : t.colors.primaryDark} dark={t.colors.primaryDark} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong">{c.name}</Text>
+                    <Text variant="caption" tone="muted">
+                      {p ? `${formatINR(p.price, { decimals: false })} each` : "—"}
+                      {p?.slabs?.length ? ` · ${p.slabs.map((s) => `${s.minQty}+ @ ${formatINR(s.price, { decimals: false })}`).join(", ")}` : ""}
+                    </Text>
+                    {slab ? (
+                      <Text variant="caption" tone="success">
+                        Slab price applied · {formatINR(slab.price, { decimals: false })} each
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Row gap={10}>
+                    <Pressable onPress={() => draft.setQty(c.id, q - 1)} disabled={q <= 0} style={[styles.step, q <= 0 && { opacity: 0.4 }]} accessibilityLabel={`Fewer ${c.name}`}>
+                      <Ionicons name="remove" size={20} color={t.colors.ink} />
+                    </Pressable>
+                    <Text variant="h2" style={{ minWidth: 26, textAlign: "center" }}>
+                      {q}
+                    </Text>
+                    <Pressable onPress={() => draft.setQty(c.id, q + 1)} disabled={count >= 20} style={[styles.step, styles.stepPrimary, count >= 20 && { opacity: 0.4 }]} accessibilityLabel={`More ${c.name}`}>
+                      <Ionicons name="add" size={20} color="#fff" />
+                    </Pressable>
+                  </Row>
+                </Row>
+              </Card>
+            );
+          })}
+
+          <Card>
             <Row between>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text variant="bodyStrong">Quantity</Text>
+                <Text variant="bodyStrong">Empty cylinders to return</Text>
                 <Text variant="caption" tone="muted">
-                  {isDomestic ? "Domestic bookings are capped at 1" : "Up to 10 per booking"}
+                  {outlet ? `${outlet.emptiesHeld} empties + ${outlet.inUse} in use at ${outlet.label}` : "Collected by the delivery partner"}
                 </Text>
               </View>
-              <Row gap={14}>
-                <Pressable onPress={() => draft.set({ qty: Math.max(1, draft.qty - 1) })} disabled={isDomestic || draft.qty <= 1} style={[styles.step, (isDomestic || draft.qty <= 1) && { opacity: 0.4 }]} accessibilityLabel="Decrease quantity">
+              <Row gap={10}>
+                <Pressable onPress={() => draft.set({ emptiesToCollect: Math.max(0, empties - 1) })} style={[styles.step, empties <= 0 && { opacity: 0.4 }]} disabled={empties <= 0} accessibilityLabel="Fewer empties">
                   <Ionicons name="remove" size={20} color={t.colors.ink} />
                 </Pressable>
-                <Text variant="h2">{draft.qty}</Text>
-                <Pressable onPress={() => draft.set({ qty: Math.min(10, draft.qty + 1) })} disabled={isDomestic || draft.qty >= 10} style={[styles.step, styles.stepPrimary, (isDomestic || draft.qty >= 10) && { opacity: 0.4 }]} accessibilityLabel="Increase quantity">
+                <Text variant="h2" style={{ minWidth: 26, textAlign: "center" }}>
+                  {empties}
+                </Text>
+                <Pressable onPress={() => draft.set({ emptiesToCollect: Math.min(20, empties + 1) })} style={[styles.step, styles.stepPrimary]} accessibilityLabel="More empties">
                   <Ionicons name="add" size={20} color="#fff" />
                 </Pressable>
               </Row>
             </Row>
           </Card>
           <Text variant="caption" tone="faint">
-            Prices are illustrative and set by the agency. Convenience fee and GST shown at review.
+            Up to 20 cylinders per order. Prices are illustrative and set by the agency; 18% GST added at review.
           </Text>
         </View>
       )}
@@ -118,8 +145,6 @@ export default function CylinderScreen() {
 }
 
 const styles = StyleSheet.create({
-  opt: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 18, backgroundColor: t.colors.surface, borderWidth: 1.5, borderColor: t.colors.border },
-  optActive: { borderColor: t.colors.primary, backgroundColor: "#FFFAF7" },
   step: { width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.surfaceAlt, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: t.colors.border },
   stepPrimary: { backgroundColor: t.colors.primary, borderColor: t.colors.primary },
 });

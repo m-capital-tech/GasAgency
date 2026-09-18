@@ -10,18 +10,19 @@ import { post } from "@/lib/api";
 import { Badge, Button, Card, Chip, EmptyState, Input, Row, Screen, Sheet, SkeletonList, Text, t } from "@/ui";
 
 const FAQ = [
-  { q: "How long does a standard delivery take?", a: "Usually within 1–2 days. Express deliveries arrive the same day, within about 3 hours." },
-  { q: "Why can't I book another domestic cylinder?", a: "Domestic refills need a minimum gap (default 21 days) and are limited to 15 per year, as per oil-company rules." },
-  { q: "What is the delivery OTP?", a: "A 4-digit code shown in the app after booking. Share it only with the delivery partner when the cylinder arrives." },
-  { q: "Can I pay by cash?", a: "Yes, if your agency allows cash on delivery. You'll see the option at checkout." },
-  { q: "How do refunds work?", a: "If a paid order is rejected or cancelled before delivery, the amount is refunded to the source in 3–5 working days." },
+  { q: "When will my cylinders arrive?", a: "Pick 'Before opening' for a 6–9 AM delivery the next day, or Express for delivery within 3 hours. Standard is any time the next working day." },
+  { q: "How does credit work?", a: "Once GasSetu verifies your business, you get a credit limit and net-15 or net-30 terms. Each delivery raises an invoice; pay invoices from Billing and get one consolidated monthly statement." },
+  { q: "What is the delivery OTP?", a: "A 4-digit code shown in the app for each order. Your outlet manager shares it with the delivery partner on arrival." },
+  { q: "What about empty cylinders?", a: "Tell us how many empties to collect when ordering; the partner picks them up on the same trip and they're credited back to your agency account." },
+  { q: "Do I get GST invoices?", a: "Yes — add your GSTIN in Profile and every invoice carries it with CGST/SGST split, so you can claim input credit." },
+  { q: "Can I order for more than one outlet?", a: "Yes. Add outlets from Profile → Outlets. Each outlet has its own stock estimate and can have its own standing order." },
 ];
 const CATS: { key: ComplaintCategory; label: string }[] = [
   { key: "delivery_delay", label: "Delivery delay" },
-  { key: "wrong_cylinder", label: "Wrong cylinder" },
+  { key: "short_supply", label: "Short supply" },
   { key: "leak", label: "Leak / safety" },
   { key: "staff_behaviour", label: "Staff behaviour" },
-  { key: "payment", label: "Payment issue" },
+  { key: "billing", label: "Billing / invoice" },
   { key: "other", label: "Other" },
 ];
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
@@ -31,10 +32,10 @@ const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   escalated: { bg: t.colors.dangerSoft, fg: t.colors.danger },
 };
 const SAFETY = [
-  "Always keep the cylinder upright, in a ventilated spot away from heat.",
-  "Turn the regulator knob OFF after cooking and when leaving home.",
-  "Check the rubber tube for cracks; replace it every 2 years.",
-  "If you smell gas: don't switch anything on or off, open windows, close the regulator, and step outside.",
+  "Store cylinders upright in a ventilated, locked cage away from the cooking line and heat sources.",
+  "Close all regulators at the end of service; assign one person to check before locking up.",
+  "Replace ISI-marked hoses every 2 years and get a fitter to inspect manifolds every 6 months.",
+  "If you smell gas: no switches, no flames, open doors, close cylinder valves, clear the kitchen and call 1906.",
 ];
 
 /** C15 — Support: FAQ, complaints, emergency */
@@ -58,7 +59,7 @@ export default function SupportScreen() {
     if (!parsed.success) return setError("Please describe the issue in a few words (min 5 characters).");
     setBusy(true);
     try {
-      await post(`/customers/${userId}/complaints`, parsed.data);
+      await post(`/businesses/${userId}/complaints`, parsed.data);
       qc.invalidateQueries({ queryKey: keys.complaints(userId) });
       setOpen(false);
       setText("");

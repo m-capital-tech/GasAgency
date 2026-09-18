@@ -21,7 +21,7 @@ export default function SuccessScreen() {
       footer={
         <View style={{ gap: 8 }}>
           <Button title="Track order" size="lg" icon="navigate" onPress={() => router.replace(`/order/${id}`)} />
-          <Button title="Back to home" variant="ghost" onPress={() => router.replace("/(customer)/home")} />
+          <Button title="Back to home" variant="ghost" onPress={() => router.replace("/(business)/home")} />
         </View>
       }
     >
@@ -30,10 +30,10 @@ export default function SuccessScreen() {
           <Ionicons name="checkmark" size={44} color="#fff" />
         </Animated.View>
         <Text variant="title" center>
-          Booking confirmed!
+          Order confirmed!
         </Text>
         <Text variant="body" tone="muted" center style={{ maxWidth: 300 }}>
-          {b ? `${b.agencyName} has your order. We'll notify you at every step.` : ""}
+          {b ? `${b.agencyName} has your order for ${b.outlet.label}. We'll notify you at every step.` : ""}
         </Text>
       </View>
       {q.isLoading ? (
@@ -44,7 +44,7 @@ export default function SuccessScreen() {
         <View style={{ gap: 12, marginTop: 24 }}>
           <Card tone="navy">
             <Text variant="label" style={{ color: "#9FB3C8" }}>
-              Delivery OTP — share only with the delivery partner
+              Delivery OTP — the outlet shares this with the delivery partner
             </Text>
             <Row between style={{ marginTop: 8 }}>
               <Row gap={8}>
@@ -60,10 +60,12 @@ export default function SuccessScreen() {
             </Row>
           </Card>
           <Card>
-            <KeyValue k="Booking ID" v={b.code} strong />
+            <KeyValue k="Order" v={b.code} strong />
+            <KeyValue k="Invoice" v={b.invoiceNo} />
             <KeyValue k="Items" v={b.items.map((i) => `${i.qty} × ${i.name}`).join(", ")} />
+            <KeyValue k="Empties to return" v={String(b.emptiesToCollect)} />
             <KeyValue k="Estimated delivery" v={b.eta ? `${formatDateShort(b.eta)}, by ${formatTime(b.eta)}` : "—"} />
-            <KeyValue k="Payment" v={b.payment.method === "cod" ? `Cash on delivery · ${formatINR(b.charges.total)}` : `Paid ${formatINR(b.charges.total)} via ${b.payment.method.toUpperCase()}`} tone={b.payment.method === "cod" ? "ink" : "success"} />
+            <KeyValue k="Payment" v={b.payment.method === "credit" ? `On credit · ${formatINR(b.charges.total)} due after delivery` : b.payment.method === "cod" ? `Cash on delivery · ${formatINR(b.charges.total)}` : `Paid ${formatINR(b.charges.total)} via ${b.payment.method.toUpperCase()}`} tone={b.payment.method === "cod" || b.payment.method === "credit" ? "ink" : "success"} />
             {b.payment.gatewayRef ? <KeyValue k="Payment ref" v={b.payment.gatewayRef} /> : null}
           </Card>
         </View>

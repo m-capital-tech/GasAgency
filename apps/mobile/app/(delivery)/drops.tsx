@@ -6,11 +6,11 @@ import { Chip, EmptyState, ErrorState, Row, Screen, SkeletonList, Text } from "@
 
 /** D2 — Drop list, ordered by route */
 export default function DropsScreen() {
-  const { staff, drops, pending, done } = useMyDrops();
+  const { staff, drops, pending, done, cylindersToLoad } = useMyDrops();
   const [tab, setTab] = useState<"pending" | "done">("pending");
   const list = tab === "pending" ? pending : done;
   return (
-    <Screen title="Today's drops" subtitle={`${pending.length} pending · ${done.length} completed`} tabBar refreshing={drops.isRefetching} onRefresh={() => drops.refetch()}>
+    <Screen title="Today's drops" subtitle={`${pending.length} pending · ${cylindersToLoad} cylinders to load · ${done.length} done`} tabBar refreshing={drops.isRefetching} onRefresh={() => drops.refetch()}>
       <Row gap={8} style={{ marginBottom: 14 }}>
         <Chip label={`Pending (${pending.length})`} active={tab === "pending"} onPress={() => setTab("pending")} />
         <Chip label={`Completed (${done.length})`} active={tab === "done"} onPress={() => setTab("done")} />

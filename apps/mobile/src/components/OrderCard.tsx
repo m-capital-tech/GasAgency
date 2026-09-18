@@ -5,24 +5,28 @@ import { StyleSheet, View } from "react-native";
 import type { ExpandedBooking } from "@/features/hooks";
 import { Card, Row, StatusBadge, Text, t } from "@/ui";
 
+export const payLabel = (b: ExpandedBooking) =>
+  b.payment.method === "credit" ? (b.payment.status === "CREDIT_PAID" ? "Credit · paid" : b.payment.status === "CREDIT_OVERDUE" ? "Credit · overdue" : "On credit") : b.payment.method === "cod" ? (b.payment.status === "COD_COLLECTED" ? "Cash paid" : "Cash on delivery") : b.payment.status === "PAID" ? `Paid · ${b.payment.method.toUpperCase()}` : b.payment.status === "REFUNDED" ? "Refunded" : "Payment pending";
+
 export function OrderRow({ b }: { b: ExpandedBooking }) {
   const router = useRouter();
-  const item = b.items[0];
   return (
     <Card onPress={() => router.push(`/order/${b.id}`)} padded={false} style={{ borderRadius: 16 }}>
       <Row gap={12} style={{ padding: 14 }}>
         <View style={styles.icon}>
-          <Ionicons name="flame" size={18} color={t.colors.primary} />
+          <Text variant="bodyStrong" tone="primary">
+            {b.cylinders}
+          </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">{b.code}</Text>
+          <Text variant="bodyStrong">{b.items.map((i) => `${i.qty} × ${i.name.replace(" Commercial", "")}`).join(" + ")}</Text>
           <Text variant="caption" tone="muted">
-            {formatDateShort(b.createdAt)}, {formatTime(b.createdAt)}
+            {b.code} · {b.outlet.label} · {formatDateShort(b.createdAt)}, {formatTime(b.createdAt)}
           </Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 4 }}>
-          <Text variant="small" tone="muted">
-            {item.qty} × {item.name.split(" ").slice(0, 2).join(" ")}
+          <Text variant="small" style={{ fontWeight: "600" }}>
+            {formatINR(b.charges.total, { decimals: false })}
           </Text>
           <StatusBadge status={b.status} />
         </View>
@@ -39,12 +43,12 @@ export function ActiveOrderCard({ b }: { b: ExpandedBooking }) {
   return (
     <Card onPress={() => router.push(`/order/${b.id}`)} tone="navy">
       <Row between>
-        <View>
-          <Text variant="label" style={{ color: "#C6953F" }}>
-            Active order · {b.code}
+        <View style={{ flex: 1 }}>
+          <Text variant="label" style={{ color: t.colors.gold }}>
+            {b.code} · {b.outlet.label}
           </Text>
           <Text variant="h3" style={{ color: "#fff", marginTop: 2 }}>
-            {awaitingPayment ? "Payment pending" : STATUS_LABELS[b.status]}
+            {awaitingPayment ? "Payment pending" : STATUS_LABELS[b.status]} · {b.items.map((i) => `${i.qty} × ${i.name.split(" ")[0]}`).join(" + ")}
           </Text>
         </View>
         <View style={styles.trackBtn}>
@@ -67,8 +71,8 @@ export function ActiveOrderCard({ b }: { b: ExpandedBooking }) {
           : b.status === "DELIVERY_FAILED"
             ? "Delivery attempt failed — agency will reschedule"
             : b.eta
-              ? `Expected by ${formatDateShort(b.eta)}, ${formatTime(b.eta)} · ${formatINR(b.charges.total)}`
-              : formatINR(b.charges.total)}
+              ? `Expected by ${formatDateShort(b.eta)}, ${formatTime(b.eta)} · ${payLabel(b)}`
+              : payLabel(b)}
       </Text>
     </Card>
   );

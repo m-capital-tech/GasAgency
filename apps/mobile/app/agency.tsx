@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Linking, View } from "react-native";
 import { AgencyCard } from "@/components/AgencyCard";
 import { toast } from "@/components/Toast";
-import { keys, useAgency, useCustomer, useUserId } from "@/features/hooks";
+import { useAgency, useBusiness, useUserId } from "@/features/hooks";
 import { get, post } from "@/lib/api";
 import { Badge, Button, Card, Chip, EmptyState, Input, KeyValue, Row, Screen, Sheet, SkeletonCard, Text, t } from "@/ui";
 
@@ -15,10 +15,10 @@ export default function AgencyScreen() {
   const params = useLocalSearchParams<{ change?: string }>();
   const userId = useUserId();
   const qc = useQueryClient();
-  const customer = useCustomer();
+  const customer = useBusiness();
   const agency = useAgency(customer.data?.assignedAgencyId);
-  const requests = useQuery({ queryKey: ["transfers", userId], queryFn: () => get(`/customers/${userId}/transfer-requests`), enabled: !!userId });
-  const nearby = useQuery({ queryKey: ["nearby", userId], queryFn: () => get(`/agencies/nearest?lat=${customer.data!.addresses[0].lat}&lng=${customer.data!.addresses[0].lng}&pincode=${customer.data!.addresses[0].pincode}`), enabled: !!customer.data });
+  const requests = useQuery({ queryKey: ["transfers", userId], queryFn: () => get(`/businesses/${userId}/transfer-requests`), enabled: !!userId });
+  const nearby = useQuery({ queryKey: ["nearby", userId], queryFn: () => get(`/agencies/nearest?lat=${customer.data!.outlets[0].lat}&lng=${customer.data!.outlets[0].lng}&pincode=${customer.data!.outlets[0].pincode}`), enabled: !!customer.data });
   const [open, setOpen] = useState(params.change === "1");
   const [reason, setReason] = useState("");
   const [to, setTo] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function AgencyScreen() {
     if (reason.trim().length < 5) return toast.error("Tell us why", "A short reason helps the agency and our team.");
     setBusy(true);
     try {
-      await post(`/customers/${userId}/transfer-request`, { reason, toAgencyId: to });
+      await post(`/businesses/${userId}/transfer-request`, { reason, toAgencyId: to });
       qc.invalidateQueries({ queryKey: ["transfers", userId] });
       setOpen(false);
       toast.success("Request sent", "Your agency and our team will review it.");
@@ -55,9 +55,11 @@ export default function AgencyScreen() {
             </Text>
             {agency.data.cylinderTypes.map((c: any) => {
               const p = agency.data.prices.find((x: any) => x.cylinderTypeId === c.id);
-              return <KeyValue key={c.id} k={c.name} v={`${formatINR(p?.price ?? 0, { decimals: false })}${p?.deliveryCharge ? ` + ${formatINR(p.deliveryCharge, { decimals: false })} delivery` : " · free delivery"}`} />;
+              return <KeyValue key={c.id} k={c.name} v={`${formatINR(p?.price ?? 0, { decimals: false })}${p?.slabs?.length ? ` · ${p.slabs[p.slabs.length - 1].minQty}+ @ ${formatINR(p.slabs[p.slabs.length - 1].price, { decimals: false })}` : ""}`} />;
             })}
+            <KeyValue k="Delivery charge" v={agency.data.prices[0]?.deliveryCharge ? formatINR(agency.data.prices[0].deliveryCharge, { decimals: false }) + " per order" : "Free"} />
             <KeyValue k="Cash on delivery" v={agency.data.codEnabled ? "Available" : "Not available"} tone={agency.data.codEnabled ? "success" : "muted"} />
+            <KeyValue k="Credit accounts" v={agency.data.creditEnabled ? "Offered" : "Not offered"} tone={agency.data.creditEnabled ? "success" : "muted"} />
             <KeyValue k="Serves pincodes" v={agency.data.serviceArea.pincodes.join(", ")} />
           </Card>
           <Row gap={8}>
@@ -86,7 +88,7 @@ export default function AgencyScreen() {
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Request agency change">
         <Text variant="small" tone="muted" style={{ marginBottom: 12 }}>
-          Your current agency and the GasSetu team will review this. Domestic connections may need the oil company's approval.
+          Your current agency and the GasSetu team will review this. Outstanding credit invoices must be cleared before a transfer.
         </Text>
         <Text variant="caption" tone="muted" style={{ marginBottom: 8 }}>
           Preferred agency (optional)

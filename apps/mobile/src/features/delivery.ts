@@ -17,6 +17,7 @@ export interface StaffProfile {
   onTimePct: number;
   failedPct: number;
   currentDrops: number;
+  currentCylinders: number;
   todayAssigned: number;
   todayDelivered: number;
   todayFailed: number;
@@ -39,5 +40,5 @@ export function useStaff() {
 export function useMyDrops() {
   const staff = useStaff();
   const drops = useDrops(staff.data?.id);
-  return { staff, drops, pending: (drops.data?.pending ?? []) as ExpandedBooking[], done: (drops.data?.done ?? []) as ExpandedBooking[] };
+  return { staff, drops, pending: (drops.data?.pending ?? []) as ExpandedBooking[], done: (drops.data?.done ?? []) as ExpandedBooking[], cylindersToLoad: (drops.data?.cylindersToLoad ?? 0) as number };
 }

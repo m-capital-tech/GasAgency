@@ -3,6 +3,7 @@ import { STATUS_LABELS, TIMELINE_STEPS, canCancel, formatDateShort, formatDateTi
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Linking, StyleSheet, View } from "react-native";
+import { payLabel } from "@/components/OrderCard";
 import { TrackingMap } from "@/components/TrackingMap";
 import { toast } from "@/components/Toast";
 import { useDraft } from "@/features/bookingDraft";
@@ -12,10 +13,10 @@ import { Avatar, Button, Card, Divider, ErrorState, IconButton, KeyValue, Row, S
 
 const STEP_COPY: Record<string, { title: string; sub: string }> = {
   PLACED: { title: "Order placed", sub: "Sent to your agency" },
-  ACCEPTED: { title: "Accepted by agency", sub: "Preparing your cylinder" },
-  ASSIGNED: { title: "Delivery partner assigned", sub: "Will pick up shortly" },
-  OUT_FOR_DELIVERY: { title: "Out for delivery", sub: "On the way to you" },
-  DELIVERED: { title: "Delivered", sub: "Enjoy! Reminder scheduled" },
+  ACCEPTED: { title: "Accepted by agency", sub: "Loading your cylinders" },
+  ASSIGNED: { title: "Delivery partner assigned", sub: "Will dispatch shortly" },
+  OUT_FOR_DELIVERY: { title: "Out for delivery", sub: "On the way to the outlet" },
+  DELIVERED: { title: "Delivered", sub: "Empties collected · invoice issued" },
 };
 
 /** C11 — Order tracking */
@@ -55,50 +56,46 @@ export default function OrderScreen() {
   const payNow = async () => {
     try {
       const out = await flow.pay(b, b.payment.method);
-      if (out.kind === "paid") toast.success("Payment successful", `Booking ${b.code} placed.`);
-      else if (out.kind === "failed") toast.error("Payment failed", "Retry or switch to cash on delivery.");
+      if (out.kind === "paid") toast.success("Payment successful", `Order ${b.code} placed.`);
+      else if (out.kind === "failed") toast.error("Payment failed", "Retry, put it on credit, or pay cash on delivery.");
     } catch (e) {
       toast.error("Payment error", (e as Error).message);
     }
   };
-
   const rebook = () => {
-    draft.set({ cylinderTypeId: b.items[0].cylinderTypeId, qty: b.items[0].qty, slot: "standard", paymentMethod: b.payment.method });
+    draft.reset();
+    const qty: Record<string, number> = {};
+    b.items.forEach((i) => (qty[i.cylinderTypeId] = i.qty));
+    draft.set({ outletId: b.outletId, qty, slot: b.slot, paymentMethod: b.payment.method, emptiesToCollect: b.emptiesToCollect });
     router.push("/book/cylinder");
   };
 
   return (
-    <Screen
-      title={b.code}
-      subtitle={`${formatDateShort(b.createdAt)}, ${formatTime(b.createdAt)}`}
-      back
-      right={<StatusBadge status={b.status} />}
-      refreshing={q.isRefetching}
-      onRefresh={() => q.refetch()}
-    >
+    <Screen title={b.code} subtitle={`${b.outlet.label} · ${formatDateShort(b.createdAt)}, ${formatTime(b.createdAt)}`} back right={<StatusBadge status={b.status} />} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
       <View style={{ gap: 12 }}>
-        {/* payment pending */}
         {awaitingPayment ? (
-          <Card style={{ borderColor: t.colors.warning }}>
+          <Card style={{ borderColor: t.colors.gold }}>
             <Text variant="bodyStrong">{b.status === "PAYMENT_FAILED" ? "Payment failed" : "Complete your payment"}</Text>
             <Text variant="small" tone="muted" style={{ marginTop: 2 }}>
-              {b.status === "PAYMENT_FAILED" ? "No money was deducted. Retry, or pay cash on delivery." : "Your order will be sent to the agency once paid."}
+              {b.status === "PAYMENT_FAILED" ? "No money was deducted. Retry, or switch to credit / cash." : "Your order goes to the agency once paid."}
             </Text>
             <Row gap={8} style={{ marginTop: 12 }}>
               <View style={{ flex: 1 }}>
-                <Button title={`Pay ${formatINR(b.charges.total)}`} size="sm" loading={flow.busy} onPress={payNow} />
+                <Button title={`Pay ${formatINR(b.charges.total, { decimals: false })}`} size="sm" loading={flow.busy} onPress={payNow} />
               </View>
               <View style={{ flex: 1 }}>
-                <Button title="Cash on delivery" size="sm" variant="secondary" loading={flow.busy} onPress={() => flow.switchToCod(b).then(() => toast.success("Switched to cash on delivery")).catch((e) => toast.error("Not available", e.message))} />
+                <Button title="On credit" size="sm" variant="secondary" loading={flow.busy} onPress={() => flow.switchPayment(b, "credit").then(() => toast.success("Placed on credit")).catch((e) => toast.error("Not available", e.message))} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button title="Cash" size="sm" variant="ghost" loading={flow.busy} onPress={() => flow.switchPayment(b, "cod").then(() => toast.success("Switched to cash on delivery")).catch((e) => toast.error("Not available", e.message))} />
               </View>
             </Row>
           </Card>
         ) : null}
 
-        {/* live map */}
         {live || b.status === "ASSIGNED" || b.status === "DELIVERED" ? (
           <Card padded={false}>
-            <TrackingMap from={b.agencyLocation} to={{ lat: b.address.lat, lng: b.address.lng }} route={live ? b.route : null} staff={live && b.staff ? b.staff.location : b.status === "DELIVERED" ? null : (b.staff?.location ?? null)} height={live ? 260 : 160} interactive={live} />
+            <TrackingMap from={b.agencyLocation} to={{ lat: b.outlet.lat, lng: b.outlet.lng }} route={live ? b.route : null} staff={live && b.staff ? b.staff.location : b.status === "DELIVERED" ? null : (b.staff?.location ?? null)} height={live ? 260 : 160} interactive={live} />
             {live ? (
               <Row between style={{ padding: 14 }}>
                 <View>
@@ -126,7 +123,6 @@ export default function OrderScreen() {
           </Card>
         ) : null}
 
-        {/* delivery partner */}
         {b.staff && !terminal ? (
           <Card>
             <Row gap={12}>
@@ -143,7 +139,6 @@ export default function OrderScreen() {
           </Card>
         ) : null}
 
-        {/* OTP for non-live states */}
         {!terminal && !awaitingPayment && !live ? (
           <Card tone="soft">
             <Row between>
@@ -152,7 +147,7 @@ export default function OrderScreen() {
                   Delivery OTP
                 </Text>
                 <Text variant="small" tone="muted">
-                  Share with the delivery partner only
+                  Outlet manager shares this with the delivery partner
                 </Text>
               </View>
               <Text variant="title" tone="primary" style={{ letterSpacing: 4 }}>
@@ -176,7 +171,6 @@ export default function OrderScreen() {
           </Card>
         ) : null}
 
-        {/* timeline */}
         {!awaitingPayment && b.status !== "REJECTED" && b.status !== "CANCELLED" ? (
           <Card>
             <Text variant="label" tone="faint" style={{ marginBottom: 10 }}>
@@ -207,7 +201,7 @@ export default function OrderScreen() {
         ) : null}
 
         {b.status === "REJECTED" || b.status === "CANCELLED" ? (
-          <Card style={{ borderColor: t.colors.border }}>
+          <Card>
             <Text variant="bodyStrong">{STATUS_LABELS[b.status]}</Text>
             <Text variant="small" tone="muted">
               {b.rejectReason ?? b.cancelReason ?? ""}
@@ -216,20 +210,22 @@ export default function OrderScreen() {
           </Card>
         ) : null}
 
-        {/* details */}
         <Card>
           <Text variant="label" tone="faint" style={{ marginBottom: 6 }}>
             Details
           </Text>
           {b.items.map((i) => (
-            <KeyValue key={i.cylinderTypeId} k={`${i.qty} × ${i.name}`} v={formatINR(i.unitPrice * i.qty)} />
+            <KeyValue key={i.cylinderTypeId} k={`${i.qty} × ${i.name} @ ${formatINR(i.unitPrice, { decimals: false })}`} v={formatINR(i.unitPrice * i.qty)} />
           ))}
-          <KeyValue k="Delivery + fees + GST" v={formatINR(b.charges.delivery + b.charges.convenience + b.charges.express + b.charges.gst)} />
+          <KeyValue k="Delivery + fees" v={formatINR(b.charges.delivery + b.charges.convenience + b.charges.express)} />
+          <KeyValue k="GST @ 18%" v={formatINR(b.charges.gst)} />
           <Divider />
           <KeyValue k="Total" v={formatINR(b.charges.total)} strong />
-          <KeyValue k="Payment" v={b.payment.method === "cod" ? (b.payment.status === "COD_COLLECTED" ? "Cash collected" : "Cash on delivery") : `${b.payment.method.toUpperCase()} · ${b.payment.status === "PAID" ? "Paid" : b.payment.status === "REFUNDED" ? "Refunded" : b.payment.status}`} />
+          <KeyValue k="Payment" v={payLabel(b)} tone={b.payment.status === "CREDIT_OVERDUE" ? "danger" : "ink"} />
+          {b.payment.method === "credit" && b.payment.dueAt ? <KeyValue k="Invoice due" v={formatDateShort(b.payment.dueAt)} /> : null}
+          <KeyValue k="Empties" v={b.status === "DELIVERED" ? `${b.emptiesCollected} collected` : `${b.emptiesToCollect} to collect`} />
           <KeyValue k="Agency" v={b.agencyName} />
-          <KeyValue k="Address" v={`${b.address.line1}, ${b.address.pincode}`} />
+          <KeyValue k="Outlet" v={`${b.outlet.label} · ${b.outlet.line1}`} />
           <Row gap={8} style={{ marginTop: 10 }}>
             <View style={{ flex: 1 }}>
               <Button title="Invoice" variant="ghost" size="sm" icon="document-text-outline" onPress={() => router.push(`/order/invoice?id=${b.id}`)} />
@@ -243,31 +239,16 @@ export default function OrderScreen() {
           </Row>
         </Card>
 
-        {terminal ? <Button title="Book again" icon="repeat" onPress={rebook} /> : null}
-        {canCancel(b.status) ? <Button title="Cancel booking" variant="ghost" onPress={() => setCancelOpen(true)} /> : null}
+        {terminal ? <Button title="Order again" icon="repeat" onPress={rebook} /> : null}
+        {canCancel(b.status) ? <Button title="Cancel order" variant="ghost" onPress={() => setCancelOpen(true)} /> : null}
       </View>
 
-      <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel this booking?">
+      <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel this order?">
         <Text variant="small" tone="muted" style={{ marginBottom: 12 }}>
           {b.payment.status === "PAID" ? `Your payment of ${formatINR(b.charges.total)} will be refunded in 3–5 working days.` : "No charges apply."}
         </Text>
-        {["Changed my mind", "Ordered by mistake", "Found another supplier", "Delivery too slow"].map((r) => (
-          <Button
-            key={r}
-            title={r}
-            variant="ghost"
-            style={{ marginBottom: 8 }}
-            loading={cancel.isPending}
-            onPress={() =>
-              cancel
-                .mutateAsync({ id: b.id, reason: r })
-                .then(() => {
-                  setCancelOpen(false);
-                  toast.success("Booking cancelled");
-                })
-                .catch((e) => Alert.alert("Couldn't cancel", e.message))
-            }
-          />
+        {["Requirement changed", "Ordered by mistake", "Outlet closed tomorrow", "Delivery too slow"].map((r) => (
+          <Button key={r} title={r} variant="ghost" style={{ marginBottom: 8 }} loading={cancel.isPending} onPress={() => cancel.mutateAsync({ id: b.id, reason: r }).then(() => { setCancelOpen(false); toast.success("Order cancelled"); }).catch((e) => Alert.alert("Couldn't cancel", e.message))} />
         ))}
       </Sheet>
     </Screen>

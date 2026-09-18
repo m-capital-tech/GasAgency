@@ -8,9 +8,9 @@ import { useBookingAction } from "@/features/hooks";
 import { Button, Input, Screen, Text, t } from "@/ui";
 
 const REASONS: { key: DeliveryFailReason; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "customer_not_home", label: "Customer not at home", sub: "No answer at door / phone", icon: "home-outline" },
-  { key: "wrong_address", label: "Wrong address", sub: "Couldn't locate the address", icon: "map-outline" },
-  { key: "refused", label: "Customer refused", sub: "Didn't want the cylinder", icon: "hand-left-outline" },
+  { key: "outlet_closed", label: "Outlet closed", sub: "No one to receive / sign", icon: "storefront-outline" },
+  { key: "wrong_address", label: "Wrong address", sub: "Couldn't locate the outlet", icon: "map-outline" },
+  { key: "refused", label: "Outlet refused", sub: "Wrong quantity / didn't want it", icon: "hand-left-outline" },
   { key: "other", label: "Other", sub: "Describe in notes", icon: "ellipsis-horizontal-circle-outline" },
 ];
 

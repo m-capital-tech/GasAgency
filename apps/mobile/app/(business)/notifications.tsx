@@ -10,12 +10,13 @@ import { Chip, EmptyState, ErrorState, Row, Screen, SkeletonList, Text, t } from
 
 const ICON: Record<NotificationType, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
   status: { name: "cube-outline", color: t.colors.primary },
-  reminder: { name: "alarm-outline", color: t.colors.warning },
+  stock: { name: "flame-outline", color: t.colors.goldDark },
+  billing: { name: "receipt-outline", color: t.colors.goldDark },
   offer: { name: "pricetag-outline", color: t.colors.success },
-  system: { name: "information-circle-outline", color: t.colors.info },
+  system: { name: "information-circle-outline", color: t.colors.inkMuted },
 };
 
-/** C14 — Notifications */
+/** C14 — Alerts */
 export default function NotificationsScreen() {
   const q = useNotifications();
   const qc = useQueryClient();
@@ -29,7 +30,7 @@ export default function NotificationsScreen() {
   };
   return (
     <Screen
-      title="Notifications"
+      title="Alerts"
       tabBar
       right={
         <Pressable onPress={markAll} accessibilityRole="button" hitSlop={8}>
@@ -42,8 +43,8 @@ export default function NotificationsScreen() {
       onRefresh={() => q.refetch()}
     >
       <Row gap={8} style={{ marginBottom: 14, flexWrap: "wrap" }}>
-        {(["all", "status", "reminder", "offer"] as const).map((f) => (
-          <Chip key={f} label={f === "all" ? "All" : f === "status" ? "Order updates" : f === "reminder" ? "Reminders" : "Offers"} active={filter === f} onPress={() => setFilter(f)} />
+        {(["all", "status", "stock", "billing", "offer"] as const).map((f) => (
+          <Chip key={f} label={f === "all" ? "All" : f === "status" ? "Orders" : f === "stock" ? "Stock" : f === "billing" ? "Billing" : "Offers"} active={filter === f} onPress={() => setFilter(f)} />
         ))}
       </Row>
       {q.isLoading ? (
@@ -51,7 +52,7 @@ export default function NotificationsScreen() {
       ) : q.isError ? (
         <ErrorState onRetry={() => q.refetch()} />
       ) : list.length === 0 ? (
-        <EmptyState icon="notifications-off-outline" title="You're all caught up" body="Order updates, refill reminders and offers will appear here." />
+        <EmptyState icon="notifications-off-outline" title="You're all caught up" body="Order updates, low-stock warnings and invoice reminders will appear here." />
       ) : (
         <View style={{ gap: 8 }}>
           {list.map((n) => {
@@ -65,6 +66,8 @@ export default function NotificationsScreen() {
                     qc.invalidateQueries({ queryKey: keys.notifications(userId) });
                   }
                   if (n.bookingId) router.push(`/order/${n.bookingId}`);
+                  else if (n.type === "billing") router.push("/(business)/billing");
+                  else if (n.type === "stock") router.push("/book/cylinder");
                 }}
                 style={[styles.row, !n.read && styles.unread]}
                 accessibilityRole="button"
@@ -97,7 +100,7 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, backgroundColor: t.colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: t.colors.border },
-  unread: { backgroundColor: "#FFF8F3" },
+  unread: { backgroundColor: "#FBF3EE" },
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.primary, marginTop: 6 },
 });

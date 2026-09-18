@@ -11,8 +11,8 @@ import { useSession } from "@/lib/session";
 import { Button, Card, Input, OtpInput, Screen, Text, t } from "@/ui";
 
 const DEMO_LOGINS = [
-  { label: "Riya · home customer", phone: "9000000001" },
-  { label: "Imran · tiffin centre", phone: "9000000002" },
+  { label: "Imran · Al-Madina Tiffin Centre", phone: "9000000001" },
+  { label: "Fatima · Star Kitchens (cloud)", phone: "9000000002" },
   { label: "Ramesh · delivery partner", phone: "9000000003" },
 ];
 
@@ -61,7 +61,7 @@ export default function LoginScreen() {
       if (r.user.role === "delivery") router.replace("/(delivery)/home");
       else if (!r.profile) router.replace("/(onboarding)/profile");
       else if (!r.profile.assignedAgencyId) router.replace("/(onboarding)/connection");
-      else router.replace("/(customer)/home");
+      else router.replace("/(business)/home");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not verify. Try again.");
     } finally {
@@ -108,7 +108,7 @@ export default function LoginScreen() {
             </Text>
             {DEMO_LOGINS.map((d) => (
               <Pressable key={d.phone} onPress={() => setPhone(d.phone)} accessibilityRole="button" style={styles.demoRow}>
-                <Ionicons name="person-circle-outline" size={20} color={t.colors.inkMuted} />
+                <Ionicons name="storefront-outline" size={20} color={t.colors.inkMuted} />
                 <Text variant="small" style={{ flex: 1 }}>
                   {d.label}
                 </Text>
@@ -118,7 +118,7 @@ export default function LoginScreen() {
               </Pressable>
             ))}
             <Text variant="caption" tone="faint" style={{ marginTop: 6 }}>
-              Any other number creates a new customer. OTP is always {DEMO_OTP}.
+              Any other number registers a new business. OTP is always {DEMO_OTP}.
             </Text>
           </Card>
         </>

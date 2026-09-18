@@ -8,34 +8,38 @@ import { Card, Row, StatusBadge, Text, t } from "@/ui";
 export function DropCard({ b, index, from }: { b: ExpandedBooking; index?: number; from?: { lat: number; lng: number } }) {
   const router = useRouter();
   const live = b.status === "OUT_FOR_DELIVERY";
-  const km = from ? haversineKm(from, { lat: b.address.lat, lng: b.address.lng }).toFixed(1) : null;
+  const km = from ? haversineKm(from, { lat: b.outlet.lat, lng: b.outlet.lng }).toFixed(1) : null;
   return (
     <Card onPress={() => router.push(`/drop/${b.id}`)} style={live ? { borderColor: t.colors.primary, borderWidth: 1.5 } : undefined}>
       <Row gap={12} center={false}>
-        <View style={[styles.idx, live && { backgroundColor: t.colors.primary }]}>
-          {live ? <Ionicons name="navigate" size={16} color="#fff" /> : <Text variant="bodyStrong">{index ?? "•"}</Text>}
-        </View>
+        <View style={[styles.idx, live && { backgroundColor: t.colors.primary }]}>{live ? <Ionicons name="navigate" size={16} color="#fff" /> : <Text variant="bodyStrong">{index ?? "•"}</Text>}</View>
         <View style={{ flex: 1 }}>
           <Row between>
             <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
-              {b.customerName}
+              {b.businessName}
             </Text>
             <StatusBadge status={b.status} />
           </Row>
           <Text variant="small" tone="muted" numberOfLines={2}>
-            {b.address.line1}, {b.address.line2} · {b.address.pincode}
+            {b.outlet.label} · {b.outlet.line1}, {b.outlet.line2} · {b.outlet.pincode}
           </Text>
           <Row gap={10} style={{ marginTop: 6, flexWrap: "wrap" }}>
             <Row gap={4}>
               <Ionicons name="flame-outline" size={13} color={t.colors.inkMuted} />
               <Text variant="caption" tone="muted">
-                {b.items.map((i) => `${i.qty} × ${i.name.split(" ").slice(0, 2).join(" ")}`).join(", ")}
+                {b.items.map((i) => `${i.qty} × ${i.name.split(" ")[0]}`).join(" + ")}
+              </Text>
+            </Row>
+            <Row gap={4}>
+              <Ionicons name="repeat-outline" size={13} color={t.colors.inkMuted} />
+              <Text variant="caption" tone="muted">
+                {b.emptiesToCollect} empties
               </Text>
             </Row>
             <Row gap={4}>
               <Ionicons name={b.payment.method === "cod" ? "cash-outline" : "checkmark-circle-outline"} size={13} color={b.payment.method === "cod" ? "#9C7328" : t.colors.success} />
               <Text variant="caption" style={{ color: b.payment.method === "cod" ? "#9C7328" : t.colors.success }}>
-                {b.payment.method === "cod" ? `Collect ${formatINR(b.charges.total, { decimals: false })}` : "Prepaid"}
+                {b.payment.method === "cod" ? `Collect ${formatINR(b.charges.total, { decimals: false })}` : b.payment.method === "credit" ? "On credit" : "Prepaid"}
               </Text>
             </Row>
             {km ? (
@@ -46,6 +50,10 @@ export function DropCard({ b, index, from }: { b: ExpandedBooking; index?: numbe
             {b.slot === "express" ? (
               <Text variant="caption" tone="primary">
                 ⚡ Express
+              </Text>
+            ) : b.slot === "tomorrow_morning" ? (
+              <Text variant="caption" tone="primary">
+                Before 9 AM
               </Text>
             ) : null}
           </Row>

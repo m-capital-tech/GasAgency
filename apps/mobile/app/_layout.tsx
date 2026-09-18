@@ -61,7 +61,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)/login" />
             <Stack.Screen name="(onboarding)/profile" />
             <Stack.Screen name="(onboarding)/connection" />
-            <Stack.Screen name="(customer)" />
+            <Stack.Screen name="(business)" />
             <Stack.Screen name="(delivery)" />
             <Stack.Screen name="book/cylinder" />
             <Stack.Screen name="book/slot" />
@@ -69,10 +69,11 @@ export default function RootLayout() {
             <Stack.Screen name="book/success" options={{ animation: "fade", gestureEnabled: false }} />
             <Stack.Screen name="order/[id]" />
             <Stack.Screen name="order/invoice" options={{ presentation: "modal" }} />
-            <Stack.Screen name="reminders" />
+            <Stack.Screen name="standing-orders" />
+            <Stack.Screen name="statement/[month]" options={{ presentation: "modal" }} />
             <Stack.Screen name="support" />
             <Stack.Screen name="agency" />
-            <Stack.Screen name="addresses" />
+            <Stack.Screen name="outlets" />
             <Stack.Screen name="drop/[id]" />
             <Stack.Screen name="drop/complete" options={{ presentation: "modal" }} />
             <Stack.Screen name="drop/fail" options={{ presentation: "modal" }} />

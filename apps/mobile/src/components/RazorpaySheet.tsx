@@ -6,16 +6,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { registerCheckoutSheet, resolveCheckout } from "@/lib/providers";
 import { Button, Input, Text, t } from "@/ui";
 
-type Tab = Exclude<PaymentMethod, "cod">;
+type Tab = Exclude<PaymentMethod, "cod" | "credit">;
 const TABS: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "upi", label: "UPI", icon: "qr-code-outline" },
-  { key: "card", label: "Card", icon: "card-outline" },
+  { key: "card", label: "Corporate card", icon: "card-outline" },
   { key: "netbanking", label: "Netbanking", icon: "business-outline" },
-  { key: "wallet", label: "Wallet", icon: "wallet-outline" },
 ];
 const UPI_APPS = ["GPay", "PhonePe", "Paytm", "BHIM"];
 const BANKS = ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "Union Bank"];
-const WALLETS = ["Paytm Wallet", "Amazon Pay", "Mobikwik", "Freecharge"];
 
 /**
  * Mock Razorpay Checkout (PRD C9). Mounted once at the root; opened via `mockRazorpay.checkout()`.
@@ -32,7 +30,7 @@ export function RazorpaySheet() {
   useEffect(() => {
     registerCheckoutSheet((o, prefer) => {
       setOrder(o);
-      setTab((prefer as Tab) && prefer !== "cod" ? (prefer as Tab) : "upi");
+      setTab(prefer && prefer !== "cod" && prefer !== "credit" ? (prefer as Tab) : "upi");
       setChoice("GPay");
       setPhase("form");
     });
@@ -146,7 +144,6 @@ export function RazorpaySheet() {
                     </>
                   )}
                   {tab === "netbanking" && BANKS.map((b) => <Option key={b} label={b} icon="business-outline" />)}
-                  {tab === "wallet" && WALLETS.map((w) => <Option key={w} label={w} icon="wallet-outline" />)}
                 </View>
               </ScrollView>
               <View style={{ paddingHorizontal: 16, gap: 8 }}>

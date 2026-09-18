@@ -15,10 +15,11 @@ export default function DeliveryHome() {
   const router = useRouter();
   const qc = useQueryClient();
   const user = useSession((s) => s.user);
-  const { staff, drops, pending, done } = useMyDrops();
+  const { staff, drops, pending, done, cylindersToLoad } = useMyDrops();
   const s = staff.data;
   const active = pending.find((b) => b.status === "OUT_FOR_DELIVERY");
   const next = pending.find((b) => b.status !== "OUT_FOR_DELIVERY");
+  const emptiesToday = done.filter((b) => b.status === "DELIVERED").reduce((x, b) => x + b.emptiesCollected, 0);
   const toggle = async (online: boolean) => {
     if (!s) return;
     await patch(`/staff/${s.id}/online`, { online });
@@ -55,14 +56,15 @@ export default function DeliveryHome() {
           <>
             <Row gap={10}>
               {[
-                { label: "Assigned", value: pending.length + done.length, icon: "list-outline" as const, color: t.colors.info },
+                { label: "Drops", value: pending.length + done.length, icon: "list-outline" as const, color: t.colors.ink },
+                { label: "To load", value: cylindersToLoad, icon: "cube-outline" as const, color: t.colors.primary },
                 { label: "Delivered", value: done.filter((b) => b.status === "DELIVERED").length, icon: "checkmark-done-outline" as const, color: t.colors.success },
-                { label: "Failed", value: done.filter((b) => b.status !== "DELIVERED").length, icon: "close-circle-outline" as const, color: t.colors.danger },
+                { label: "Empties", value: emptiesToday, icon: "repeat-outline" as const, color: t.colors.goldDark },
               ].map((k) => (
                 <Card key={k.label} style={{ flex: 1 }} padded={false}>
-                  <View style={{ padding: 12, gap: 6 }}>
-                    <Ionicons name={k.icon} size={18} color={k.color} />
-                    <Text variant="title">{k.value}</Text>
+                  <View style={{ padding: 10, gap: 4 }}>
+                    <Ionicons name={k.icon} size={16} color={k.color} />
+                    <Text variant="h2">{k.value}</Text>
                     <Text variant="caption" tone="muted">
                       {k.label}
                     </Text>
@@ -74,7 +76,7 @@ export default function DeliveryHome() {
             <Card tone="navy" onPress={() => router.push("/(delivery)/summary")}>
               <Row between>
                 <View>
-                  <Text variant="label" style={{ color: "#9FB3C8" }}>
+                  <Text variant="label" style={{ color: t.colors.gold }}>
                     Cash in hand
                   </Text>
                   <Text variant="title" style={{ color: "#fff" }}>
@@ -105,7 +107,7 @@ export default function DeliveryHome() {
                   Next drop
                 </Text>
                 <DropCard b={next} index={active ? 2 : 1} from={s?.currentLocation} />
-                {!active ? <Button title="Start trip" icon="navigate" size="lg" style={{ marginTop: 10 }} onPress={() => router.push(`/drop/${next.id}?start=1`)} /> : null}
+                {!active ? <Button title={`Start trip · ${next.cylinders} cylinder${next.cylinders === 1 ? "" : "s"}`} icon="navigate" size="lg" style={{ marginTop: 10 }} onPress={() => router.push(`/drop/${next.id}?start=1`)} /> : null}
               </View>
             ) : !active && !drops.isLoading ? (
               <EmptyState icon="checkmark-done-circle-outline" title="No pending drops" body="You're all done for now. New assignments from the agency will appear here." />

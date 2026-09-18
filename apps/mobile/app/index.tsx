@@ -23,7 +23,7 @@ export default function SplashScreen() {
     if (user.role === "delivery" || mode === "delivery") return <Redirect href="/(delivery)/home" />;
     if (onboarding === "profile") return <Redirect href="/(onboarding)/profile" />;
     if (onboarding === "connection") return <Redirect href="/(onboarding)/connection" />;
-    return <Redirect href="/(customer)/home" />;
+    return <Redirect href="/(business)/home" />;
   }
 
   return (
@@ -36,7 +36,7 @@ export default function SplashScreen() {
           GasSetu
         </Text>
         <Text variant="body" style={{ color: "#E9E3D6" }} center>
-          LPG refills, booked in a tap.{"\n"}Tracked live. Any oil company.
+          Commercial LPG for your kitchen.{"\n"}Ordered in a tap, delivered before service.
         </Text>
       </View>
       <View style={{ gap: 14 }}>

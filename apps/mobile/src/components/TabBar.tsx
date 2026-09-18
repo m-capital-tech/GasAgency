@@ -5,8 +5,9 @@ import { Text, t } from "@/ui";
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   home: ["home", "home-outline"],
-  orders: ["receipt", "receipt-outline"],
+  orders: ["cube", "cube-outline"],
   notifications: ["notifications", "notifications-outline"],
+  billing: ["receipt", "receipt-outline"],
   profile: ["person", "person-outline"],
   drops: ["list", "list-outline"],
   summary: ["stats-chart", "stats-chart-outline"],

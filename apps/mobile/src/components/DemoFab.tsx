@@ -45,7 +45,7 @@ export function DemoFab() {
         const drops = await get(`/staff/${me.profile.id}/drops`);
         return drops.pending[0] ?? null;
       }
-      const list = await get<ExpandedBooking[]>(`/bookings?customerId=${userId}`);
+      const list = await get<ExpandedBooking[]>(`/bookings?businessId=${userId}`);
       return list.find((b) => !["DELIVERED", "REJECTED", "CANCELLED"].includes(b.status)) ?? null;
     },
     enabled: open && !!userId,
@@ -70,7 +70,7 @@ export function DemoFab() {
       const hasAgency = !!r.profile?.assignedAgencyId;
       session.login(r.token, r.user, { hasProfile: !!r.profile, hasAgency });
       setOpen(false);
-      router.replace(r.user.role === "delivery" ? "/(delivery)/home" : "/(customer)/home");
+      router.replace(r.user.role === "delivery" ? "/(delivery)/home" : "/(business)/home");
     }, undefined);
   };
 
@@ -113,8 +113,8 @@ export function DemoFab() {
           Switch persona
         </Text>
         <Row gap={8} style={{ flexWrap: "wrap", marginBottom: 16 }}>
-          <Chip label="Riya · home" icon="person" active={session.user?.phone === "9000000001"} onPress={() => switchPersona("9000000001")} />
-          <Chip label="Imran · business" icon="storefront" active={session.user?.phone === "9000000002"} onPress={() => switchPersona("9000000002")} />
+          <Chip label="Imran · tiffin centre" icon="restaurant" active={session.user?.phone === "9000000001"} onPress={() => switchPersona("9000000001")} />
+          <Chip label="Fatima · cloud kitchen" icon="storefront" active={session.user?.phone === "9000000002"} onPress={() => switchPersona("9000000002")} />
           <Chip label="Ramesh · delivery" icon="bicycle" active={session.user?.phone === "9000000003"} onPress={() => switchPersona("9000000003")} />
           <Chip label="Agency panel ↗" icon="desktop-outline" onPress={() => Linking.openURL(`${WEB_URL}/agency`)} />
           <Chip label="Admin ↗" icon="shield-checkmark-outline" onPress={() => Linking.openURL(`${WEB_URL}/admin`)} />
@@ -135,7 +135,7 @@ export function DemoFab() {
           </Row>
         ) : (
           <Text variant="small" tone="muted" style={{ marginBottom: 8 }}>
-            {session.mode === "delivery" ? "Use the drop list to progress deliveries." : "No open order for this customer."}
+            {session.mode === "delivery" ? "Use the drop list to progress deliveries." : "No open order for this business."}
           </Text>
         )}
 
@@ -147,16 +147,17 @@ export function DemoFab() {
           <Chip label="Delivery failure" icon="alert-circle-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "delivery_failure" }).then((r: any) => toast.info(r.message)))} />
           <Chip label="Low stock" icon="cube-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "low_stock" }).then((r: any) => toast.info(r.message)))} />
           <Chip label="Order burst" icon="flash-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "order_burst" }).then((r: any) => toast.info(r.message)))} />
+          <Chip label="Overdue invoice" icon="receipt-outline" onPress={() => run("sim", () => post("/demo/simulate", { kind: "overdue_invoice" }).then((r: any) => toast.info(r.message)))} />
         </Row>
 
         <Row between style={{ marginBottom: 16, backgroundColor: t.colors.goldSoft, padding: 12, borderRadius: 14 }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text variant="bodyStrong">Bypass refill rules</Text>
+            <Text variant="bodyStrong">Bypass order rules</Text>
             <Text variant="caption" tone="muted">
-              Skips the 21-day gap, yearly quota and one-open-order checks so a persona can rebook during the pitch.
+              Skips the credit-limit, overdue and quantity-cap checks so a persona can keep ordering during the pitch.
             </Text>
           </View>
-          <Switch value={!!demoState.data?.bypassRules} onValueChange={setBypass} trackColor={{ true: t.colors.gold }} accessibilityLabel="Bypass refill rules" />
+          <Switch value={!!demoState.data?.bypassRules} onValueChange={setBypass} trackColor={{ true: t.colors.gold }} accessibilityLabel="Bypass order rules" />
         </Row>
 
         <Text variant="label" tone="faint" style={{ marginBottom: 8 }}>
@@ -170,7 +171,7 @@ export function DemoFab() {
 
         <Button title="Reset demo data" variant="danger" icon="refresh" loading={busy === "reset"} onPress={() => run("reset", () => post("/demo/reset"), "Demo data reset to seed")} />
         <Text variant="caption" tone="faint" center style={{ marginTop: 10 }}>
-          Logins: 9000000001 (Riya) · 9000000002 (Imran) · 9000000003 (Ramesh) · OTP 123456
+          Logins: 9000000001 (Imran) · 9000000002 (Fatima) · 9000000003 (Ramesh) · OTP 123456
         </Text>
       </Sheet>
     </>

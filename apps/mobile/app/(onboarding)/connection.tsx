@@ -16,7 +16,7 @@ const OMCS: { key: OMC; label: string }[] = [
   { key: "BPCL", label: "Bharat Gas" },
 ];
 
-/** C4 — Link an existing LPG connection or auto-assign the nearest agency. */
+/** C4 — Link an existing commercial LPG connection or auto-assign the nearest agency. */
 export default function ConnectionScreen() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -34,7 +34,7 @@ export default function ConnectionScreen() {
     try {
       const r = await fn();
       setResult(r);
-      qc.invalidateQueries({ queryKey: ["customer", user!.id] });
+      qc.invalidateQueries({ queryKey: ["business", user!.id] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong");
     } finally {
@@ -44,12 +44,12 @@ export default function ConnectionScreen() {
 
   const finish = () => {
     setOnboarding("done");
-    toast.success("You're all set!", `${result.agency.name} will serve your refills.`);
-    router.replace("/(customer)/home");
+    toast.success("You're all set!", `${result.agency.name} will supply your outlets.`);
+    router.replace("/(business)/home");
   };
 
   return (
-    <Screen title="Your gas connection" subtitle="Step 2 of 2" back keyboard footer={result ? <Button title="Go to my dashboard" size="lg" onPress={finish} iconRight="arrow-forward" /> : undefined}>
+    <Screen title="Your LPG supply" subtitle="Step 2 of 2" back keyboard footer={result ? <Button title="Go to my dashboard" size="lg" onPress={finish} iconRight="arrow-forward" /> : undefined}>
       {!result ? (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Pressable onPress={() => setChoice("link")} style={[styles.opt, choice === "link" && styles.optActive]} accessibilityRole="radio" accessibilityState={{ selected: choice === "link" }}>
@@ -57,9 +57,9 @@ export default function ConnectionScreen() {
               <Ionicons name="link-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">I already have a connection</Text>
+              <Text variant="bodyStrong">I have a commercial connection</Text>
               <Text variant="small" tone="muted">
-                We'll link your existing distributor
+                Link the distributor on your existing commercial connection
               </Text>
             </View>
             <Ionicons name={choice === "link" ? "radio-button-on" : "radio-button-off"} size={22} color={choice === "link" ? t.colors.primary : t.colors.inkFaint} />
@@ -80,7 +80,7 @@ export default function ConnectionScreen() {
                 ))}
               </Row>
               <Input label="Consumer no. or 17-digit LPG ID" value={consumerNo} onChangeText={(v) => setConsumerNo(v.replace(/\D/g, "").slice(0, 17))} keyboardType="number-pad" placeholder="e.g. 614302877" error={error} hint="Demo: any 6+ digit number works" />
-              <Button title="Find my distributor" onPress={() => run(() => post(`/customers/${user!.id}/connection`, { omc, consumerNo }))} loading={busy} icon="search" />
+              <Button title="Find my distributor" onPress={() => run(() => post(`/businesses/${user!.id}/connection`, { omc, consumerNo }))} loading={busy} icon="search" />
             </View>
           ) : null}
 
@@ -89,9 +89,9 @@ export default function ConnectionScreen() {
               <Ionicons name="navigate-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">I don't have one / commercial buyer</Text>
+              <Text variant="bodyStrong">I don't have one yet</Text>
               <Text variant="small" tone="muted">
-                Auto-assign the nearest agency to me
+                Auto-assign the nearest agency that serves my outlet
               </Text>
             </View>
             <Ionicons name={choice === "new" ? "radio-button-on" : "radio-button-off"} size={22} color={choice === "new" ? t.colors.primary : t.colors.inkFaint} />
@@ -103,7 +103,7 @@ export default function ConnectionScreen() {
                   {error}
                 </Text>
               ) : null}
-              <Button title="Find nearest agency" onPress={() => run(() => post(`/customers/${user!.id}/assign-agency`))} loading={busy} icon="locate" />
+              <Button title="Find nearest agency" onPress={() => run(() => post(`/businesses/${user!.id}/assign-agency`))} loading={busy} icon="locate" />
             </View>
           ) : null}
         </View>
@@ -115,12 +115,12 @@ export default function ConnectionScreen() {
             </View>
             <Text variant="h2">{choice === "link" ? "Connection linked" : "Agency assigned"}</Text>
             <Text variant="small" tone="muted" center>
-              {choice === "link" ? `Your ${omc} connection is now linked to its distributor.` : "The closest approved agency that serves your pincode."}
+              {choice === "link" ? `Your ${omc} commercial connection is now linked to its distributor.` : "The closest approved agency serving your outlet's pincode."}
             </Text>
           </View>
           <AgencyCard agency={result.agency} distanceKm={result.agency.distanceKm} />
           <Text variant="caption" tone="faint" center>
-            Not the right agency? You can request a change anytime from Profile.
+            Not the right agency? Request a change anytime from Profile. Credit terms are set by GasSetu once your business is verified.
           </Text>
         </View>
       )}

@@ -18,7 +18,7 @@ export function usePayFlow() {
       let b = booking;
       if (b.status === "PAYMENT_FAILED") b = await action.mutateAsync({ id: b.id, action: "retry-payment" });
       const order = await mockRazorpay.createOrder(b.id, b.charges.total);
-      const result = await mockRazorpay.checkout(order, method === "cod" ? "upi" : method);
+      const result = await mockRazorpay.checkout(order, method === "cod" || method === "credit" ? "upi" : method);
       if (result.ok) {
         const paid = await checkout.mutateAsync({ bookingId: b.id, ok: true, paymentId: result.razorpay_payment_id, method: result.method });
         return paid.status === "PLACED" ? { kind: "paid", booking: paid } : { kind: "failed", booking: paid };
@@ -27,21 +27,21 @@ export function usePayFlow() {
         toast.info("Payment cancelled", "Your booking is saved. Retry or choose cash on delivery.");
         return { kind: "cancelled", booking: b };
       }
-      const f = await checkout.mutateAsync({ bookingId: b.id, ok: false, method: method === "cod" ? "upi" : method, error: result.error.description });
+      const f = await checkout.mutateAsync({ bookingId: b.id, ok: false, method: method === "cod" || method === "credit" ? "upi" : method, error: result.error.description });
       return { kind: "failed", booking: f };
     } finally {
       setBusy(false);
     }
   };
 
-  const switchToCod = async (booking: ExpandedBooking) => {
+  const switchPayment = async (booking: ExpandedBooking, method: "cod" | "credit") => {
     setBusy(true);
     try {
-      return await action.mutateAsync({ id: booking.id, action: "switch-cod" });
+      return await action.mutateAsync({ id: booking.id, action: "switch-payment", body: { method } });
     } finally {
       setBusy(false);
     }
   };
 
-  return { pay, switchToCod, busy };
+  return { pay, switchPayment, busy };
 }

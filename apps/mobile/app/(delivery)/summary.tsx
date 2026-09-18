@@ -20,6 +20,7 @@ export default function SummaryScreen() {
   const failed = done.filter((b) => b.status !== "DELIVERED");
   const codCollected = delivered.filter((b) => b.payment.method === "cod").reduce((sum, b) => sum + b.charges.total, 0);
   const cylinders = delivered.reduce((sum, b) => sum + b.items.reduce((x, i) => x + i.qty, 0), 0);
+  const empties = delivered.reduce((sum, b) => sum + b.emptiesCollected, 0);
 
   const deposit = () => {
     if (!s) return;
@@ -39,9 +40,9 @@ export default function SummaryScreen() {
   const backToCustomer = async () => {
     const r = await post("/auth/verify", { phone: "9000000001", otp: "123456" });
     login(r.token, r.user, { hasProfile: true, hasAgency: true });
-    setMode("customer");
+    setMode("business");
     qc.clear();
-    router.replace("/(customer)/home");
+    router.replace("/(business)/home");
   };
 
   return (
@@ -77,7 +78,7 @@ export default function SummaryScreen() {
             </Row>
             <Divider />
             <KeyValue k="Cylinders delivered" v={String(cylinders)} />
-            <KeyValue k="Empties collected" v={String(delivered.filter((b) => b.emptyCollected).length)} />
+            <KeyValue k="Empties collected" v={String(empties)} />
             <KeyValue k="On-time rate" v={`${s?.onTimePct ?? 0}%`} />
           </Card>
 
@@ -99,13 +100,13 @@ export default function SummaryScreen() {
           {done.length ? (
             <Card style={{ paddingVertical: 4 }}>
               {done.map((b) => (
-                <ListItem key={b.id} icon={b.status === "DELIVERED" ? "checkmark-circle" : "close-circle"} iconColor={b.status === "DELIVERED" ? t.colors.success : t.colors.danger} title={b.customerName} subtitle={`${b.code} · ${b.deliveredAt ? formatTime(b.deliveredAt) : b.status.replace(/_/g, " ").toLowerCase()} · ${b.payment.method === "cod" ? formatINR(b.charges.total, { decimals: false }) + " cash" : "prepaid"}`} onPress={() => router.push(`/drop/${b.id}`)} />
+                <ListItem key={b.id} icon={b.status === "DELIVERED" ? "checkmark-circle" : "close-circle"} iconColor={b.status === "DELIVERED" ? t.colors.success : t.colors.danger} title={b.businessName} subtitle={`${b.code} · ${b.cylinders} cyl · ${b.deliveredAt ? formatTime(b.deliveredAt) : b.status.replace(/_/g, " ").toLowerCase()} · ${b.payment.method === "cod" ? formatINR(b.charges.total, { decimals: false }) + " cash" : "prepaid"}`} onPress={() => router.push(`/drop/${b.id}`)} />
               ))}
             </Card>
           ) : null}
 
           <Card style={{ paddingVertical: 4 }}>
-            <ListItem icon="person-outline" title="Switch to Customer mode (demo)" subtitle="Back to Riya's app" onPress={backToCustomer} iconColor={t.colors.primary} />
+            <ListItem icon="person-outline" title="Switch to Business mode (demo)" subtitle="Back to Imran's app" onPress={backToCustomer} iconColor={t.colors.primary} />
             <ListItem icon="log-out-outline" title="Log out" danger onPress={() => { logout(); qc.clear(); router.replace("/"); }} />
           </Card>
           <Row gap={6} style={{ justifyContent: "center" }}>
