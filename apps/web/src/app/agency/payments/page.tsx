@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownRight, Banknote, IndianRupee, Landmark, Percent } from "lucide-react";
+import { ArrowDownRight, Banknote, FileText, IndianRupee, Landmark, Percent } from "lucide-react";
 import { PageHeader } from "@/components/shell/Shell";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardSkeleton, CardTitle, EmptyState, ErrorState, Kpi, TBody, THead, Table, Tabs, TabsContent, TabsList, TabsTrigger, Tr } from "@/components/ui";
 import { q, useAgencyId } from "@/features/hooks";
@@ -15,20 +15,79 @@ export default function PaymentsPage() {
   const d = s.data;
   return (
     <>
-      <PageHeader title="Payments & settlements" subtitle="Online payments are settled to your bank via Razorpay Route (mock) after platform commission. COD is reconciled with staff deposits." />
+      <PageHeader title="Payments & receivables" subtitle="Online and credit orders settle via Razorpay Route (mock) after platform commission; credit invoices are collected from accounts on net terms. COD is reconciled with staff deposits." />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="Gross online" value={formatCompactINR(d.summary.gross)} icon={IndianRupee} tone="info" sub="all time" />
-        <Kpi label="Platform commission" value={formatCompactINR(d.summary.commission + d.summary.convenience)} icon={Percent} tone="warning" sub="2% + ₹9 convenience" />
+        <Kpi label="Gross billed" value={formatCompactINR(d.summary.gross)} icon={IndianRupee} tone="info" sub="online + credit" />
+        <Kpi label="Platform fees" value={formatCompactINR(d.summary.commission + d.summary.convenience)} icon={Percent} tone="warning" sub="commission + credit fee + convenience" />
         <Kpi label="Net payout" value={formatCompactINR(d.summary.net)} icon={Landmark} tone="success" sub={`${formatCompactINR(d.summary.settledNet)} settled`} />
-        <Kpi label="Pending payout" value={formatCompactINR(d.summary.pendingNet)} icon={ArrowDownRight} tone="primary" sub="settles T+3" />
+        <Kpi label="Receivables" value={formatCompactINR(d.summary.receivables)} icon={FileText} tone={d.summary.overdue ? "danger" : "primary"} sub={d.summary.overdue ? `${formatCompactINR(d.summary.overdue)} overdue` : `${formatCompactINR(d.summary.collected30)} collected / 30d`} />
         <Kpi label="COD with staff" value={formatCompactINR(d.codCollected)} icon={Banknote} tone="warning" sub={`${formatCompactINR(d.codPending)} yet to collect`} />
       </div>
-      <Tabs defaultValue="settlements" className="mt-4">
+      <Tabs defaultValue="receivables" className="mt-4">
         <TabsList>
-          <TabsTrigger value="settlements">Online settlements</TabsTrigger>
+          <TabsTrigger value="receivables">Credit receivables</TabsTrigger>
+          <TabsTrigger value="settlements">Settlements</TabsTrigger>
           <TabsTrigger value="payouts">Payout history</TabsTrigger>
           <TabsTrigger value="cod">COD reconciliation</TabsTrigger>
         </TabsList>
+        <TabsContent value="receivables" className="mt-3">
+          <div className="grid gap-4 lg:grid-cols-4">
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Aging</CardTitle>
+                  <CardDescription>Unpaid credit invoices</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  {d.aging.map((a: any) => (
+                    <li key={a.bucket} className="flex justify-between">
+                      <span className={a.bucket === "Not due" ? "text-muted-foreground" : "text-danger"}>{a.bucket}</span>
+                      <span className="font-semibold tabular-nums">{formatINR(a.amount, { decimals: false })}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-3">
+              <CardContent className="px-0 pt-2">
+                {d.receivables.length === 0 ? (
+                  <EmptyState title="No open credit invoices" />
+                ) : (
+                  <Table>
+                    <THead>
+                      <tr>
+                        <th>Invoice</th>
+                        <th>Business</th>
+                        <th>Delivered</th>
+                        <th>Due</th>
+                        <th className="text-right">Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </THead>
+                    <TBody>
+                      {d.receivables.map((b: any) => (
+                        <Tr key={b.id}>
+                          <td className="font-semibold">{b.invoiceNo}</td>
+                          <td>
+                            <p className="font-medium">{b.businessName}</p>
+                            <p className="text-xs text-muted-foreground">{b.code} · {b.outlet.label}</p>
+                          </td>
+                          <td className="text-xs text-muted-foreground">{formatDateShort(b.deliveredAt)}</td>
+                          <td className="text-xs">{b.payment.dueAt ? formatDateShort(b.payment.dueAt) : "—"}</td>
+                          <td className="text-right tabular-nums">{formatINR(b.charges.total)}</td>
+                          <td>{b.overdueDays > 0 ? <Badge tone="danger" dot>{b.overdueDays}d overdue</Badge> : <Badge tone="warning" dot>Due</Badge>}</td>
+                        </Tr>
+                      ))}
+                    </TBody>
+                  </Table>
+                )}
+                <p className="px-4 pt-3 text-xs text-muted-foreground">Record collections from Business accounts → account drawer → Record payment.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
         <TabsContent value="settlements" className="mt-3">
           <Card>
             <CardContent className="px-0 pt-2">
@@ -119,7 +178,7 @@ export default function PaymentsPage() {
                   <THead>
                     <tr>
                       <th>Booking</th>
-                      <th>Customer</th>
+                      <th>Business</th>
                       <th>Staff</th>
                       <th className="text-right">Amount</th>
                       <th>Status</th>
@@ -129,7 +188,7 @@ export default function PaymentsPage() {
                     {d.cod.map((b: any) => (
                       <Tr key={b.id}>
                         <td className="font-semibold">{b.code}</td>
-                        <td>{b.customerName}</td>
+                        <td>{b.businessName}</td>
                         <td className="text-xs">{b.staff?.name ?? "—"}</td>
                         <td className="text-right tabular-nums">{formatINR(b.charges.total)}</td>
                         <td>{b.payment.status === "COD_COLLECTED" ? <Badge tone="success" dot>Cash collected</Badge> : <Badge tone="warning" dot>Pending delivery</Badge>}</td>

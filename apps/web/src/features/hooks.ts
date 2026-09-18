@@ -1,26 +1,45 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Agency, Booking, BookingStatus, Customer, DeliveryStaff } from "@gassetu/shared";
+import type { Agency, Booking, BookingStatus, Business, DeliveryStaff, Outlet } from "@gassetu/shared";
 import { get, patch, post, put } from "@/lib/api";
 import { useLive } from "@/lib/live";
 import { useSession } from "@/lib/session";
 
 export type ExpandedBooking = Omit<Booking, "items"> & {
-  customerName: string;
-  customerPhone: string;
-  customerType: "domestic" | "commercial";
-  address: Customer["addresses"][number];
+  businessName: string;
+  businessType: Business["type"];
+  ownerName: string;
+  contactPhone: string;
+  outlet: Outlet;
   agencyName: string;
   agencyPhone: string;
   agencyOmc: string;
   agencyLocation: { lat: number; lng: number };
+  cylinders: number;
   items: (Booking["items"][number] & { name: string })[];
   staff: { id: string; name: string; phone: string; vehicle: string; vehicleNo: string; location: { lat: number; lng: number }; onTimePct: number } | null;
   route: { lat: number; lng: number }[] | null;
   routeIndex: number | null;
 };
-export type ExpandedStaff = DeliveryStaff & { name: string; phone: string; avatarColor: string; currentDrops: number; todayAssigned: number; todayDelivered: number; todayFailed: number; activeBookingId: string | null; tripProgress: number | null };
-export type ExpandedCustomer = Customer & { name: string; phone: string; avatarColor: string; agencyName: string | null; totalBookings: number; lastRefillAt: string | null; dueForRefill?: boolean };
+export type ExpandedStaff = DeliveryStaff & { name: string; phone: string; avatarColor: string; currentDrops: number; currentCylinders: number; todayAssigned: number; todayDelivered: number; todayFailed: number; activeBookingId: string | null; tripProgress: number | null };
+export type ExpandedOutlet = Outlet & { daysLeft: number; lowStock: boolean };
+export type ExpandedBusiness = Omit<Business, "outlets"> & {
+  outlets: ExpandedOutlet[];
+  ownerName: string;
+  phone: string;
+  avatarColor: string;
+  agencyName: string | null;
+  totalBookings: number;
+  cylinders30: number;
+  spend30: number;
+  lastDeliveryAt: string | null;
+  lastBooking: ExpandedBooking | null;
+  creditOutstanding: number;
+  creditOverdue: number;
+  creditAvailable: number;
+  lowStockOutlets: number;
+  usualOrder: { cylinderTypeId: string; qty: number }[];
+};
 
 export function useAgencyId() {
   return useSession((s) => s.agency?.id ?? "");
@@ -31,7 +50,8 @@ export const q = {
   orders: (id: string) => ({ queryKey: ["orders", id], queryFn: () => get<ExpandedBooking[]>(`/bookings?agencyId=${id}`), enabled: !!id }),
   booking: (id: string) => ({ queryKey: ["booking", id], queryFn: () => get<ExpandedBooking>(`/bookings/${id}`), enabled: !!id }),
   staff: (id: string) => ({ queryKey: ["staff", id], queryFn: () => get<ExpandedStaff[]>(`/agency/${id}/staff`), enabled: !!id }),
-  customers: (id: string) => ({ queryKey: ["customers", id], queryFn: () => get<ExpandedCustomer[]>(`/agency/${id}/customers`), enabled: !!id }),
+  accounts: (id: string) => ({ queryKey: ["accounts", id], queryFn: () => get<ExpandedBusiness[]>(`/agency/${id}/accounts`), enabled: !!id }),
+  accountPrices: (id: string) => ({ queryKey: ["account-prices", id], queryFn: () => get(`/agency/${id}/account-prices`), enabled: !!id }),
   inventory: (id: string) => ({ queryKey: ["inventory", id], queryFn: () => get(`/agency/${id}/inventory`), enabled: !!id }),
   prices: (id: string) => ({ queryKey: ["prices", id], queryFn: () => get(`/agency/${id}/prices`), enabled: !!id }),
   agency: (id: string) => ({ queryKey: ["agency", id], queryFn: () => get<Agency>(`/agencies/${id}`), enabled: !!id }),
@@ -42,7 +62,7 @@ export const q = {
   notifications: (userId: string) => ({ queryKey: ["notifications", userId], queryFn: () => get(`/users/${userId}/notifications`), enabled: !!userId }),
   adminOverview: () => ({ queryKey: ["admin", "overview"], queryFn: () => get("/admin/overview") }),
   adminAgencies: () => ({ queryKey: ["admin", "agencies"], queryFn: () => get("/admin/agencies") }),
-  adminCustomers: (s: string) => ({ queryKey: ["admin", "customers", s], queryFn: () => get(`/admin/customers?q=${encodeURIComponent(s)}`) }),
+  adminBusinesses: (s: string) => ({ queryKey: ["admin", "businesses", s], queryFn: () => get<ExpandedBusiness[]>(`/admin/businesses?q=${encodeURIComponent(s)}`) }),
   adminComplaints: () => ({ queryKey: ["admin", "complaints"], queryFn: () => get("/admin/complaints") }),
   adminTransfers: () => ({ queryKey: ["admin", "transfers"], queryFn: () => get("/admin/transfers") }),
   config: () => ({ queryKey: ["config"], queryFn: () => get("/admin/config") }),
@@ -52,7 +72,7 @@ export const useDashboard = () => useQuery(q.dashboard(useAgencyId()));
 export const useOrders = () => useQuery(q.orders(useAgencyId()));
 export const useBooking = (id: string) => useQuery(q.booking(id));
 export const useStaff = () => useQuery(q.staff(useAgencyId()));
-export const useCustomers = () => useQuery(q.customers(useAgencyId()));
+export const useAccounts = () => useQuery(q.accounts(useAgencyId()));
 export const useInventory = () => useQuery(q.inventory(useAgencyId()));
 
 /** Keep caches fresh from the WebSocket. Returns nothing; mount once in the shell. */
@@ -67,7 +87,7 @@ export function useLiveSync(onEvent?: (e: Parameters<Parameters<typeof useLive>[
         qc.invalidateQueries({ queryKey: ["orders"] });
         qc.invalidateQueries({ queryKey: ["dashboard"] });
         qc.invalidateQueries({ queryKey: ["staff"] });
-        qc.invalidateQueries({ queryKey: ["customers"] });
+        qc.invalidateQueries({ queryKey: ["accounts"] });
         qc.invalidateQueries({ queryKey: ["settlements"] });
         qc.invalidateQueries({ queryKey: ["admin"] });
         break;
@@ -87,6 +107,11 @@ export function useLiveSync(onEvent?: (e: Parameters<Parameters<typeof useLive>[
       case "agency.updated":
         qc.invalidateQueries({ queryKey: ["agency"] });
         qc.invalidateQueries({ queryKey: ["admin"] });
+        break;
+      case "business.updated":
+        qc.invalidateQueries({ queryKey: ["accounts"] });
+        qc.invalidateQueries({ queryKey: ["admin"] });
+        qc.invalidateQueries({ queryKey: ["dashboard"] });
         break;
       case "notification":
         qc.invalidateQueries({ queryKey: ["notifications"] });

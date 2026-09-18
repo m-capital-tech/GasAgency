@@ -1,5 +1,5 @@
 "use client";
-import { STATUS_LABELS, type BookingStatus } from "@gassetu/shared";
+import { BUSINESS_TYPE_LABELS, type BookingStatus } from "@gassetu/shared";
 import { Check, Columns3, List, Search, Wand2, Zap } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -54,15 +54,15 @@ function OrdersBoard() {
     today.setHours(0, 0, 0, 0);
     return (orders.data ?? []).filter((b) => {
       const s = search.toLowerCase();
-      if (s && !(b.code.toLowerCase().includes(s) || b.customerName.toLowerCase().includes(s) || b.customerPhone.includes(s))) return false;
+      if (s && !(b.code.toLowerCase().includes(s) || b.businessName.toLowerCase().includes(s) || b.contactPhone.includes(s) || b.invoiceNo.toLowerCase().includes(s))) return false;
       const created = new Date(b.createdAt);
       const openStatus = !["DELIVERED", "REJECTED", "CANCELLED", "PAYMENT_FAILED"].includes(b.status);
       if (f.date === "today" && created < today && !openStatus) return false;
       if (f.date === "7d" && created < new Date(today.getTime() - 7 * 86400000)) return false;
-      if (f.type !== "all" && b.customerType !== f.type) return false;
-      if (f.payment !== "all" && (f.payment === "cod" ? b.payment.method !== "cod" : b.payment.method === "cod")) return false;
+      if (f.type !== "all" && b.businessType !== f.type) return false;
+      if (f.payment !== "all" && (f.payment === "cod" ? b.payment.method !== "cod" : f.payment === "credit" ? b.payment.method !== "credit" : b.payment.method === "cod" || b.payment.method === "credit")) return false;
       if (f.staff !== "all" && b.assignedStaffId !== f.staff) return false;
-      if (f.pincode && !b.address.pincode.startsWith(f.pincode)) return false;
+      if (f.pincode && !b.outlet.pincode.startsWith(f.pincode)) return false;
       if (tab !== "all") {
         const col = COLUMNS.find((c) => c.key === tab)!;
         if (!col.statuses.includes(b.status)) return false;
@@ -105,14 +105,15 @@ function OrdersBoard() {
         {b.slot === "express" ? <Zap className="size-3.5 text-primary" /> : null}
         <span className="ml-auto text-xs text-faint">{relativeTime(b.createdAt)}</span>
       </div>
-      <p className="mt-1.5 truncate font-medium">{b.customerName}</p>
+      <p className="mt-1.5 truncate font-medium">{b.businessName}</p>
       <p className="truncate text-xs text-muted-foreground">
-        {b.address.line2} · {b.address.pincode}
+        {b.outlet.label} · {b.outlet.line2} · {b.outlet.pincode}
       </p>
       <div className="mt-2 flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">{b.items.map((i) => `${i.qty}×${i.name.split(" ")[0]}`).join(", ")}</span>
+        <span className="font-semibold">{b.items.map((i) => `${i.qty} × ${i.name.split(" ")[0]}`).join(" + ")}</span>
+        <span className="text-muted-foreground">· {b.emptiesToCollect} empties</span>
         <span className="ml-auto font-semibold tabular-nums">{formatINR(b.charges.total, { decimals: false })}</span>
-        <Badge tone={b.payment.method === "cod" ? "warning" : "success"}>{b.payment.method === "cod" ? "COD" : "Paid"}</Badge>
+        <Badge tone={b.payment.method === "credit" ? "info" : b.payment.method === "cod" ? "warning" : "success"}>{b.payment.method === "credit" ? "Credit" : b.payment.method === "cod" ? "COD" : "Paid"}</Badge>
       </div>
       {b.staff ? <p className="mt-1.5 text-xs text-info">🛵 {b.staff.name}{b.status === "OUT_FOR_DELIVERY" && b.etaMinutes != null ? ` · ETA ${b.etaMinutes} min` : ""}</p> : null}
       {b.status === "PLACED" ? (
@@ -161,20 +162,24 @@ function OrdersBoard() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search code, customer, phone" className="h-9 w-64 pl-9" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order, business, invoice, phone" className="h-9 w-64 pl-9" />
         </div>
         <NativeSelect className="h-9 w-auto" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} aria-label="Date">
           <option value="today">Today + open</option>
           <option value="7d">Last 7 days</option>
           <option value="all">All time</option>
         </NativeSelect>
-        <NativeSelect className="h-9 w-auto" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} aria-label="Customer type">
-          <option value="all">All types</option>
-          <option value="domestic">Domestic</option>
-          <option value="commercial">Commercial</option>
+        <NativeSelect className="h-9 w-auto" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} aria-label="Business type">
+          <option value="all">All business types</option>
+          {Object.entries(BUSINESS_TYPE_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
         </NativeSelect>
         <NativeSelect className="h-9 w-auto" value={f.payment} onChange={(e) => setF({ ...f, payment: e.target.value })} aria-label="Payment">
           <option value="all">All payments</option>
+          <option value="credit">Credit</option>
           <option value="online">Prepaid</option>
           <option value="cod">COD</option>
         </NativeSelect>
@@ -229,8 +234,8 @@ function OrdersBoard() {
               <tr>
                 <th className="w-8"></th>
                 <th>Order</th>
-                <th>Customer</th>
-                <th>Items</th>
+                <th>Business</th>
+                <th>Cylinders</th>
                 <th>Slot</th>
                 <th>Payment</th>
                 <th>Staff</th>
@@ -247,13 +252,15 @@ function OrdersBoard() {
                   </td>
                   <td className="font-semibold">{b.code}</td>
                   <td>
-                    <p className="font-medium">{b.customerName}</p>
-                    <p className="text-xs text-muted-foreground">{b.address.pincode}</p>
+                    <p className="font-medium">{b.businessName}</p>
+                    <p className="text-xs text-muted-foreground">{b.outlet.label} · {b.outlet.pincode}</p>
                   </td>
-                  <td className="text-xs">{b.items.map((i) => `${i.qty} × ${i.name}`).join(", ")}</td>
-                  <td className="text-xs">{b.slot === "express" ? "⚡ Express" : b.slot.replace(/_/g, " ")}</td>
+                  <td className="text-xs">
+                    {b.items.map((i) => `${i.qty} × ${i.name.split(" ")[0]}`).join(" + ")} <span className="text-muted-foreground">· {b.emptiesToCollect} empties</span>
+                  </td>
+                  <td className="text-xs">{b.slot === "express" ? "⚡ Express" : b.slot === "tomorrow_morning" ? "Before opening" : b.slot.replace(/_/g, " ")}</td>
                   <td>
-                    <Badge tone={b.payment.method === "cod" ? "warning" : "success"}>{b.payment.method === "cod" ? "COD" : b.payment.method.toUpperCase()}</Badge>
+                    <Badge tone={b.payment.method === "credit" ? "info" : b.payment.method === "cod" ? "warning" : "success"}>{b.payment.method === "credit" ? "Credit" : b.payment.method === "cod" ? "COD" : b.payment.method.toUpperCase()}</Badge>
                   </td>
                   <td className="text-xs">{b.staff?.name ?? "—"}</td>
                   <td className="text-right tabular-nums">{formatINR(b.charges.total, { decimals: false })}</td>

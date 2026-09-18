@@ -33,7 +33,7 @@ export default function AdminAgenciesPage() {
                   <th>OMC</th>
                   <th>Owner</th>
                   <th>Plan</th>
-                  <th className="text-right">Customers</th>
+                  <th className="text-right">Accounts</th>
                   <th className="text-right">Staff</th>
                   <th className="text-right">Orders (30d)</th>
                   <th className="text-right">On-time</th>
@@ -58,7 +58,7 @@ export default function AdminAgenciesPage() {
                       <span className="text-muted-foreground">{a.ownerEmail}</span>
                     </td>
                     <td className="capitalize">{a.plan}</td>
-                    <td className="text-right tabular-nums">{a.customerCount}</td>
+                    <td className="text-right tabular-nums">{a.accountCount}</td>
                     <td className="text-right tabular-nums">{a.staffCount}</td>
                     <td className="text-right tabular-nums">{a.orders30}</td>
                     <td className="text-right tabular-nums">{a.onTimePct}%</td>

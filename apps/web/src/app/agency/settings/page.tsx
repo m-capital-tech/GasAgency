@@ -17,14 +17,14 @@ export default function SettingsPage() {
   const types = useQuery({ queryKey: ["cylinder-types"], queryFn: () => get("/cylinder-types") });
   const login = useSession((s) => s.login);
   const user = useSession((s) => s.user);
-  const [rows, setRows] = useState<{ cylinderTypeId: string; price: number; deliveryCharge: number }[]>([]);
-  const [settings, setSettings] = useState<{ codEnabled: boolean; phone: string; pincodes: string; radiusKm: number; slots: { id: string; label: string; capacity: number }[] } | null>(null);
+  const [rows, setRows] = useState<{ cylinderTypeId: string; price: number; deliveryCharge: number; slabs: { minQty: number; price: number }[] }[]>([]);
+  const [settings, setSettings] = useState<{ codEnabled: boolean; creditEnabled: boolean; phone: string; pincodes: string; radiusKm: number; slots: { id: string; label: string; capacity: number }[] } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (prices.data) setRows(prices.data.map((p: any) => ({ cylinderTypeId: p.cylinderTypeId, price: p.price, deliveryCharge: p.deliveryCharge })));
+    if (prices.data) setRows(prices.data.map((p: any) => ({ cylinderTypeId: p.cylinderTypeId, price: p.price, deliveryCharge: p.deliveryCharge, slabs: p.slabs ?? [] })));
   }, [prices.data]);
   useEffect(() => {
-    if (agency.data && !settings) setSettings({ codEnabled: agency.data.codEnabled, phone: agency.data.phone, pincodes: agency.data.serviceArea.pincodes.join(", "), radiusKm: agency.data.serviceArea.radiusKm, slots: agency.data.slots });
+    if (agency.data && !settings) setSettings({ codEnabled: agency.data.codEnabled, creditEnabled: agency.data.creditEnabled, phone: agency.data.phone, pincodes: agency.data.serviceArea.pincodes.join(", "), radiusKm: agency.data.serviceArea.radiusKm, slots: agency.data.slots });
   }, [agency.data, settings]);
 
   const savePrices = async () => {
@@ -32,7 +32,7 @@ export default function SettingsPage() {
     try {
       await put(`/agency/${agencyId}/prices`, { rows });
       qc.invalidateQueries({ queryKey: ["prices"] });
-      toast.success("Prices updated", { description: "Customers now see the new prices when booking." });
+      toast.success("Prices updated", { description: "Accounts see the new prices and slabs when ordering." });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -43,7 +43,7 @@ export default function SettingsPage() {
     if (!settings || !agency.data) return;
     setBusy(true);
     try {
-      const updated = await patch(`/agency/${agencyId}`, { codEnabled: settings.codEnabled, phone: settings.phone, slots: settings.slots, serviceArea: { ...agency.data.serviceArea, pincodes: settings.pincodes.split(/[,\s]+/).filter(Boolean), radiusKm: Number(settings.radiusKm) } });
+      const updated = await patch(`/agency/${agencyId}`, { codEnabled: settings.codEnabled, creditEnabled: settings.creditEnabled, phone: settings.phone, slots: settings.slots, serviceArea: { ...agency.data.serviceArea, pincodes: settings.pincodes.split(/[,\s]+/).filter(Boolean), radiusKm: Number(settings.radiusKm) } });
       qc.invalidateQueries({ queryKey: ["agency"] });
       if (user) login(user, updated);
       toast.success("Settings saved");
@@ -67,7 +67,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>Price list</CardTitle>
-              <CardDescription>Illustrative prices. Domestic rates follow OMC notified prices in production.</CardDescription>
+              <CardDescription>Ex-GST commercial prices with quantity slabs per order. Negotiated per-account rates live under Business accounts.</CardDescription>
             </div>
             <Button size="sm" onClick={savePrices} loading={busy}>
               Save prices
@@ -79,7 +79,8 @@ export default function SettingsPage() {
                 <tr>
                   <th>Cylinder</th>
                   <th className="w-36">Price (₹)</th>
-                  <th className="w-36">Delivery (₹)</th>
+                  <th className="w-36">Delivery / order (₹)</th>
+                  <th>Slabs (qty → ₹)</th>
                 </tr>
               </THead>
               <TBody>
@@ -91,6 +92,16 @@ export default function SettingsPage() {
                     </td>
                     <td>
                       <Input type="number" className="h-8" value={r.deliveryCharge} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, deliveryCharge: Number(e.target.value) } : x)))} aria-label={`${nameOf(r.cylinderTypeId)} delivery charge`} />
+                    </td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {r.slabs.map((sl, k) => (
+                          <span key={k} className="flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-xs">
+                            {sl.minQty}+ →
+                            <input type="number" className="w-16 bg-transparent text-xs outline-none" value={sl.price} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, slabs: x.slabs.map((y, m) => (m === k ? { ...y, price: Number(e.target.value) } : y)) } : x)))} aria-label={`Slab ${sl.minQty}+ price`} />
+                          </span>
+                        ))}
+                      </div>
                     </td>
                   </Tr>
                 ))}
@@ -112,11 +123,18 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
                 <p className="text-sm font-medium">Accept cash on delivery</p>
-                <p className="text-xs text-muted-foreground">Customers see COD at checkout; staff collect and deposit.</p>
+                <p className="text-xs text-muted-foreground">Accounts see COD at checkout; staff collect and deposit.</p>
               </div>
               <Switch checked={settings.codEnabled} onCheckedChange={(v) => setSettings({ ...settings, codEnabled: v })} aria-label="Cash on delivery" />
             </div>
-            <Field label="Customer-facing phone">
+            <div className="flex items-center justify-between rounded-xl border p-3">
+              <div>
+                <p className="text-sm font-medium">Offer credit accounts</p>
+                <p className="text-xs text-muted-foreground">Verified businesses can order on invoice within the limit GasSetu sets; you collect on net terms.</p>
+              </div>
+              <Switch checked={settings.creditEnabled} onCheckedChange={(v) => setSettings({ ...settings, creditEnabled: v })} aria-label="Offer credit" />
+            </div>
+            <Field label="Account-facing phone">
               <Input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone: e.target.value })} />
             </Field>
             <div>

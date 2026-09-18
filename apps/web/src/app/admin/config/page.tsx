@@ -18,7 +18,7 @@ export default function ConfigPage() {
   const save = async () => {
     setBusy(true);
     try {
-      await patch("/admin/config", { ...c, commissionPct: Number(c.commissionPct), commissionFlat: Number(c.commissionFlat), convenienceFee: Number(c.convenienceFee), expressFee: Number(c.expressFee), expressAgencySharePct: Number(c.expressAgencySharePct), gstPct: Number(c.gstPct), minRefillGapDays: Number(c.minRefillGapDays), yearlyDomesticQuota: Number(c.yearlyDomesticQuota), defaultCycleDays: Number(c.defaultCycleDays), reminderLeadDays: Number(c.reminderLeadDays), plans: { free: { ...c.plans.free, monthlyFee: Number(c.plans.free.monthlyFee), orderLimit: Number(c.plans.free.orderLimit) }, growth: { ...c.plans.growth, monthlyFee: Number(c.plans.growth.monthlyFee) }, pro: { ...c.plans.pro, monthlyFee: Number(c.plans.pro.monthlyFee) } } });
+      await patch("/admin/config", { ...c, commissionPct: Number(c.commissionPct), commissionFlat: Number(c.commissionFlat), convenienceFee: Number(c.convenienceFee), expressFee: Number(c.expressFee), expressAgencySharePct: Number(c.expressAgencySharePct), gstPct: Number(c.gstPct), maxCylindersPerOrder: Number(c.maxCylindersPerOrder), defaultCreditLimit: Number(c.defaultCreditLimit), defaultCreditDays: Number(c.defaultCreditDays), creditFeePct: Number(c.creditFeePct), lowStockDays: Number(c.lowStockDays), plans: { free: { ...c.plans.free, monthlyFee: Number(c.plans.free.monthlyFee), orderLimit: Number(c.plans.free.orderLimit) }, growth: { ...c.plans.growth, monthlyFee: Number(c.plans.growth.monthlyFee) }, pro: { ...c.plans.pro, monthlyFee: Number(c.plans.pro.monthlyFee) } } });
       qc.invalidateQueries();
       toast.success("Config saved", { description: "New bookings use the updated fees and rules immediately." });
     } catch (e) {
@@ -70,7 +70,7 @@ export default function ConfigPage() {
             <Field label="Express fee — agency share (%)">
               <Input {...num("expressAgencySharePct")} />
             </Field>
-            <Field label="GST on services (%)">
+            <Field label="GST on commercial LPG (%)">
               <Input {...num("gstPct")} />
             </Field>
           </CardContent>
@@ -78,22 +78,25 @@ export default function ConfigPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Refill rules & reminders</CardTitle>
-              <CardDescription>Shown as friendly errors in the customer app</CardDescription>
+              <CardTitle>Order rules & credit</CardTitle>
+              <CardDescription>Order limits and credit defaults shown as friendly errors in the business app</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
-            <Field label="Minimum gap between domestic refills (days)">
-              <Input {...num("minRefillGapDays")} />
+            <Field label="Max cylinders per order">
+              <Input {...num("maxCylindersPerOrder")} />
             </Field>
-            <Field label="Yearly domestic quota (cylinders)">
-              <Input {...num("yearlyDomesticQuota")} />
+            <Field label="Default credit limit (₹)">
+              <Input {...num("defaultCreditLimit")} />
             </Field>
-            <Field label="Default usage cycle (days)">
-              <Input {...num("defaultCycleDays")} />
+            <Field label="Default credit terms (days)">
+              <Input {...num("defaultCreditDays")} />
             </Field>
-            <Field label="Reminder lead time (days before run-out)">
-              <Input {...num("reminderLeadDays")} />
+            <Field label="Credit facilitation fee (%)">
+              <Input {...num("creditFeePct")} step="0.5" />
+            </Field>
+            <Field label="Low-stock alert (days of LPG left)">
+              <Input {...num("lowStockDays")} />
             </Field>
           </CardContent>
         </Card>

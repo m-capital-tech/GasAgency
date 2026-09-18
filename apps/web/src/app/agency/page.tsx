@@ -1,5 +1,5 @@
 "use client";
-import { AlertTriangle, Banknote, CheckCircle2, Clock, IndianRupee, Package, Truck, XCircle } from "lucide-react";
+import { AlertTriangle, Banknote, CheckCircle2, Clock, Flame, IndianRupee, Package, Truck, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { DonutChart, MoneyBarChart, OrdersAreaChart } from "@/components/charts";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardSkeleton, CardTitle
 import { useDashboard, type ExpandedStaff } from "@/features/hooks";
 import { useSession } from "@/lib/session";
 import { formatCompactINR, formatINR, relativeTime } from "@/lib/format";
+import { BUSINESS_TYPE_LABELS } from "@gassetu/shared";
 
 /** A2 — Dashboard */
 export default function AgencyDashboard() {
@@ -38,19 +39,19 @@ export default function AgencyDashboard() {
         ) : null}
       </PageHeader>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Kpi label="Today's orders" value={kpis.todayOrders} icon={Package} tone="info" sub={`${kpis.failedToday} failed`} />
+        <Kpi label="Today's orders" value={kpis.todayOrders} icon={Package} tone="info" sub={`${kpis.todayCylinders} cylinders · ${kpis.failedToday} failed`} />
         <Kpi label="Pending" value={kpis.pending} icon={Clock} tone="warning" sub="awaiting accept" />
         <Kpi label="Out for delivery" value={kpis.outForDelivery} icon={Truck} tone="primary" sub={`${kpis.accepted} accepted/assigned`} />
-        <Kpi label="Delivered today" value={kpis.deliveredToday} icon={CheckCircle2} tone="success" />
         <Kpi label="Revenue today" value={formatCompactINR(kpis.revenueToday)} icon={IndianRupee} tone="warning" sub={`${formatCompactINR(kpis.revenue30)} last 30 days`} />
-        <Kpi label="COD outstanding" value={formatCompactINR(kpis.codOutstanding)} icon={Banknote} tone="warning" sub="cash with staff" />
+        <Kpi label="Receivables" value={formatCompactINR(kpis.receivables)} icon={Banknote} tone={kpis.overdue ? "danger" : "warning"} sub={kpis.overdue ? `${formatCompactINR(kpis.overdue)} overdue` : `${kpis.creditAccounts} credit accounts`} />
+        <Kpi label="Accounts" value={kpis.accounts} icon={CheckCircle2} tone="success" sub={`${d.data.lowStockAccounts.length} running low`} />
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div>
-              <CardTitle>Orders per day</CardTitle>
-              <CardDescription>Bookings received, with delivered count</CardDescription>
+              <CardTitle>Cylinders per day</CardTitle>
+              <CardDescription>Cylinders ordered and order count</CardDescription>
             </div>
             <Tabs value={range} onValueChange={(v) => setRange(v as any)}>
               <TabsList className="h-8">
@@ -60,7 +61,7 @@ export default function AgencyDashboard() {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <OrdersAreaChart data={series} keys={[{ key: "orders", name: "Orders", color: "#A31E21" }, { key: "delivered", name: "Delivered", color: "#C6953F" }]} />
+            <OrdersAreaChart data={series} keys={[{ key: "cylinders", name: "Cylinders", color: "#A31E21" }, { key: "orders", name: "Orders", color: "#C6953F" }]} />
           </CardContent>
         </Card>
         <Card>
@@ -71,7 +72,16 @@ export default function AgencyDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <DonutChart data={d.data.cylinderMix} height={170} />
+            <DonutChart data={d.data.cylinderMix} height={150} />
+            <p className="mt-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Accounts by segment</p>
+            <ul className="space-y-1 text-xs">
+              {d.data.segments.slice(0, 5).map((s: any) => (
+                <li key={s.type} className="flex justify-between">
+                  <span className="text-muted-foreground">{BUSINESS_TYPE_LABELS[s.type as keyof typeof BUSINESS_TYPE_LABELS]}</span>
+                  <span className="font-semibold tabular-nums">{s.count}</span>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       </div>
@@ -119,8 +129,8 @@ export default function AgencyDashboard() {
                 <Link href={`/agency/orders?open=${b.id}`} className="w-24 font-semibold text-primary">
                   {b.code}
                 </Link>
-                <span className="flex-1 truncate">{b.customerName}</span>
-                <span className="hidden text-xs text-muted-foreground md:inline">{b.items.map((i: any) => `${i.qty} × ${i.name}`).join(", ")}</span>
+                <span className="flex-1 truncate">{b.businessName} <span className="text-xs text-muted-foreground">· {b.outlet.label}</span></span>
+                <span className="hidden text-xs text-muted-foreground md:inline">{b.items.map((i: any) => `${i.qty} × ${i.name.split(" ")[0]}`).join(" + ")} · {b.payment.method === "credit" ? "credit" : b.payment.method}</span>
                 <span className="w-20 text-right tabular-nums">{formatINR(b.charges.total, { decimals: false })}</span>
                 <StatusBadge status={b.status} />
                 <span className="w-16 text-right text-xs text-faint">{relativeTime(b.createdAt)}</span>
@@ -129,6 +139,30 @@ export default function AgencyDashboard() {
           </ul>
         </CardContent>
       </Card>
+      {d.data.lowStockAccounts.length ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2"><Flame className="size-4 text-primary" /> Accounts running low</CardTitle>
+              <CardDescription>Outlets with ≤ 2 days of LPG — nudge them from Business accounts</CardDescription>
+            </div>
+            <Link href="/agency/accounts" className="text-xs font-semibold text-primary">
+              Open accounts →
+            </Link>
+          </CardHeader>
+          <CardContent className="px-2">
+            <ul className="divide-y">
+              {d.data.lowStockAccounts.map((b: any) => (
+                <li key={b.userId} className="flex items-center gap-3 px-3 py-2 text-sm">
+                  <span className="flex-1 font-medium">{b.name}</span>
+                  <span className="text-xs text-muted-foreground">{b.outlets.filter((o: any) => o.lowStock).map((o: any) => `${o.label} · ${o.daysLeft}d`).join(", ")}</span>
+                  <span className="text-xs text-muted-foreground">usual {b.usualOrder.map((i: any) => `${i.qty} × ${i.cylinderTypeId === "cyl_19" ? "19 kg" : "47.5 kg"}`).join(" + ")}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       {kpis.failedToday ? (
         <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <XCircle className="size-3.5 text-danger" /> {kpis.failedToday} failed delivery today — reschedule from the orders board.

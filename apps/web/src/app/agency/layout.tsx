@@ -15,7 +15,7 @@ function AgencyShell({ children }: { children: React.ReactNode }) {
     if (!agency) return;
     if (e.type === "booking.created" && e.booking.agencyId === agency.id) {
       playNewOrderChime();
-      toast(`New order ${e.booking.code}`, { description: `${e.booking.items.reduce((s, i) => s + i.qty, 0)} cylinder(s) · ${e.booking.slot === "express" ? "⚡ Express" : "Standard"} · ${e.booking.payment.method === "cod" ? "COD" : "Prepaid"}`, action: { label: "Open board", onClick: () => (window.location.href = "/agency/orders") } });
+      toast(`New order ${e.booking.code}`, { description: `${e.booking.items.reduce((s, i) => s + i.qty, 0)} cylinder(s) · ${e.booking.slot === "express" ? "⚡ Express" : e.booking.slot === "tomorrow_morning" ? "Before opening" : "Standard"} · ${e.booking.payment.method === "credit" ? "on credit" : e.booking.payment.method === "cod" ? "COD" : "prepaid"}`, action: { label: "Open board", onClick: () => (window.location.href = "/agency/orders") } });
     }
     if (e.type === "booking.updated" && e.booking.agencyId === agency.id && e.booking.status === "DELIVERY_FAILED") toast.error(`Delivery failed · ${e.booking.code}`, { description: "Back in your queue for rescheduling." });
     if (e.type === "booking.updated" && e.booking.agencyId === agency.id && e.booking.status === "DELIVERED") toast.success(`Delivered · ${e.booking.code}`);
@@ -26,7 +26,7 @@ function AgencyShell({ children }: { children: React.ReactNode }) {
     { href: "/agency/orders", label: "Orders", icon: Package, badge: pending },
     { href: "/agency/tracking", label: "Live tracking", icon: MapPinned },
     { href: "/agency/staff", label: "Delivery staff", icon: UsersRound },
-    { href: "/agency/customers", label: "Customers", icon: Users },
+    { href: "/agency/accounts", label: "Business accounts", icon: Users },
     { href: "/agency/inventory", label: "Inventory", icon: Boxes },
     { href: "/agency/payments", label: "Payments", icon: BadgeIndianRupee },
     { href: "/agency/complaints", label: "Complaints", icon: MessageSquareWarning },

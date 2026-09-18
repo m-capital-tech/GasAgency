@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, IndianRupee, MessageSquareWarning, Package, Users } from "lucide-react";
+import { Building2, CreditCard, IndianRupee, MessageSquareWarning, Package, Users } from "lucide-react";
 import { HBarList, MoneyBarChart, OrdersAreaChart } from "@/components/charts";
 import { Map } from "@/components/map/Map";
 import { PageHeader } from "@/components/shell/Shell";
@@ -18,11 +18,12 @@ export default function AdminOverview() {
   return (
     <>
       <PageHeader title="Platform overview" subtitle="Hyderabad · last 90 days of seeded activity" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Kpi label="GMV" value={formatCompactINR(d.kpis.gmv)} icon={IndianRupee} tone="warning" sub="delivered order value" />
         <Kpi label="Orders" value={formatNumber(d.kpis.orders)} icon={Package} tone="info" sub={`${d.kpis.ordersToday} today`} />
-        <Kpi label="Active customers" value={d.kpis.activeCustomers} icon={Users} tone="primary" sub={`of ${d.kpis.totalCustomers} registered`} />
-        <Kpi label="Active agencies" value={d.kpis.activeAgencies} icon={Building2} tone="muted" sub={`${d.kpis.pendingAgencies} pending approval`} />
+        <Kpi label="Active businesses" value={d.kpis.activeBusinesses} icon={Users} tone="primary" sub={`of ${d.kpis.totalBusinesses} · ${d.kpis.cylinders.toLocaleString("en-IN")} cylinders delivered`} />
+        <Kpi label="Credit book" value={formatCompactINR(d.kpis.creditBook)} icon={CreditCard} tone="info" sub={`${d.kpis.creditAccounts} accounts · ${d.kpis.creditRequests} requests`} />
+        <Kpi label="Agencies" value={d.kpis.activeAgencies} icon={Building2} tone="muted" sub={`${d.kpis.pendingAgencies} agency + ${d.kpis.pendingBusinesses} business pending`} />
         <Kpi label="Platform revenue" value={formatCompactINR(d.kpis.platformRevenue)} icon={IndianRupee} tone="warning" sub="commission + fees + SaaS" />
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -42,14 +43,14 @@ export default function AdminOverview() {
           <CardHeader>
             <div>
               <CardTitle>Revenue by stream</CardTitle>
-              <CardDescription>Business model (PRD §11) · {formatINR(totalRev, { decimals: false })} total</CardDescription>
+              <CardDescription>Commission, credit fee, convenience, express, SaaS · {formatINR(totalRev, { decimals: false })} total</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <HBarList data={d.revenueSplit} nameKey="stream" valueKey="amount" money />
             <div className="mt-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
               <p>
-                Commission <b>{d.config.commissionPct}%</b> of cylinder value on online orders · convenience fee <b>₹{d.config.convenienceFee}</b> · express fee <b>₹{d.config.expressFee}</b> split {d.config.expressAgencySharePct}/{100 - d.config.expressAgencySharePct} with agencies · SaaS plans ₹0 / ₹{d.config.plans.growth.monthlyFee} / ₹{d.config.plans.pro.monthlyFee}.
+                Commission <b>{d.config.commissionPct}%</b> of cylinder value on online and credit orders · credit facilitation fee <b>{d.config.creditFeePct}%</b> on credit orders · convenience fee <b>₹{d.config.convenienceFee}</b> · express fee <b>₹{d.config.expressFee}</b> split {d.config.expressAgencySharePct}/{100 - d.config.expressAgencySharePct} with agencies · SaaS plans ₹0 / ₹{d.config.plans.growth.monthlyFee} / ₹{d.config.plans.pro.monthlyFee}.
               </p>
             </div>
           </CardContent>
@@ -60,11 +61,11 @@ export default function AdminOverview() {
           <CardHeader>
             <div>
               <CardTitle>City heatmap</CardTitle>
-              <CardDescription>Agencies sized by 30-day orders</CardDescription>
+              <CardDescription>Agencies sized by 30-day orders · {d.segments.map((s: any) => `${s.count} ${s.type.replace("_", " ")}`).slice(0, 4).join(" · ")}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            <Map height={320} pins={d.cityHeat.map((a: any) => ({ id: a.id, lat: a.center.lat, lng: a.center.lng, kind: a.status === "approved" ? "agency" : "pending", label: a.name, sub: `${a.orders30} orders · ${formatCompactINR(a.gmv30)} · ${a.status}` }))} circles={d.cityHeat.filter((a: any) => a.status === "approved").map((a: any) => ({ lat: a.center.lat, lng: a.center.lng, radiusKm: Math.max(1.5, a.orders30 / 12) }))} />
+            <Map height={320} pins={d.cityHeat.map((a: any) => ({ id: a.id, lat: a.center.lat, lng: a.center.lng, kind: a.status === "approved" ? "agency" : "pending", label: a.name, sub: `${a.orders30} orders · ${formatCompactINR(a.gmv30)} · ${a.accounts} accounts · ${a.status}` }))} circles={d.cityHeat.filter((a: any) => a.status === "approved").map((a: any) => ({ lat: a.center.lat, lng: a.center.lng, radiusKm: Math.max(1.5, a.orders30 / 12) }))} />
           </CardContent>
         </Card>
         <Card>

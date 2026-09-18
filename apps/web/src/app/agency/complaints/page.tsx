@@ -6,7 +6,7 @@ import { Badge, Button, Card, CardContent, EmptyState, ErrorState, NativeSelect,
 import { q, useAgencyId, patch, post } from "@/features/hooks";
 import { formatDateTime } from "@/lib/format";
 
-const CAT: Record<string, string> = { delivery_delay: "Delivery delay", wrong_cylinder: "Wrong cylinder", leak: "Leak / safety", staff_behaviour: "Staff behaviour", payment: "Payment", other: "Other" };
+const CAT: Record<string, string> = { delivery_delay: "Delivery delay", short_supply: "Short supply", leak: "Leak / safety", staff_behaviour: "Staff behaviour", billing: "Billing", other: "Other" };
 const TONE: Record<string, "info" | "warning" | "success" | "danger"> = { open: "info", in_progress: "warning", resolved: "success", escalated: "danger" };
 
 /** A11 — Complaints & transfer requests */
@@ -26,7 +26,7 @@ export default function ComplaintsPage() {
     post(`/transfers/${id}/resolve`, { approve })
       .then(() => {
         qc.invalidateQueries({ queryKey: ["transfers"] });
-        qc.invalidateQueries({ queryKey: ["customers"] });
+        qc.invalidateQueries({ queryKey: ["accounts"] });
         toast.success(approve ? "Transfer approved" : "Transfer declined");
       })
       .catch((e) => toast.error(e.message));
@@ -49,13 +49,13 @@ export default function ComplaintsPage() {
               ) : complaints.isError ? (
                 <ErrorState onRetry={() => complaints.refetch()} />
               ) : (complaints.data ?? []).length === 0 ? (
-                <EmptyState title="No complaints" body="Customer complaints raised from the app appear here." />
+                <EmptyState title="No complaints" body="Complaints raised by business accounts from the app appear here." />
               ) : (
                 <Table>
                   <THead>
                     <tr>
                       <th>Ticket</th>
-                      <th>Customer</th>
+                      <th>Business</th>
                       <th>Category</th>
                       <th>Details</th>
                       <th>Raised</th>
@@ -68,7 +68,7 @@ export default function ComplaintsPage() {
                       <Tr key={c.id}>
                         <td className="font-mono text-xs">{c.id.toUpperCase()}</td>
                         <td>
-                          <p className="font-medium">{c.customerName}</p>
+                          <p className="font-medium">{c.businessName}</p>
                           <p className="text-xs text-muted-foreground">{c.bookingCode ?? "—"}</p>
                         </td>
                         <td>{CAT[c.category]}</td>
@@ -101,12 +101,12 @@ export default function ComplaintsPage() {
               {transfers.isLoading ? (
                 <TableSkeleton rows={3} />
               ) : (transfers.data ?? []).length === 0 ? (
-                <EmptyState title="No transfer requests" body="Requests to move customers to or from your agency show up here." />
+                <EmptyState title="No transfer requests" body="Requests to move business accounts to or from your agency show up here." />
               ) : (
                 <Table>
                   <THead>
                     <tr>
-                      <th>Customer</th>
+                      <th>Business</th>
                       <th>From</th>
                       <th>To</th>
                       <th>Reason</th>
@@ -119,8 +119,8 @@ export default function ComplaintsPage() {
                     {(transfers.data ?? []).map((t: any) => (
                       <Tr key={t.id}>
                         <td>
-                          <p className="font-medium">{t.customerName}</p>
-                          <p className="text-xs text-muted-foreground">+91 {t.customerPhone}</p>
+                          <p className="font-medium">{t.businessName}</p>
+                          <p className="text-xs text-muted-foreground">+91 {t.contactPhone}</p>
                         </td>
                         <td className="text-xs">{t.fromAgencyName}</td>
                         <td className="text-xs">{t.toAgencyName ?? "Nearest available"}</td>

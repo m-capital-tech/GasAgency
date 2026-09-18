@@ -9,7 +9,7 @@ import { get, post } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-const MOBILE_HINT = "Mobile personas (Riya / Imran / Ramesh) are switched from the phone app's Demo tab.";
+const MOBILE_HINT = "Mobile personas (Imran / Fatima / Ramesh) are switched from the phone app's Demo tab.";
 
 /** PRD §6.5 — demo controls for the web panels. */
 export function DemoControls() {
@@ -75,6 +75,7 @@ export function DemoControls() {
                 <Chip k="s2" label="Delivery failure" onClick={() => run("s2", () => post("/demo/simulate", { kind: "delivery_failure", agencyId: agency?.id }))} />
                 <Chip k="s3" label="Low stock" onClick={() => run("s3", () => post("/demo/simulate", { kind: "low_stock", agencyId: agency?.id }))} />
                 <Chip k="s4" label="Payment failure" onClick={() => run("s4", () => post("/demo/simulate", { kind: "payment_failure" }))} />
+                <Chip k="s5" label="Overdue invoice (Imran)" onClick={() => run("s5", () => post("/demo/simulate", { kind: "overdue_invoice" }))} />
               </div>
             </section>
             <section>
@@ -87,8 +88,8 @@ export function DemoControls() {
             </section>
             <section className="flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold-soft/60 p-3">
               <div>
-                <p className="text-sm font-semibold">Bypass refill rules</p>
-                <p className="text-xs text-muted-foreground">Skips the 21-day gap, yearly quota and one-open-order checks so Riya can rebook during the pitch.</p>
+                <p className="text-sm font-semibold">Bypass order rules</p>
+                <p className="text-xs text-muted-foreground">Skips credit-limit, overdue and quantity-cap checks so a business can keep ordering during the pitch.</p>
               </div>
               <Switch checked={!!demoState.data?.bypassRules} onCheckedChange={(v) => run("bypass", () => post("/demo/bypass-rules", { enabled: v }).then(() => qc.invalidateQueries({ queryKey: ["demo-state"] })), v ? "Refill rules bypassed" : "Refill rules back on")} aria-label="Bypass refill rules" />
             </section>

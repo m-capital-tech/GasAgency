@@ -22,14 +22,14 @@ export default function TrackingPage() {
   const shownStaff = (staff.data ?? []).filter((s) => !focus || s.id === focus);
   const pins: MapPin[] = [
     { id: "ag", lat: agency.serviceArea.center.lat, lng: agency.serviceArea.center.lng, kind: "agency", label: agency.name },
-    ...shownStaff.filter((s) => s.online || s.activeBookingId).map((s) => ({ id: s.id, lat: s.currentLocation.lat, lng: s.currentLocation.lng, kind: s.activeBookingId ? ("staff" as const) : ("staff-idle" as const), label: s.name, sub: s.activeBookingId ? "Delivering" : `Idle · ${s.currentDrops} drops queued` })),
-    ...active.filter((b) => !focus || b.assignedStaffId === focus).map((b) => ({ id: b.id, lat: b.address.lat, lng: b.address.lng, kind: b.status === "OUT_FOR_DELIVERY" ? ("customer" as const) : ("pending" as const), label: `${b.code} · ${b.customerName}`, sub: b.status === "OUT_FOR_DELIVERY" ? `Out for delivery · ETA ${b.etaMinutes ?? "—"} min` : "Assigned, not started" })),
+    ...shownStaff.filter((s) => s.online || s.activeBookingId).map((s) => ({ id: s.id, lat: s.currentLocation.lat, lng: s.currentLocation.lng, kind: s.activeBookingId ? ("staff" as const) : ("staff-idle" as const), label: s.name, sub: s.activeBookingId ? "Delivering" : `Idle · ${s.currentDrops} drops · ${s.currentCylinders} cyl queued` })),
+    ...active.filter((b) => !focus || b.assignedStaffId === focus).map((b) => ({ id: b.id, lat: b.outlet.lat, lng: b.outlet.lng, kind: b.status === "OUT_FOR_DELIVERY" ? ("customer" as const) : ("pending" as const), label: `${b.code} · ${b.businessName}`, sub: `${b.cylinders} cyl · ${b.status === "OUT_FOR_DELIVERY" ? `ETA ${b.etaMinutes ?? "—"} min` : "Assigned, not started"}` })),
   ];
   const routes = active.filter((b) => b.status === "OUT_FOR_DELIVERY" && b.route && (!focus || b.assignedStaffId === focus)).map((b) => ({ id: b.id, points: b.route! }));
 
   return (
     <>
-      <PageHeader title="Live tracking" subtitle={`${(staff.data ?? []).filter((s) => s.activeBookingId).length} on a trip · ${active.length} active drops`}>
+      <PageHeader title="Live tracking" subtitle={`${(staff.data ?? []).filter((s) => s.activeBookingId).length} on a trip · ${active.length} active drops · ${active.reduce((s, b) => s + b.cylinders, 0)} cylinders on the road`}>
         <span className="flex items-center gap-1.5 text-xs text-success">
           <Radio className="size-3.5 animate-pulse" /> Positions update every 1.5 s
         </span>

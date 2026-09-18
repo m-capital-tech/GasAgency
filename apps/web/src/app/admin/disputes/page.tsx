@@ -6,7 +6,7 @@ import { Badge, Button, Card, CardContent, EmptyState, ErrorState, NativeSelect,
 import { q, patch, post } from "@/features/hooks";
 import { formatDateTime } from "@/lib/format";
 
-const CAT: Record<string, string> = { delivery_delay: "Delivery delay", wrong_cylinder: "Wrong cylinder", leak: "Leak / safety", staff_behaviour: "Staff behaviour", payment: "Payment", other: "Other" };
+const CAT: Record<string, string> = { delivery_delay: "Delivery delay", short_supply: "Short supply", leak: "Leak / safety", staff_behaviour: "Staff behaviour", billing: "Billing", other: "Other" };
 const TONE: Record<string, "info" | "warning" | "success" | "danger"> = { open: "info", in_progress: "warning", resolved: "success", escalated: "danger" };
 
 /** P5 — Disputes / complaints (escalated first) + transfer requests */
@@ -38,7 +38,7 @@ export default function DisputesPage() {
                   <THead>
                     <tr>
                       <th>Ticket</th>
-                      <th>Customer</th>
+                      <th>Business</th>
                       <th>Agency</th>
                       <th>Category</th>
                       <th>Details</th>
@@ -52,7 +52,7 @@ export default function DisputesPage() {
                       <Tr key={c.id} className={c.status === "escalated" ? "bg-danger-soft/30" : ""}>
                         <td className="font-mono text-xs">{c.id.toUpperCase()}</td>
                         <td>
-                          <p className="font-medium">{c.customerName}</p>
+                          <p className="font-medium">{c.businessName}</p>
                           <p className="text-xs text-muted-foreground">{c.bookingCode ?? "—"}</p>
                         </td>
                         <td className="text-xs">{c.agencyName}</td>
@@ -89,7 +89,7 @@ export default function DisputesPage() {
                 <Table>
                   <THead>
                     <tr>
-                      <th>Customer</th>
+                      <th>Business</th>
                       <th>From</th>
                       <th>To</th>
                       <th>Reason</th>
@@ -100,7 +100,7 @@ export default function DisputesPage() {
                   <TBody>
                     {(transfers.data ?? []).map((t: any) => (
                       <Tr key={t.id}>
-                        <td className="font-medium">{t.customerName}</td>
+                        <td className="font-medium">{t.businessName}</td>
                         <td className="text-xs">{t.fromAgencyName}</td>
                         <td className="text-xs">{t.toAgencyName ?? "Nearest available"}</td>
                         <td className="text-xs text-muted-foreground">{t.reason}</td>

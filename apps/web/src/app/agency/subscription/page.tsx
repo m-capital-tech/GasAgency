@@ -10,9 +10,9 @@ import { formatINR, formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PLANS = [
-  { key: "free", name: "Free", price: 0, blurb: "Up to 200 orders / month", features: ["Order board & assignment", "Customer app listing", "Basic settlements"] },
-  { key: "growth", name: "Growth", price: 1999, blurb: "Unlimited orders", features: ["Everything in Free", "Live staff tracking", "Refill reminder campaigns", "COD reconciliation"] },
-  { key: "pro", name: "Pro", price: 4999, blurb: "For multi-godown distributors", features: ["Everything in Growth", "Advanced analytics", "Priority support", "API access (coming soon)"] },
+  { key: "free", name: "Free", price: 0, blurb: "Up to 150 orders / month", features: ["Order board & assignment", "Listed to business accounts", "Basic settlements"] },
+  { key: "growth", name: "Growth", price: 2999, blurb: "Unlimited orders", features: ["Everything in Free", "Live staff tracking", "Low-stock nudge campaigns", "Credit receivables & aging"] },
+  { key: "pro", name: "Pro", price: 7999, blurb: "For multi-godown distributors", features: ["Everything in Growth", "Negotiated account pricing", "Advanced analytics", "API access (coming soon)"] },
 ];
 
 /** A12 — Subscription */

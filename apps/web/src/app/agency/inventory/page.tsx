@@ -42,7 +42,7 @@ export default function InventoryPage() {
           </span>
         ) : null}
       </PageHeader>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2">
         {inv.data.stock.map((s: any) => (
           <Card key={s.cylinderTypeId} className={cn(s.low && "border-warning")}>
             <CardContent className="pt-5">
@@ -50,7 +50,7 @@ export default function InventoryPage() {
                 <p className="font-semibold">{s.name}</p>
                 {s.low ? <Badge tone="warning" dot>Low</Badge> : <Badge tone="success" dot>OK</Badge>}
               </div>
-              <div className="mt-3 flex items-end gap-6">
+              <div className="mt-3 flex items-end gap-5">
                 <div>
                   <p className="text-3xl font-bold tabular-nums">{s.filled}</p>
                   <p className="text-xs text-muted-foreground">filled</p>
@@ -58,6 +58,10 @@ export default function InventoryPage() {
                 <div>
                   <p className="text-xl font-semibold tabular-nums text-muted-foreground">{s.empty}</p>
                   <p className="text-xs text-muted-foreground">empty</p>
+                </div>
+                <div>
+                  <p className="text-xl font-semibold tabular-nums text-muted-foreground">{s.withAccounts}</p>
+                  <p className="text-xs text-muted-foreground">with accounts</p>
                 </div>
               </div>
               <div className="mt-3 h-1.5 rounded-full bg-muted">
@@ -68,6 +72,26 @@ export default function InventoryPage() {
           </Card>
         ))}
       </div>
+      {inv.data.emptiesHeldByAccounts.length ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <div>
+              <CardTitle>Empties held by accounts</CardTitle>
+              <CardDescription>Cylinders to collect on the next delivery</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="px-2">
+            <ul className="grid gap-1 md:grid-cols-2">
+              {inv.data.emptiesHeldByAccounts.map((e: any) => (
+                <li key={e.businessId} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm hover:bg-muted">
+                  <span>{e.name}</span>
+                  <span className="text-xs text-muted-foreground">{e.empties} empties · {e.inUse} in use</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
