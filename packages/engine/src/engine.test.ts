@@ -4,96 +4,125 @@ import { DemoEngine } from "./engine";
 const e = new DemoEngine();
 const events: string[] = [];
 e.on((ev) => events.push(ev.type));
-const { riyaId, imranId, rameshStaffId, sureshAgencyId } = e.state.demo;
+const { imranId, fatimaId, rameshStaffId, sureshAgencyId, pendingBusinessId } = e.state.demo;
 
 // auth
 assert.throws(() => e.verifyOtp("9000000001", "000000"), /Incorrect OTP/);
 const login = e.verifyOtp("9000000001", "123456");
-assert.equal(login.user.name, "Riya Sharma");
+assert.equal(login.user.name, "Imran Khan");
+assert.equal((login.profile as any).name, "Al-Madina Tiffin Centre");
 
-// usage gauge
-const usage = e.usage(riyaId);
-console.log("riya gauge", usage.pct, "% ,", usage.daysLeft, "days left, cycle", usage.cycleDays);
-assert.ok(usage.pct > 5 && usage.pct < 25);
+// dashboard data
+const imran = e.expandBusiness(e.business(imranId));
+console.log("imran outlets", imran.outlets.map((o) => [o.label, `${o.daysLeft}d left`, o.lowStock]), "credit avail", imran.creditAvailable, "usual", imran.usualOrder);
+assert.equal(imran.outlets.length, 2);
+assert.ok(imran.outlets[0].daysLeft <= 2, "main kitchen is nearly out");
+assert.equal(imran.credit.status, "approved");
 
-// quote + booking + payment
-const q = e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "express");
+// quote: slab pricing + credit
+const q = e.quote(imranId, [{ cylinderTypeId: "cyl_19", qty: 5 }], "tomorrow_morning", "credit");
 assert.equal(q.violation, null);
-assert.equal(q.charges.express, 49);
-const riya = e.customer(riyaId);
-const b = e.createBooking({ customerId: riyaId, addressId: riya.defaultAddressId, items: [{ cylinderTypeId: "cyl_14", qty: 1 }], slot: "express", paymentMethod: "upi" });
-assert.equal(b.status, "PENDING_PAYMENT");
-// duplicate open booking blocked
-assert.throws(() => e.createBooking({ customerId: riyaId, addressId: riya.defaultAddressId, items: [{ cylinderTypeId: "cyl_14", qty: 1 }], slot: "standard", paymentMethod: "cod" }), /open booking/);
-// payment fail → retry → cod fallback
-e.recordPayment(b.id, { ok: false, error: "declined" });
-assert.equal(b.status, "PAYMENT_FAILED");
-e.switchToCod(b.id);
-assert.equal(b.status, "PLACED");
-assert.equal(b.payment.status, "COD_PENDING");
+assert.ok(q.items[0].unitPrice < q.items[0].basePrice, "slab discount applied at 5+");
+assert.ok(q.charges.slabDiscount > 0);
+assert.ok(q.charges.gst > 0);
+assert.equal(q.creditAllowed, true);
 
-// agency accept + auto-assign
+// credit limit rule
+const big = e.quote(imranId, [{ cylinderTypeId: "cyl_47", qty: 12 }], "standard", "credit");
+assert.equal(big.violation?.code, "CREDIT_LIMIT");
+// quantity cap
+assert.equal(e.quote(imranId, [{ cylinderTypeId: "cyl_19", qty: 25 }], "standard", "upi").violation?.code, "QTY_CAP");
+// fatima: credit requested but not approved
+assert.equal(e.quote(fatimaId, [{ cylinderTypeId: "cyl_19", qty: 2 }], "standard", "credit").violation?.code, "CREDIT_NOT_APPROVED");
+assert.equal(e.quote(fatimaId, [{ cylinderTypeId: "cyl_19", qty: 2 }], "standard", "upi").violation, null);
+
+// order on credit → placed immediately, two open orders allowed
+const b = e.createBooking({ businessId: imranId, outletId: imran.outlets[0].id, items: [{ cylinderTypeId: "cyl_19", qty: 3 }], slot: "tomorrow_morning", paymentMethod: "credit", emptiesToCollect: 3 });
+assert.equal(b.status, "PLACED");
+assert.equal(b.payment.status, "CREDIT_DUE");
+const b2 = e.createBooking({ businessId: imranId, outletId: imran.outlets[1].id, items: [{ cylinderTypeId: "cyl_19", qty: 1 }], slot: "standard", paymentMethod: "upi" });
+assert.equal(b2.status, "PENDING_PAYMENT");
+e.recordPayment(b2.id, { ok: false, error: "declined" });
+assert.equal(b2.status, "PAYMENT_FAILED");
+e.switchPayment(b2.id, "credit");
+assert.equal(b2.status, "PLACED");
+
+// agency accept + auto-assign → Ramesh
 e.accept(b.id);
 e.autoAssign(b.id);
-assert.equal(b.status, "ASSIGNED");
-assert.ok(b.assignedStaffId);
+assert.equal(b.assignedStaffId, rameshStaffId);
 
-// delivery: start trip, tick, wrong otp, right otp
+// delivery with empties, credit invoice, outlet stock
+const spareBefore = e.business(imranId).outlets[0].spareFull;
 e.startTrip(b.id);
-assert.equal(b.status, "OUT_FOR_DELIVERY");
-const eta0 = b.etaMinutes!;
-e.tick(); e.tick(); e.tick();
-assert.ok(b.etaMinutes! < eta0, "eta falls");
-assert.throws(() => e.completeDelivery(b.id, { otp: "0000", cashCollected: true }), /Incorrect delivery OTP/);
-assert.throws(() => e.completeDelivery(b.id, { otp: b.deliveryOtp }), /cash/);
-const done = e.completeDelivery(b.id, { otp: b.deliveryOtp, cashCollected: true, emptyCollected: true });
+e.tick(); e.tick();
+assert.throws(() => e.completeDelivery(b.id, { otp: "0000" }), /Incorrect delivery OTP/);
+const done = e.completeDelivery(b.id, { otp: b.deliveryOtp, emptiesCollected: 2 });
 assert.equal(done.status, "DELIVERED");
-assert.ok(e.customer(riyaId).reminder.nextDate, "reminder scheduled");
-console.log("next reminder", e.customer(riyaId).reminder.nextDate);
-assert.ok(e.staff(b.assignedStaffId!).cashInHand > 0);
+assert.equal(done.emptiesCollected, 2);
+assert.ok(b.payment.dueAt, "credit invoice has a due date");
+assert.equal(e.business(imranId).outlets[0].spareFull, spareBefore + 3);
+assert.ok(e.ledgerFor(imranId)[0].kind === "invoice");
+console.log("credit outstanding after delivery", e.expandBusiness(e.business(imranId)).creditOutstanding);
 
-// min gap rule now applies
-const q2 = e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard");
-assert.equal(q2.violation?.code, "MIN_GAP");
+// pay off invoices
+const outstanding = e.expandBusiness(e.business(imranId)).creditOutstanding;
+const pay = e.recordCreditPayment(imranId, outstanding, "NEFT");
+assert.ok(pay.paidInvoices.length >= 1);
+assert.equal(e.expandBusiness(e.business(imranId)).creditOutstanding, 0);
 
-// bypass switch lifts the rule, and reset clears it
+// statement
+const months = e.statementMonths(imranId);
+const st = e.statement(imranId, months[0]);
+assert.ok(st.totals.orders > 0 && st.totals.gst > 0);
+
+// standing order run
+const so = e.business(imranId).standingOrders[0];
+const run = e.runStandingOrder(imranId, so.id);
+assert.equal(run.status, "PLACED");
+assert.equal(run.standingOrderId, so.id);
+
+// overdue simulation blocks credit
+e.simulate("overdue_invoice");
+assert.equal(e.quote(imranId, [{ cylinderTypeId: "cyl_19", qty: 1 }], "standard", "credit").violation?.code, "CREDIT_OVERDUE");
 e.setBypassRules(true);
-assert.equal(e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard").violation, null);
+assert.equal(e.quote(imranId, [{ cylinderTypeId: "cyl_19", qty: 1 }], "standard", "credit").violation, null);
 e.setBypassRules(false);
-assert.equal(e.quote(riyaId, [{ cylinderTypeId: "cyl_14", qty: 1 }], "standard").violation?.code, "MIN_GAP");
 
-// commercial: quantity > 1 allowed, no gap
-const imran = e.customer(imranId);
-const b2 = e.createBooking({ customerId: imranId, addressId: imran.defaultAddressId, items: [{ cylinderTypeId: "cyl_19", qty: 3 }], slot: "standard", paymentMethod: "cod" });
-assert.equal(b2.status, "PLACED");
-e.advance(b2.id); e.advance(b2.id); e.advance(b2.id);
-assert.equal(b2.status, "OUT_FOR_DELIVERY");
-e.simulate("delivery_failure");
-assert.equal(b2.status, "DELIVERY_FAILED");
-e.reschedule(b2.id);
-assert.equal(b2.status, "ACCEPTED");
-e.cancel(b2.id, "test");
-assert.equal(b2.status, "CANCELLED");
+// admin: verify pending business + approve credit in one go; approve Fatima's request
+const pb = e.setBusinessStatus(pendingBusinessId, { status: "verified", credit: { status: "approved", limit: 100000, termDays: 30 }, by: "usr_admin" });
+assert.equal(pb.status, "verified");
+assert.equal(pb.credit.limit, 100000);
+e.setBusinessStatus(fatimaId, { credit: { status: "approved", limit: 75000, termDays: 15 } });
+assert.equal(e.quote(fatimaId, [{ cylinderTypeId: "cyl_19", qty: 2 }], "standard", "credit").violation, null);
 
-// admin approve pending agency then it is selectable
-const pending = e.agency(e.state.demo.pendingAgencyId);
-assert.equal(pending.status, "pending");
-e.setAgencyStatus(pending.id, "approved");
-assert.ok(e.nearestAgencies({ lat: 17.4056, lng: 78.5591 }, "500039")[0].id === pending.id);
+// pending agency approval + nearest
+e.setAgencyStatus(e.state.demo.pendingAgencyId, "approved");
+assert.equal(e.nearestAgencies({ lat: 17.4056, lng: 78.5591 }, "500039")[0].id, e.state.demo.pendingAgencyId);
 
-// dashboards non-empty
+// new business onboarding
+const nu = e.verifyOtp("9876501234", "123456");
+assert.equal(nu.isNew, true);
+const prof = e.upsertBusiness(nu.user.id, { ownerName: "Test Owner", name: "Test Dhaba", type: "restaurant", outlet: { label: "Main kitchen", line1: "1-2-3 Road", pincode: "500013", lat: 17.396, lng: 78.521, inUse: 2, spareFull: 1, cylindersPerWeek: 4 } });
+assert.equal(prof.status, "pending");
+const asg = e.autoAssignAgency(nu.user.id);
+assert.equal(asg.agency.id, sureshAgencyId);
+assert.equal(e.business(nu.user.id).status, "verified");
+
+// dashboards
 const dash = e.agencyDashboard(sureshAgencyId);
-assert.ok(dash.series30.some((d) => d.orders > 0));
+assert.ok(dash.kpis.receivables > 0 && dash.series30.some((d) => d.cylinders > 0));
+const stl = e.agencySettlements(sureshAgencyId);
+assert.ok(stl.receivables.length > 0 && stl.aging.length === 4);
 const ov = e.adminOverview();
-assert.ok(ov.kpis.gmv > 0 && ov.weekly.length === 13);
-console.log("admin kpis", ov.kpis, ov.revenueSplit);
+assert.ok(ov.kpis.gmv > 1e7 && ov.revenueSplit.length === 5);
+console.log("admin", ov.kpis, ov.revenueSplit);
 
 // burst + reset
 e.simulate("order_burst");
-assert.ok(e.listBookings({ agencyId: sureshAgencyId, status: ["PLACED"] }).length >= 5);
 e.reset();
-assert.equal(e.listBookings({ customerId: riyaId }).length, 4);
+assert.equal(e.business(imranId).standingOrders.length, 1);
 assert.ok(events.includes("booking.created") && events.includes("staff.location") && events.includes("demo.reset"));
-console.log("drops for ramesh", e.dropsFor(rameshStaffId).pending.map((d) => [d.code, d.status]));
+console.log("drops for ramesh", e.dropsFor(rameshStaffId).pending.map((d) => [d.code, d.status, d.cylinders]));
 console.log("✅ engine tests passed");
 e.destroy();

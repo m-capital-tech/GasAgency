@@ -1,11 +1,11 @@
-import { createBookingSchema, type BookingStatus } from "@gassetu/shared";
+import { createBookingSchema, standingOrderSchema, type BookingStatus } from "@gassetu/shared";
 import type { DemoEngine, SimulationKind } from "./engine";
 import { EngineError } from "./errors";
 
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export interface Req {
   method: Method;
-  path: string; // without query string
+  path: string;
   query: Record<string, string>;
   body: any;
   userId?: string;
@@ -43,19 +43,30 @@ add("GET", "/me/:userId", (e, p) => {
   return { user, profile: e.profileFor(user) };
 });
 
-// ---- customers
-add("GET", "/customers/:id", (e, p) => e.expandCustomer(e.customer(p.id)));
-add("PUT", "/customers/:id/profile", (e, p, r) => e.upsertProfile(p.id, r.body));
-add("POST", "/customers/:id/connection", (e, p, r) => e.linkConnection(p.id, r.body.omc, str(r.body?.consumerNo, "consumerNo")));
-add("POST", "/customers/:id/assign-agency", (e, p) => e.autoAssignAgency(p.id));
-add("GET", "/customers/:id/usage", (e, p) => e.usage(p.id));
-add("PATCH", "/customers/:id/reminder", (e, p, r) => e.updateReminder(p.id, r.body));
-add("POST", "/customers/:id/transfer-request", (e, p, r) => e.requestTransfer(p.id, str(r.body?.reason, "reason"), r.body?.toAgencyId ?? null));
-add("GET", "/customers/:id/transfer-requests", (e, p) => e.state.transferRequests.filter((t) => t.customerId === p.id).map((t) => ({ ...t, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
-add("GET", "/customers/:id/notifications", (e, p) => e.notificationsFor(p.id));
-add("POST", "/customers/:id/notifications/read", (e, p, r) => e.markRead(p.id, r.body?.id));
-add("GET", "/customers/:id/complaints", (e, p) => e.state.complaints.filter((c) => c.customerId === p.id).map((c) => e.expandComplaint(c)));
-add("POST", "/customers/:id/complaints", (e, p, r) => e.createComplaint(p.id, r.body));
+// ---- businesses (customer side)
+add("GET", "/businesses/:id", (e, p) => e.expandBusiness(e.business(p.id)));
+add("PUT", "/businesses/:id/profile", (e, p, r) => e.upsertBusiness(p.id, r.body));
+add("POST", "/businesses/:id/outlets", (e, p, r) => e.addOutlet(p.id, r.body));
+add("PATCH", "/businesses/:id/outlets/:outletId", (e, p, r) => e.updateOutlet(p.id, p.outletId, r.body));
+add("POST", "/businesses/:id/outlets/:outletId/default", (e, p) => e.setDefaultOutlet(p.id, p.outletId));
+add("POST", "/businesses/:id/connection", (e, p, r) => e.linkConnection(p.id, r.body.omc, str(r.body?.consumerNo, "consumerNo")));
+add("POST", "/businesses/:id/assign-agency", (e, p) => e.autoAssignAgency(p.id));
+add("POST", "/businesses/:id/transfer-request", (e, p, r) => e.requestTransfer(p.id, str(r.body?.reason, "reason"), r.body?.toAgencyId ?? null));
+add("GET", "/businesses/:id/transfer-requests", (e, p) => e.state.transferRequests.filter((t) => t.businessId === p.id).map((t) => ({ ...t, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
+add("POST", "/businesses/:id/credit/request", (e, p, r) => e.requestCredit(p.id, r.body?.note));
+add("GET", "/businesses/:id/ledger", (e, p) => e.ledgerFor(p.id));
+add("POST", "/businesses/:id/ledger/payment", (e, p, r) => e.recordCreditPayment(p.id, num(r.body?.amount, "amount"), r.body?.note));
+add("GET", "/businesses/:id/statements", (e, p) => e.statementMonths(p.id));
+add("GET", "/businesses/:id/statements/:month", (e, p) => e.statement(p.id, p.month));
+add("GET", "/businesses/:id/complaints", (e, p) => e.state.complaints.filter((c) => c.businessId === p.id).map((c) => e.expandComplaint(c)));
+add("POST", "/businesses/:id/complaints", (e, p, r) => e.createComplaint(p.id, r.body));
+add("PUT", "/businesses/:id/standing-orders", (e, p, r) => {
+  const parsed = standingOrderSchema.safeParse(r.body);
+  if (!parsed.success) throw new EngineError("VALIDATION", parsed.error.issues.map((i) => i.message).join(", "));
+  return e.upsertStandingOrder(p.id, { ...parsed.data, days: parsed.data.days as any, id: r.body?.id });
+});
+add("DELETE", "/businesses/:id/standing-orders/:soId", (e, p) => e.deleteStandingOrder(p.id, p.soId));
+add("POST", "/businesses/:id/standing-orders/:soId/run", (e, p) => e.runStandingOrder(p.id, p.soId));
 add("GET", "/users/:id/notifications", (e, p) => e.notificationsFor(p.id));
 add("POST", "/users/:id/notifications/read", (e, p, r) => e.markRead(p.id, r.body?.id));
 
@@ -71,8 +82,11 @@ add("GET", "/config", (e) => e.config);
 add("GET", "/agency/:id/dashboard", (e, p) => e.agencyDashboard(p.id));
 add("GET", "/agency/:id/staff", (e, p) => e.state.staff.filter((s) => s.agencyId === p.id).map((s) => e.expandStaff(s)));
 add("POST", "/agency/:id/staff", (e, p, r) => e.upsertStaff(p.id, r.body));
-add("GET", "/agency/:id/customers", (e, p) => e.agencyCustomers(p.id));
-add("POST", "/agency/:id/campaign", (e, p, r) => e.runCampaign(p.id, r.body?.customerIds ?? []));
+add("GET", "/agency/:id/accounts", (e, p) => e.agencyAccounts(p.id));
+add("GET", "/agency/:id/account-prices", (e, p) => e.state.accountPrices.filter((x) => x.agencyId === p.id));
+add("PUT", "/agency/:id/accounts/:businessId/price", (e, p, r) => e.setAccountPrice(p.id, p.businessId, str(r.body?.cylinderTypeId, "cylinderTypeId"), r.body?.price == null ? null : num(r.body.price, "price")));
+add("POST", "/agency/:id/accounts/:businessId/payment", (e, p, r) => e.recordCreditPayment(p.businessId, num(r.body?.amount, "amount"), r.body?.note ?? "Collected by agency"));
+add("POST", "/agency/:id/campaign", (e, p, r) => e.runCampaign(p.id, r.body?.businessIds ?? []));
 add("GET", "/agency/:id/inventory", (e, p) => e.agencyInventory(p.id));
 add("POST", "/agency/:id/inventory", (e, p, r) => e.addInventoryEntry(p.id, { cylinderTypeId: str(r.body?.cylinderTypeId, "cylinderTypeId"), kind: r.body.kind, qty: num(r.body?.qty, "qty"), note: r.body?.note }));
 add("GET", "/agency/:id/prices", (e, p) => e.state.prices.filter((x) => x.agencyId === p.id));
@@ -80,22 +94,14 @@ add("PUT", "/agency/:id/prices", (e, p, r) => e.updatePrices(p.id, r.body?.rows 
 add("PATCH", "/agency/:id", (e, p, r) => e.updateAgency(p.id, r.body));
 add("GET", "/agency/:id/settlements", (e, p) => e.agencySettlements(p.id));
 add("GET", "/agency/:id/complaints", (e, p) => e.state.complaints.filter((c) => c.agencyId === p.id).map((c) => e.expandComplaint(c)));
-add("GET", "/agency/:id/transfers", (e, p) => e.state.transferRequests.filter((t) => t.fromAgencyId === p.id || t.toAgencyId === p.id).map((t) => ({ ...t, customerName: e.user(t.customerId).name, customerPhone: e.user(t.customerId).phone, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
+add("GET", "/agency/:id/transfers", (e, p) => e.state.transferRequests.filter((t) => t.fromAgencyId === p.id || t.toAgencyId === p.id).map((t) => ({ ...t, businessName: e.business(t.businessId).name, contactPhone: e.user(t.businessId).phone, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
 add("GET", "/agency/:id/invoices", (e, p) => e.state.subscriptionInvoices.filter((i) => i.agencyId === p.id).sort((a, b) => b.issuedAt.localeCompare(a.issuedAt)));
 add("POST", "/transfers/:id/resolve", (e, p, r) => e.resolveTransfer(p.id, !!r.body?.approve));
 add("PATCH", "/complaints/:id", (e, p, r) => e.updateComplaint(p.id, r.body.status));
 
 // ---- bookings
-add("GET", "/bookings", (e, _p, r) =>
-  e.listBookings({
-    customerId: r.query.customerId,
-    agencyId: r.query.agencyId,
-    staffId: r.query.staffId,
-    status: r.query.status ? (r.query.status.split(",") as BookingStatus[]) : undefined,
-    since: r.query.since,
-  }),
-);
-add("POST", "/bookings/quote", (e, _p, r) => e.quote(str(r.body?.customerId, "customerId"), r.body.items, r.body.slot));
+add("GET", "/bookings", (e, _p, r) => e.listBookings({ businessId: r.query.businessId, agencyId: r.query.agencyId, staffId: r.query.staffId, outletId: r.query.outletId, status: r.query.status ? (r.query.status.split(",") as BookingStatus[]) : undefined, since: r.query.since }));
+add("POST", "/bookings/quote", (e, _p, r) => e.quote(str(r.body?.businessId, "businessId"), r.body.items, r.body.slot, r.body.paymentMethod));
 add("POST", "/bookings", (e, _p, r) => {
   const parsed = createBookingSchema.safeParse(r.body);
   if (!parsed.success) throw new EngineError("VALIDATION", parsed.error.issues.map((i) => i.message).join(", "));
@@ -111,29 +117,30 @@ add("PATCH", "/bookings/:id/status", (e, p, r) => {
     case "REJECTED":
       return e.expandBooking(e.reject(p.id, r.body?.reason ?? "Unable to fulfil", by));
     case "CANCELLED":
-      return e.expandBooking(e.cancel(p.id, r.body?.reason ?? "Cancelled", by === "customer" ? "customer" : "agency"));
+      return e.expandBooking(e.cancel(p.id, r.body?.reason ?? "Cancelled", by === "business" ? "business" : "agency"));
     default:
       throw new EngineError("VALIDATION", `Use the dedicated endpoint for ${to}`);
   }
 });
 add("POST", "/bookings/:id/assign", (e, p, r) => e.expandBooking(r.body?.auto || !r.body?.staffId ? e.autoAssign(p.id) : e.assign(p.id, r.body.staffId)));
 add("POST", "/bookings/:id/start-trip", (e, p) => e.startTrip(p.id));
-add("POST", "/bookings/:id/complete", (e, p, r) => e.completeDelivery(p.id, { otp: str(r.body?.otp, "otp"), cashCollected: !!r.body?.cashCollected, emptyCollected: !!r.body?.emptyCollected }));
+add("POST", "/bookings/:id/complete", (e, p, r) => e.completeDelivery(p.id, { otp: str(r.body?.otp, "otp"), cashCollected: !!r.body?.cashCollected, emptiesCollected: r.body?.emptiesCollected == null ? undefined : num(r.body.emptiesCollected, "emptiesCollected") }));
 add("POST", "/bookings/:id/fail", (e, p, r) => e.failDelivery(p.id, r.body?.reason ?? "other", r.body?.notes));
 add("POST", "/bookings/:id/retry-payment", (e, p) => e.expandBooking(e.retryPayment(p.id)));
-add("POST", "/bookings/:id/switch-cod", (e, p) => e.expandBooking(e.switchToCod(p.id)));
+add("POST", "/bookings/:id/switch-payment", (e, p, r) => e.expandBooking(e.switchPayment(p.id, r.body?.method === "credit" ? "credit" : "cod")));
 add("POST", "/bookings/bulk", (e, _p, r) => {
   const ids: string[] = r.body?.ids ?? [];
   const action = r.body?.action as "accept" | "auto_assign";
-  const out = [];
+  let updated = 0;
   for (const id of ids) {
     try {
-      out.push(action === "accept" ? e.accept(id) : e.autoAssign(id));
+      action === "accept" ? e.accept(id) : e.autoAssign(id);
+      updated++;
     } catch {
       /* skip invalid */
     }
   }
-  return { updated: out.length };
+  return { updated };
 });
 
 // ---- payments (mock Razorpay)
@@ -141,10 +148,7 @@ add("POST", "/payments/mock/order", (e, _p, r) => {
   const b = e.booking(str(r.body?.bookingId, "bookingId"));
   return { orderId: `order_mock_${b.id}`, amount: Math.round(b.charges.total * 100), currency: "INR", bookingId: b.id, key: "rzp_test_mock" };
 });
-add("POST", "/payments/mock/checkout", (e, _p, r) => {
-  const b = e.recordPayment(str(r.body?.bookingId, "bookingId"), { ok: !!r.body?.ok, paymentId: r.body?.paymentId, method: r.body?.method, error: r.body?.error });
-  return e.expandBooking(b);
-});
+add("POST", "/payments/mock/checkout", (e, _p, r) => e.expandBooking(e.recordPayment(str(r.body?.bookingId, "bookingId"), { ok: !!r.body?.ok, paymentId: r.body?.paymentId, method: r.body?.method, error: r.body?.error })));
 
 // ---- delivery
 add("GET", "/staff/:id", (e, p) => e.expandStaff(e.staff(p.id)));
@@ -154,17 +158,12 @@ add("POST", "/staff/:id/deposit", (e, p) => e.depositCash(p.id));
 
 // ---- admin
 add("GET", "/admin/overview", (e) => e.adminOverview());
-add("GET", "/admin/agencies", (e) => e.state.agencies.map((a) => ({ ...e.agencyCard(a), ownerName: e.user(a.ownerUserId).name, ownerEmail: e.user(a.ownerUserId).email, staffCount: e.state.staff.filter((s) => s.agencyId === a.id).length, customerCount: e.state.customers.filter((c) => c.assignedAgencyId === a.id).length, orders30: e.state.bookings.filter((b) => b.agencyId === a.id && Date.now() - new Date(b.createdAt).getTime() < 30 * 86400000).length, onTimePct: Math.round(e.state.staff.filter((s) => s.agencyId === a.id).reduce((s, x) => s + x.onTimePct, 0) / Math.max(1, e.state.staff.filter((s) => s.agencyId === a.id).length)) })));
+add("GET", "/admin/agencies", (e) => e.state.agencies.map((a) => ({ ...e.agencyCard(a), ownerName: e.user(a.ownerUserId).name, ownerEmail: e.user(a.ownerUserId).email, staffCount: e.state.staff.filter((s) => s.agencyId === a.id).length, accountCount: e.state.businesses.filter((b) => b.assignedAgencyId === a.id).length, orders30: e.state.bookings.filter((b) => b.agencyId === a.id && Date.now() - new Date(b.createdAt).getTime() < 30 * 86400000).length, onTimePct: Math.round(e.state.staff.filter((s) => s.agencyId === a.id).reduce((s, x) => s + x.onTimePct, 0) / Math.max(1, e.state.staff.filter((s) => s.agencyId === a.id).length)) })));
 add("POST", "/admin/agencies/:id/status", (e, p, r) => e.setAgencyStatus(p.id, r.body.status));
-add("GET", "/admin/customers", (e, _p, r) => {
-  const q = (r.query.q ?? "").toLowerCase();
-  return e.state.customers
-    .map((c) => e.expandCustomer(c))
-    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.agencyName ?? "").toLowerCase().includes(q))
-    .slice(0, 100);
-});
+add("GET", "/admin/businesses", (e, _p, r) => e.adminBusinesses(r.query.q ?? ""));
+add("POST", "/admin/businesses/:id/status", (e, p, r) => e.setBusinessStatus(p.id, { status: r.body?.status, credit: r.body?.credit, by: r.userId ?? "admin" }));
 add("GET", "/admin/complaints", (e) => e.state.complaints.map((c) => e.expandComplaint(c)));
-add("GET", "/admin/transfers", (e) => e.state.transferRequests.map((t) => ({ ...t, customerName: e.user(t.customerId).name, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
+add("GET", "/admin/transfers", (e) => e.state.transferRequests.map((t) => ({ ...t, businessName: e.business(t.businessId).name, fromAgencyName: e.agency(t.fromAgencyId).name, toAgencyName: t.toAgencyId ? e.agency(t.toAgencyId).name : null })));
 add("GET", "/admin/config", (e) => e.config);
 add("PATCH", "/admin/config", (e, _p, r) => e.updateConfig(r.body));
 

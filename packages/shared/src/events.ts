@@ -9,4 +9,5 @@ export type LiveEvent =
   | { type: "notification"; notification: Notification }
   | { type: "inventory.updated"; agencyId: string }
   | { type: "agency.updated"; agencyId: string }
-  | { type: "demo.reset" }
+  | { type: "business.updated"; businessId: string }
+  | { type: "demo.reset" };

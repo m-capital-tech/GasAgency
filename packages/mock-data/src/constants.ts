@@ -1,14 +1,12 @@
-import type { CylinderType, OMC } from "@gassetu/shared";
+import type { BusinessType, CylinderType, OMC } from "@gassetu/shared";
 
 export const CYLINDER_TYPES: CylinderType[] = [
-  { id: "cyl_14", name: "14.2 kg Domestic", weightKg: 14.2, category: "domestic" },
-  { id: "cyl_5", name: "5 kg FTL", weightKg: 5, category: "domestic" },
-  { id: "cyl_19", name: "19 kg Commercial", weightKg: 19, category: "commercial" },
-  { id: "cyl_47", name: "47.5 kg Commercial", weightKg: 47.5, category: "commercial" },
+  { id: "cyl_19", name: "19 kg Commercial", weightKg: 19 },
+  { id: "cyl_47", name: "47.5 kg Commercial", weightKg: 47.5 },
 ];
 
-// Illustrative prices (PRD §8.2)
-export const BASE_PRICES: Record<string, number> = { cyl_14: 905, cyl_5: 340, cyl_19: 1750, cyl_47: 4350 };
+// Illustrative commercial prices (ex-GST)
+export const BASE_PRICES: Record<string, number> = { cyl_19: 1750, cyl_47: 4350 };
 
 export interface AreaSeed {
   key: string;
@@ -41,8 +39,50 @@ export const STREETS = [
   "Asif Nagar", "Humayun Nagar", "Masab Tank", "Tolichowki", "Gudimalkapur", "Vijayanagar Colony",
 ];
 
-export const FIRST_NAMES_F = ["Riya", "Ananya", "Lakshmi", "Priya", "Sneha", "Divya", "Kavya", "Meena", "Swathi", "Harini", "Nandini", "Pooja", "Sowmya", "Bhavana", "Jyothi", "Fatima", "Ayesha", "Rekha", "Vasundhara", "Padma"];
-export const FIRST_NAMES_M = ["Ravi", "Suresh", "Kiran", "Naveen", "Srinivas", "Arjun", "Vikram", "Mahesh", "Rahul", "Sandeep", "Venkat", "Praveen", "Imran", "Anil", "Karthik", "Rajesh", "Mohan", "Ganesh", "Farhan", "Abdul"];
+export const FIRST_NAMES = ["Ravi", "Suresh", "Kiran", "Naveen", "Srinivas", "Arjun", "Vikram", "Mahesh", "Rahul", "Sandeep", "Venkat", "Praveen", "Imran", "Anil", "Karthik", "Rajesh", "Mohan", "Ganesh", "Farhan", "Abdul", "Lakshmi", "Priya", "Sneha", "Divya", "Fatima", "Ayesha", "Rekha", "Padma", "Swathi", "Harini"];
 export const LAST_NAMES = ["Reddy", "Rao", "Sharma", "Kumar", "Naidu", "Goud", "Yadav", "Khan", "Iyer", "Chowdary", "Verma", "Prasad", "Devi", "Murthy", "Ali", "Nair", "Patel", "Babu", "Sagar", "Varma"];
-export const BUSINESS_NAMES = ["Sai Tiffin Centre", "Al-Madina Biryani House", "Annapurna Mess", "Chai Point Corner", "Sri Lakshmi Bakery", "Ruchi Restaurant", "Hotel Swagath", "Deccan Dhaba", "Cafe Nirvana", "Star Kitchens Cloud", "Ganesh Sweets", "Bawarchi Express", "Mom's Kitchen Catering", "Udupi Grand", "Paradise Take-away"];
-export const VEHICLES = ["Three-wheeler", "Three-wheeler", "Three-wheeler", "Mini truck", "Cycle cart", "Two-wheeler"];
+
+export const BUSINESSES: { name: string; type: BusinessType; perWeek: number; big?: boolean }[] = [
+  { name: "Al-Madina Tiffin Centre", type: "tiffin_centre", perWeek: 3 },
+  { name: "Sai Tiffin Centre", type: "tiffin_centre", perWeek: 2 },
+  { name: "Annapurna Mess", type: "canteen", perWeek: 4 },
+  { name: "Chai Point Corner", type: "tea_stall", perWeek: 1 },
+  { name: "Sri Lakshmi Bakery", type: "bakery", perWeek: 2 },
+  { name: "Ruchi Restaurant", type: "restaurant", perWeek: 5 },
+  { name: "Hotel Swagath", type: "hotel", perWeek: 7, big: true },
+  { name: "Deccan Dhaba", type: "restaurant", perWeek: 4 },
+  { name: "Cafe Nirvana", type: "tea_stall", perWeek: 1.5 },
+  { name: "Star Kitchens Cloud", type: "cloud_kitchen", perWeek: 6 },
+  { name: "Ganesh Sweets", type: "bakery", perWeek: 3 },
+  { name: "Bawarchi Express", type: "restaurant", perWeek: 6, big: true },
+  { name: "Mom's Kitchen Catering", type: "cloud_kitchen", perWeek: 4 },
+  { name: "Udupi Grand", type: "restaurant", perWeek: 5 },
+  { name: "Paradise Take-away", type: "restaurant", perWeek: 5 },
+  { name: "JNTU Hostel Mess", type: "canteen", perWeek: 8, big: true },
+  { name: "Care Hospital Canteen", type: "hospital", perWeek: 4, big: true },
+  { name: "Shah Ghouse Café", type: "restaurant", perWeek: 6 },
+  { name: "Kritunga Kitchens", type: "cloud_kitchen", perWeek: 5 },
+  { name: "Minerva Coffee Shop", type: "restaurant", perWeek: 4 },
+  { name: "Rayalaseema Ruchulu", type: "restaurant", perWeek: 5 },
+  { name: "Karachi Bakery Outlet", type: "bakery", perWeek: 3 },
+  { name: "Nimrah Café", type: "tea_stall", perWeek: 2 },
+  { name: "Pista House Kitchen", type: "cloud_kitchen", perWeek: 6, big: true },
+  { name: "Green Park Hotel", type: "hotel", perWeek: 8, big: true },
+  { name: "Osmania Hostel Mess", type: "canteen", perWeek: 7, big: true },
+  { name: "Café Bahar", type: "restaurant", perWeek: 5 },
+  { name: "Subbayya Gari Hotel", type: "restaurant", perWeek: 5 },
+  { name: "Tea Time Franchise", type: "tea_stall", perWeek: 1 },
+  { name: "Apollo Cafeteria", type: "hospital", perWeek: 5, big: true },
+  { name: "Biryani Box Cloud", type: "cloud_kitchen", perWeek: 4 },
+  { name: "Grand Kakatiya Kitchens", type: "hotel", perWeek: 9, big: true },
+  { name: "Dosa Corner", type: "tiffin_centre", perWeek: 2 },
+  { name: "Idli Express", type: "tiffin_centre", perWeek: 2 },
+  { name: "Mehfil Restaurant", type: "restaurant", perWeek: 6 },
+  { name: "Chutneys Cloud", type: "cloud_kitchen", perWeek: 4 },
+  { name: "Balaji Sweets & Snacks", type: "bakery", perWeek: 2 },
+  { name: "Iron Hill Café", type: "restaurant", perWeek: 4 },
+  { name: "Nizam Club Kitchen", type: "hotel", perWeek: 6, big: true },
+  { name: "Infosys Food Court", type: "canteen", perWeek: 10, big: true },
+];
+
+export const VEHICLES = ["Three-wheeler", "Three-wheeler", "Mini truck", "Mini truck", "Tata Ace", "Three-wheeler"];
