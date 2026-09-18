@@ -45,3 +45,14 @@ Palette: charcoal `#1D1D1E`, maroon `#620A1A`, gold `#C6953F`, red `#A31E21`, sa
 - One exception outside the palette: a muted green `#2E7D4F` for *delivered / online / paid* so success never reads as the red primary. The mock Razorpay sheet keeps Razorpay's blue on purpose (it's a third-party checkout).
 
 - **Bypass refill rules (demo switch, 17 Sep):** `POST /demo/bypass-rules {enabled}` makes `quote()` skip min-gap / quota / duplicate-open checks. Off by default and cleared by Reset, so the §13 rule messages still show unless the presenter flips it. Available in both Demo sheets.
+
+## B2B pivot (18 Sep 2026) — see PRD_B2B_ADDENDUM.md
+- **Days of LPG left** = (spare full + ½ × in-use) ÷ (cylinders per week ÷ 7). Consumption is re-estimated from the last 8 weeks of deliveries at each delivery; the onboarding value is a fallback.
+- **Credit:** admin sets status/limit/terms; ordering on credit is blocked when not approved, over limit, or any invoice is overdue. Invoices are raised **on delivery** (due = delivered + term days); payments clear the oldest invoices first. Historic seed invoices past due + 3 days are marked paid, so only a handful are genuinely overdue; Imran's history is kept clean so his demo path isn't blocked.
+- **GST:** 18 % on commercial LPG + services, shown as CGST/SGST 9 % each on invoices. Convenience fee is inside the taxable value.
+- **Slab pricing** is per order line (qty ≥ slab min); a negotiated per-account rate wins if lower. `charges.slabDiscount` is informational (subtotal already reflects the slab).
+- **Auto-assign** still uses fewest current drops, so it picks Ramesh in the demo seed.
+- **Linking a commercial connection counts as KYC** for a new business (status → verified); auto-assign does too, so a new sign-up can order prepaid immediately. Credit still needs the admin.
+- **Standing orders** don't run on a real scheduler in the prototype; "Run now" performs exactly what the 7 AM job would.
+- **Session key** changed to `gassetu.b2b.session`, so devices with the old B2C session start logged-out after the pivot.
+- **Simulator note:** two simulators booted at once made `xcrun simctl … booted` target an iPhone with an old Expo Go; installed the cached SDK-57 Expo Go on the iPhone 17 Pro explicitly (ERRORS.md).

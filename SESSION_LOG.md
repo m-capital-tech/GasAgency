@@ -22,3 +22,10 @@
 ### Open threads
 - Simulator MCP panel crashed in this session (drove the simulator with `simctl` deep links instead). Splash/login were verified on Expo web, not natively.
 - Expo Go shows `expo-notifications` warnings (local notifications need a dev build) — in-app toasts cover the demo.
+
+## 2026-09-18 — Session 3: B2B pivot
+- Decisions (Pranav): drop domestic; admin decides credit at onboarding; multi-outlet now; Imran is 9000000001.
+- Step 1 engine/seed, step 2 mobile, step 3 web — all committed; typecheck 7/7, engine test green, `next build` green.
+- Verified live: Imran 5 × 19 kg on credit end-to-end (web build); agency dashboard/accounts/receivables; admin onboarding queue verify + credit terms. Native: SDK-57 Expo Go reinstalled on iPhone 17 Pro; splash + logged-out states render.
+- Docs: README rewritten (B2B walkthrough), PRD_B2B_ADDENDUM.md, DECISIONS/ERRORS updated. Tag `b2c-prototype` marks the pre-pivot code.
+- Open: native logged-in tap-through not possible without the simulator panel; scheduler for standing orders is "Run now" only.

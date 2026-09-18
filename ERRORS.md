@@ -20,3 +20,7 @@
 ## Turbo 2 strips env vars from `pnpm demo`
 - ❌ `EXPO_PORT=8091 pnpm demo` still started Expo on 8081.
 - ✅ `globalPassThroughEnv: ["EXPO_PORT", "PORT", "EXPO_PUBLIC_*", "NEXT_PUBLIC_*"]` in `turbo.json`.
+
+## "Project is incompatible with this version of Expo Go" (SDK 57 project)
+- Cause: two simulators were booted; `xcrun simctl … booted` picked the other device, whose Expo Go was 54.x.
+- ✅ Target the device by UDID and install the cached client: `xcrun simctl install <UDID> ~/.expo/ios-simulator-app-cache/Expo-Go-57.0.9.tar.app`, then `xcrun simctl openurl <UDID> exp://<LAN-IP>:<port>`.
