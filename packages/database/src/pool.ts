@@ -36,6 +36,16 @@ export function databaseSslConfig(mode: DatabaseSslMode, caCertificate?: string)
   };
 }
 
+export function connectionStringWithoutSslOptions(connectionString: string): string {
+  const parsed = new URL(connectionString);
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (key.toLowerCase().startsWith("ssl") || key.toLowerCase() === "uselibpqcompat") {
+      parsed.searchParams.delete(key);
+    }
+  }
+  return parsed.toString();
+}
+
 export function createDatabasePool(options: DatabasePoolOptions): pg.Pool {
   const maxConnections = positiveInteger(options.maxConnections ?? 10, "maxConnections");
   const idleTimeoutMs = positiveInteger(options.idleTimeoutMs ?? 30_000, "idleTimeoutMs");
@@ -44,7 +54,10 @@ export function createDatabasePool(options: DatabasePoolOptions): pg.Pool {
   const idleTransactionTimeoutMs = positiveInteger(options.idleTransactionTimeoutMs ?? 10_000, "idleTransactionTimeoutMs");
 
   return new Pool({
-    connectionString: options.connectionString,
+    // Provider bindable URLs include sslmode=require. node-postgres parses that
+    // after the explicit ssl object and can discard our CA certificate. Remove
+    // URL-level SSL controls so the verified configuration below is authoritative.
+    connectionString: connectionStringWithoutSslOptions(options.connectionString),
     application_name: options.applicationName,
     max: maxConnections,
     idleTimeoutMillis: idleTimeoutMs,

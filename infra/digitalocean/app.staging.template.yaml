@@ -59,7 +59,7 @@ services:
       - key: DATABASE_URL
         scope: RUN_TIME
         type: SECRET
-        value: ${platform-db.DATABASE_PRIVATE_URL}
+        value: ${platform-db.DATABASE_URL}
       - key: DATABASE_SSL_MODE
         scope: RUN_TIME
         type: GENERAL
@@ -205,7 +205,7 @@ jobs:
       - key: MIGRATION_DATABASE_URL
         scope: RUN_TIME
         type: SECRET
-        value: __MIGRATION_DATABASE_URL__
+        value: ${platform-db-migrations.DATABASE_URL}
       - key: DATABASE_RUNTIME_ROLE
         scope: RUN_TIME
         type: GENERAL
@@ -217,7 +217,7 @@ jobs:
       - key: DATABASE_CA_CERT
         scope: RUN_TIME
         type: SECRET
-        value: ${platform-db.CA_CERT}
+        value: ${platform-db-migrations.CA_CERT}
 databases:
   - name: platform-db
     engine: PG
@@ -226,3 +226,10 @@ databases:
     cluster_name: __DATABASE_CLUSTER__
     db_name: __DATABASE_NAME__
     db_user: __DATABASE_RUNTIME_USER__
+  - name: platform-db-migrations
+    engine: PG
+    version: "16"
+    production: true
+    cluster_name: __DATABASE_CLUSTER__
+    db_name: __DATABASE_NAME__
+    db_user: __DATABASE_MIGRATION_USER__

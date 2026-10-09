@@ -12,7 +12,7 @@ The commercial product name is not finalized. Resource names should therefore us
 | Production API | App Platform service | Public HTTPS through ingress |
 | Background worker | App Platform worker | No public route |
 | Migration job | App Platform job | Release-time only; database-owner credential |
-| PostgreSQL | Managed PostgreSQL in `blr1` | Private VPC/trusted sources only |
+| PostgreSQL | Managed PostgreSQL in `blr1` | Public TLS endpoint restricted to the App Platform app as its only trusted source |
 | Documents | Private Spaces bucket in the closest supported region | Signed, short-lived access only |
 
 The API, worker, and migration job are separate components and separate security principals. Runtime components do not receive the migration-owner credential.
@@ -25,7 +25,7 @@ Values marked secret are configured through encrypted App Platform environment v
 |---|---|---|---|
 | `APP_ENV` | All | General | `staging` or `production` |
 | `DATABASE_URL` | API, worker | Secret | Private, least-privilege PostgreSQL connection; add a pooler after its staging limits are measured |
-| `MIGRATION_DATABASE_URL` | Migration job only | Secret | Schema-owner connection used during controlled releases |
+| `MIGRATION_DATABASE_URL` | Migration job only | Secret | Dedicated schema-owner binding supplied by App Platform during controlled releases |
 | `DATABASE_RUNTIME_ROLE` | Migration job only | General | Pre-created login role that receives tightly scoped runtime grants after each migration |
 | `SESSION_TOKEN_PEPPER` | API | Secret | Server-side session-token hashing pepper |
 | `OTP_HASH_PEPPER` | API, worker | Secret | Server-side OTP hashing pepper |
@@ -55,7 +55,7 @@ SMS and WhatsApp variables are intentionally absent until the Phase 2 provider s
 - readiness and liveness checks for both services;
 - a `PRE_DEPLOY` migration job that runs before application rollout;
 - an idempotent post-migration grant step that limits the runtime database role to application DML and denies schema creation or broad deletes;
-- an existing managed PostgreSQL 16 cluster attached through its private bindable URL and CA certificate;
+- an existing managed PostgreSQL 16 cluster attached through separate runtime and migration bindings, with its public TLS endpoint restricted to the app as the only trusted source;
 - Bangalore App Platform region `blr`, Node.js 22 from the root engine declaration, and the root pnpm workspace build context.
 
 The messaging worker is intentionally not present in the staging specification yet. Its runtime rejects the local provider in staging/production, so deploying it before a real provider adapter exists would create a permanently failing component. Add the worker only with the provider adapter and its encrypted credentials.
@@ -81,8 +81,8 @@ export DO_GITHUB_BRANCH='main'
 export DO_DATABASE_CLUSTER='existing-managed-postgres-cluster-name'
 export DO_DATABASE_NAME='platform_staging'
 export DO_DATABASE_RUNTIME_USER='platform_runtime'
+export DO_DATABASE_MIGRATION_USER='platform_migrator'
 
-export MIGRATION_DATABASE_URL='postgresql://schema-owner:...@private-host:25060/platform_staging'
 export SESSION_TOKEN_PEPPER='independent-random-secret-at-least-32-characters'
 export OTP_HASH_PEPPER='another-independent-random-secret-at-least-32-characters'
 export OTP_DELIVERY_KEY='canonical-base64-encoded-32-byte-key'

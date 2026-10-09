@@ -26,28 +26,17 @@ function canonicalBase64Key(value) {
   return decoded.length === 32 && decoded.toString("base64").replace(/=+$/, "") === value.replace(/=+$/, "");
 }
 
-function parsePostgresUrl(value) {
-  try {
-    const parsed = new URL(value);
-    return ["postgres:", "postgresql:"].includes(parsed.protocol)
-      && Boolean(parsed.hostname)
-      && Boolean(parsed.username)
-      && Boolean(parsed.password)
-      ? parsed
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 const runtimeDatabaseUser = required(
   "DO_DATABASE_RUNTIME_USER",
   (value) => /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value),
 );
-const migrationDatabaseUrl = required("MIGRATION_DATABASE_URL", (value) => Boolean(parsePostgresUrl(value)));
-const parsedMigrationDatabaseUrl = parsePostgresUrl(migrationDatabaseUrl);
-if (decodeURIComponent(parsedMigrationDatabaseUrl.username) === runtimeDatabaseUser) {
-  throw new Error("MIGRATION_DATABASE_URL must use a schema owner distinct from DO_DATABASE_RUNTIME_USER");
+const migrationDatabaseUser = optional(
+  "DO_DATABASE_MIGRATION_USER",
+  "platform_migrator",
+  (value) => /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value),
+);
+if (migrationDatabaseUser === runtimeDatabaseUser) {
+  throw new Error("DO_DATABASE_MIGRATION_USER must differ from DO_DATABASE_RUNTIME_USER");
 }
 
 const authenticationSecrets = {
@@ -67,7 +56,7 @@ const values = new Map([
   ["__DATABASE_CLUSTER__", required("DO_DATABASE_CLUSTER", (value) => /^[A-Za-z0-9_-]{2,63}$/.test(value))],
   ["__DATABASE_NAME__", optional("DO_DATABASE_NAME", "platform_staging", (value) => /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value))],
   ["__DATABASE_RUNTIME_USER__", runtimeDatabaseUser],
-  ["__MIGRATION_DATABASE_URL__", migrationDatabaseUrl],
+  ["__DATABASE_MIGRATION_USER__", migrationDatabaseUser],
   ["__SESSION_TOKEN_PEPPER__", authenticationSecrets.SESSION_TOKEN_PEPPER],
   ["__OTP_HASH_PEPPER__", authenticationSecrets.OTP_HASH_PEPPER],
   ["__OTP_DELIVERY_KEY__", authenticationSecrets.OTP_DELIVERY_KEY],
