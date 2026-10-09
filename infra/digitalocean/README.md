@@ -24,7 +24,7 @@ Values marked secret are configured through encrypted App Platform environment v
 | Variable | Components | Classification | Purpose |
 |---|---|---|---|
 | `APP_ENV` | All | General | `staging` or `production` |
-| `DATABASE_URL` | API, worker | Secret | Private, least-privilege PostgreSQL connection; add a pooler after its staging limits are measured |
+| `DATABASE_URL` | API, worker | Secret | App Platform database binding for the least-privilege runtime user; staging uses the public TLS endpoint with CA-verified hostname checks and an app-only database firewall rule |
 | `MIGRATION_DATABASE_URL` | Migration job only | Secret | Dedicated schema-owner binding supplied by App Platform during controlled releases |
 | `DATABASE_RUNTIME_ROLE` | Migration job only | General | Pre-created login role that receives tightly scoped runtime grants after each migration |
 | `SESSION_TOKEN_PEPPER` | API | Secret | Server-side session-token hashing pepper |
@@ -69,7 +69,9 @@ The approved staging ceiling is **USD 45 per month including applicable Indian G
 - a 512 MiB pre-deploy migration job, billed only while it runs; and
 - a single-node 1 GiB managed PostgreSQL cluster.
 
-The expected initial recurring infrastructure cost is approximately USD 30.15 before tax, or USD 35.58 with 18% GST, plus the short-lived migration job. A future 512 MiB messaging worker adds USD 5 before tax and keeps the expected total near USD 42 including GST. Spaces, high availability, dedicated CPUs, dedicated egress IPs, additional database nodes, and autoscaling are outside this ceiling and require a separate approval.
+The ordinary recurring services cost approximately USD 30.15 before tax, or USD 35.58 with 18% GST: USD 15 for the API and dashboard plus USD 15.15 for PostgreSQL. DigitalOcean's proposal also presents the release job at its USD 5 monthly rate even though jobs are charged only while running; the conservative proposal total is therefore USD 35.15 before tax, or about USD 41.48 with GST.
+
+A future 512 MiB messaging worker would raise the conservative proposal to about USD 47.38 with GST. It must not be enabled until the footprint is reduced or the ceiling is explicitly changed. Spaces, high availability, dedicated CPUs, dedicated egress IPs, additional database nodes, and autoscaling likewise require separate approval.
 
 Treat USD 45 as an authorization ceiling, not as a DigitalOcean-enforced hard cap. Review the provider's proposal before creation and monitor month-to-date billing after deployment.
 
@@ -118,17 +120,36 @@ After App Platform encrypts the first-submission secrets, download its canonical
 doctl apps spec get '<app-id>' --format yaml
 ```
 
+The active staging checkout follows this rule: `.do/app.yaml` is mode `0600`, git-ignored, contains DigitalOcean-encrypted `EV[...]` values, and contains no plaintext PostgreSQL URL. Temporary local database passwords and connection exports are removed after deployment.
+
 Do not enable deploy-on-push until database restore, rollback, authorization, and provider-delivery smoke tests have all passed in staging.
 
-## Provisioning gate
+## Active staging deployment
 
-Do not create paid staging resources yet. Provisioning starts after:
+Staging was provisioned in the confirmed DigitalOcean project on 9 October 2026:
+
+- app: `commercial-lpg-staging` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
+- public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
+- PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`;
+- deployment: `dbf5d0ae-6a93-4bfd-93e0-115b5f42ac74`, sourced from commit `27a03ee`;
+- database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
+- database firewall: the App Platform app is the only trusted source.
+
+The release reached `ACTIVE` with all 14 deployment steps complete. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests. Automatic deployment remains disabled.
+
+## Provisioning and release gate
+
+Current status:
 
 - [x] The production API and worker components exist and build as deployable artifacts.
-- [ ] The repository is connected to a supported Git remote.
+- [x] The repository is connected to the organization GitHub remote.
 - [x] The initial schema, verification suite, and outbox concurrency test pass locally.
-- [ ] The DigitalOcean team/project owner and access list are confirmed.
+- [x] The DigitalOcean project is confirmed and both paid resources are assigned to it.
 - [x] A secret-safe App Platform staging template and validated renderer exist.
+- [x] The managed database, separate runtime/migration users, app-only firewall rule, migrations, and runtime grant verification are complete.
+- [x] The first App Platform deployment and public route smoke tests pass.
 - [ ] A real SMS provider adapter and staging credentials exist before enabling the worker or login smoke tests.
+- [ ] Database restore and application rollback drills pass before enabling automatic deployment.
+- [ ] Authorization and real-provider delivery smoke tests pass before production promotion.
 
-The local checkout currently has no Git remote and no authenticated `doctl` installation. The template can therefore be reviewed and tested locally, but it must not be submitted until the repository, project, managed database cluster, runtime database user, and migration-owner URL are confirmed.
+The temporary bootstrap API token is retained only until the operator confirms revocation. Future routine deployments should use a narrowly scoped team credential or CI identity rather than a personal bootstrap token.
