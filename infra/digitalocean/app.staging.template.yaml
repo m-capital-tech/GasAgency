@@ -33,7 +33,7 @@ services:
     run_command: pnpm --filter @platform/api start
     http_port: 8080
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
+    instance_size_slug: apps-s-1vcpu-0.5gb
     health_check:
       http_path: /health/ready
       initial_delay_seconds: 15
@@ -152,7 +152,7 @@ services:
     run_command: pnpm --filter @gassetu/web start
     http_port: 3000
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
+    instance_size_slug: apps-s-1vcpu-1gb-fixed
     health_check:
       http_path: /control/login
       initial_delay_seconds: 15
@@ -196,7 +196,7 @@ jobs:
     build_command: pnpm --filter @platform/database build
     run_command: pnpm --filter @platform/database release
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
+    instance_size_slug: apps-s-1vcpu-0.5gb
     envs:
       - key: NODE_ENV
         scope: RUN_TIME

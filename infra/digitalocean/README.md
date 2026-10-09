@@ -60,6 +60,19 @@ SMS and WhatsApp variables are intentionally absent until the Phase 2 provider s
 
 The messaging worker is intentionally not present in the staging specification yet. Its runtime rejects the local provider in staging/production, so deploying it before a real provider adapter exists would create a permanently failing component. Add the worker only with the provider adapter and its encrypted credentials.
 
+## Staging budget guardrail
+
+The approved staging ceiling is **USD 45 per month including applicable Indian GST**. The initial specification therefore uses:
+
+- a 512 MiB shared API service (`apps-s-1vcpu-0.5gb`);
+- a fixed 1 GiB shared dashboard service (`apps-s-1vcpu-1gb-fixed`);
+- a 512 MiB pre-deploy migration job, billed only while it runs; and
+- a single-node 1 GiB managed PostgreSQL cluster.
+
+The expected initial recurring infrastructure cost is approximately USD 30.15 before tax, or USD 35.58 with 18% GST, plus the short-lived migration job. A future 512 MiB messaging worker adds USD 5 before tax and keeps the expected total near USD 42 including GST. Spaces, high availability, dedicated CPUs, dedicated egress IPs, additional database nodes, and autoscaling are outside this ceiling and require a separate approval.
+
+Treat USD 45 as an authorization ceiling, not as a DigitalOcean-enforced hard cap. Review the provider's proposal before creation and monitor month-to-date billing after deployment.
+
 The generated `.do/app.yaml` is git-ignored because first submission contains plaintext values that App Platform encrypts. Render it only on an authorized operator machine:
 
 ```bash

@@ -3,6 +3,7 @@
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
 ## DigitalOcean staging deployment slice (30 Sep 2026)
+- **Staging has a USD 45 all-in monthly authorization ceiling.** The first deployment uses a 512 MiB API, fixed 1 GiB dashboard, short-lived 512 MiB migration job, and single-node 1 GiB PostgreSQL. A later 512 MiB messaging worker fits within the ceiling; Spaces, HA, dedicated compute/IPs, extra database nodes, and autoscaling require separate approval.
 - **One App Platform app fronts the dashboard and API.** The Next.js dashboard owns `/`, while ingress preserves `/v1` for the API. Dashboard server calls use App Platform's private `http://api` service route, and mobile clients use the public `/v1` route on the provider-generated domain.
 - **Managed PostgreSQL is attached, not synthesized by application code.** The spec binds an existing PostgreSQL 16 cluster by confirmed cluster, database, and runtime-user names. Runtime components use the private bindable URL and CA certificate; schema migrations use a separately supplied owner URL.
 - **Migrations are a pre-deploy release gate.** A single-instance `PRE_DEPLOY` job runs the forward-only migrator under its advisory lock before new API/web containers receive traffic. Runtime services never receive the migration-owner credential.
