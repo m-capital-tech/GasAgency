@@ -4,6 +4,8 @@ import { useSession } from "@/lib/session";
 
 export default function DeliveryTabs() {
   const user = useSession((s) => s.user);
+  const sessionKind = useSession((s) => s.sessionKind);
+  if (sessionKind === "tenant") return <Redirect href="/(tenant)/home" />;
   if (!user) return <Redirect href="/" />;
   return (
     <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#F4F5F7" } }}>

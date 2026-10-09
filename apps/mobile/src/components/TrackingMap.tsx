@@ -7,7 +7,7 @@ import { t } from "@/ui";
 
 export interface TrackingMapProps {
   from?: LatLng | null; // agency
-  to?: LatLng | null; // customer
+  to?: LatLng | null; // tenant outlet
   route?: LatLng[] | null;
   staff?: LatLng | null;
   others?: { id: string; location: LatLng; label?: string }[];

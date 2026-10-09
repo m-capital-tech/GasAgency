@@ -1,0 +1,228 @@
+name: commercial-lpg-staging
+region: blr
+features:
+  - buildpack-stack=ubuntu-22
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /v1
+      component:
+        name: api
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /
+      component:
+        name: web
+
+services:
+  - name: api
+    github:
+      repo: __GITHUB_REPOSITORY__
+      branch: __GITHUB_BRANCH__
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: pnpm --filter @platform/api build
+    run_command: pnpm --filter @platform/api start
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /health/ready
+      initial_delay_seconds: 15
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 5
+    liveness_health_check:
+      http_path: /health/live
+      initial_delay_seconds: 20
+      period_seconds: 15
+      timeout_seconds: 5
+      failure_threshold: 5
+    envs:
+      - key: APP_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: staging
+      - key: NODE_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: ${platform-db.DATABASE_PRIVATE_URL}
+      - key: DATABASE_SSL_MODE
+        scope: RUN_TIME
+        type: GENERAL
+        value: verify-full
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+        value: ${platform-db.CA_CERT}
+      - key: DATABASE_POOL_MAX
+        scope: RUN_TIME
+        type: GENERAL
+        value: "10"
+      - key: DATABASE_STATEMENT_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "15000"
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        type: GENERAL
+        value: ${APP_URL}
+      - key: LOG_LEVEL
+        scope: RUN_TIME
+        type: GENERAL
+        value: info
+      - key: SHUTDOWN_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "15000"
+      - key: SESSION_TOKEN_PEPPER
+        scope: RUN_TIME
+        type: SECRET
+        value: __SESSION_TOKEN_PEPPER__
+      - key: OTP_HASH_PEPPER
+        scope: RUN_TIME
+        type: SECRET
+        value: __OTP_HASH_PEPPER__
+      - key: OTP_DELIVERY_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __OTP_DELIVERY_KEY__
+      - key: MFA_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __MFA_ENCRYPTION_KEY__
+      - key: MFA_TICKET_PEPPER
+        scope: RUN_TIME
+        type: SECRET
+        value: __MFA_TICKET_PEPPER__
+      - key: MFA_ISSUER
+        scope: RUN_TIME
+        type: GENERAL
+        value: Commercial LPG Platform
+      - key: MFA_TICKET_TTL_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "600"
+      - key: MFA_MAX_ATTEMPTS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "5"
+      - key: PRIVILEGED_SESSION_TTL_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "28800"
+      - key: OTP_TTL_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "300"
+      - key: OTP_RESEND_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "60"
+      - key: OTP_MAX_ATTEMPTS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "5"
+      - key: SESSION_TTL_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "2592000"
+
+  - name: web
+    github:
+      repo: __GITHUB_REPOSITORY__
+      branch: __GITHUB_BRANCH__
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: pnpm --filter @gassetu/web build
+    run_command: pnpm --filter @gassetu/web start
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /control/login
+      initial_delay_seconds: 15
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 5
+    liveness_health_check:
+      http_path: /control/login
+      initial_delay_seconds: 20
+      period_seconds: 15
+      timeout_seconds: 5
+      failure_threshold: 5
+    envs:
+      - key: APP_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: staging
+      - key: NODE_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        scope: RUN_AND_BUILD_TIME
+        type: GENERAL
+        value: "1"
+      - key: PLATFORM_API_URL
+        scope: RUN_TIME
+        type: GENERAL
+        value: http://api
+
+jobs:
+  - name: database-migrations
+    kind: PRE_DEPLOY
+    github:
+      repo: __GITHUB_REPOSITORY__
+      branch: __GITHUB_BRANCH__
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: pnpm --filter @platform/database build
+    run_command: pnpm --filter @platform/database release
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+      - key: MIGRATION_DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: __MIGRATION_DATABASE_URL__
+      - key: DATABASE_RUNTIME_ROLE
+        scope: RUN_TIME
+        type: GENERAL
+        value: __DATABASE_RUNTIME_USER__
+      - key: DATABASE_SSL_MODE
+        scope: RUN_TIME
+        type: GENERAL
+        value: verify-full
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+        value: ${platform-db.CA_CERT}
+databases:
+  - name: platform-db
+    engine: PG
+    version: "16"
+    production: true
+    cluster_name: __DATABASE_CLUSTER__
+    db_name: __DATABASE_NAME__
+    db_user: __DATABASE_RUNTIME_USER__

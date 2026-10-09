@@ -32,7 +32,7 @@ export function DemoFab() {
   const userId = session.user?.id;
   const demoState = useQuery({ queryKey: ["demo-state"], queryFn: () => get("/demo/state"), enabled: open });
   const setBypass = async (enabled: boolean) => {
-    await run("bypass", () => post("/demo/bypass-rules", { enabled }), enabled ? "Refill rules bypassed — book freely" : "Refill rules back on");
+    await run("bypass", () => post("/demo/bypass-rules", { enabled }), enabled ? "Order rules bypassed — order freely" : "Order rules back on");
     qc.invalidateQueries({ queryKey: ["demo-state"] });
     qc.invalidateQueries({ queryKey: ["quote"] });
   };

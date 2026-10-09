@@ -1,0 +1,30 @@
+{
+  "name": "@platform/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bootstrap:super-admin": "node --enable-source-maps dist/commands/bootstrap-super-admin.js",
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "node --enable-source-maps dist/server.js",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@platform/database": "workspace:*",
+    "@platform/runtime": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3"
+  }
+}

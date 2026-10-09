@@ -19,7 +19,7 @@ import { t } from "@/ui";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function LiveBridge() {
+function DemoLiveBridge() {
   useLiveSync();
   const user = useSession((s) => s.user);
   const router = useRouter();
@@ -46,6 +46,7 @@ function LiveBridge() {
 export default function RootLayout() {
   const hydrated = useSession((s) => s.hydrated);
   const user = useSession((s) => s.user);
+  const sessionKind = useSession((s) => s.sessionKind);
   useEffect(() => {
     if (hydrated) SplashScreen.hideAsync().catch(() => {});
   }, [hydrated]);
@@ -59,6 +60,9 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.colors.bg }, animation: "slide_from_right" }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)/login" />
+            <Stack.Screen name="(auth)/select-tenant" />
+            <Stack.Screen name="(tenant)/home" />
+            <Stack.Screen name="(tenant)/order" />
             <Stack.Screen name="(onboarding)/profile" />
             <Stack.Screen name="(onboarding)/connection" />
             <Stack.Screen name="(business)" />
@@ -78,10 +82,10 @@ export default function RootLayout() {
             <Stack.Screen name="drop/complete" options={{ presentation: "modal" }} />
             <Stack.Screen name="drop/fail" options={{ presentation: "modal" }} />
           </Stack>
-          <LiveBridge />
+          {sessionKind === "demo" ? <DemoLiveBridge /> : null}
           <ToastHost />
           <RazorpaySheet />
-          {user ? <DemoFab /> : null}
+          {user && sessionKind === "demo" ? <DemoFab /> : null}
           </AppErrorBoundary>
         </QueryClientProvider>
       </SafeAreaProvider>

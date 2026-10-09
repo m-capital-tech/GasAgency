@@ -1,5 +1,7 @@
 # PRD — LPG Cylinder Booking Marketplace (Investor Prototype)
 
+> Historical prototype specification. The active product is commercial/B2B only. `PRD_PRODUCTION_V1.md` is the canonical production specification; the `b2c-prototype` Git tag preserves the earlier implementation.
+
 **Working name:** GasSetu (placeholder — replace with final brand)
 **Owner:** Pranav Aditya
 **Version:** 1.0 (Prototype) · **Date:** 16 Sep 2026

@@ -1,0 +1,94 @@
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const directory = path.dirname(fileURLToPath(import.meta.url));
+const templatePath = path.join(directory, "app.staging.template.yaml");
+const checkOnly = process.argv.includes("--check");
+const positional = process.argv.slice(2).filter((argument) => !["--", "--check"].includes(argument));
+const outputPath = path.resolve(positional[0] ?? ".do/app.yaml");
+
+function required(name, validate = () => true) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  if (!validate(value)) throw new Error(`${name} is invalid`);
+  return value;
+}
+
+function optional(name, fallback, validate = () => true) {
+  const value = process.env[name] ?? fallback;
+  if (!validate(value)) throw new Error(`${name} is invalid`);
+  return value;
+}
+
+function canonicalBase64Key(value) {
+  const decoded = Buffer.from(value, "base64");
+  return decoded.length === 32 && decoded.toString("base64").replace(/=+$/, "") === value.replace(/=+$/, "");
+}
+
+function parsePostgresUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return ["postgres:", "postgresql:"].includes(parsed.protocol)
+      && Boolean(parsed.hostname)
+      && Boolean(parsed.username)
+      && Boolean(parsed.password)
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const runtimeDatabaseUser = required(
+  "DO_DATABASE_RUNTIME_USER",
+  (value) => /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value),
+);
+const migrationDatabaseUrl = required("MIGRATION_DATABASE_URL", (value) => Boolean(parsePostgresUrl(value)));
+const parsedMigrationDatabaseUrl = parsePostgresUrl(migrationDatabaseUrl);
+if (decodeURIComponent(parsedMigrationDatabaseUrl.username) === runtimeDatabaseUser) {
+  throw new Error("MIGRATION_DATABASE_URL must use a schema owner distinct from DO_DATABASE_RUNTIME_USER");
+}
+
+const authenticationSecrets = {
+  SESSION_TOKEN_PEPPER: required("SESSION_TOKEN_PEPPER", (value) => value.length >= 32),
+  OTP_HASH_PEPPER: required("OTP_HASH_PEPPER", (value) => value.length >= 32),
+  OTP_DELIVERY_KEY: required("OTP_DELIVERY_KEY", canonicalBase64Key),
+  MFA_ENCRYPTION_KEY: required("MFA_ENCRYPTION_KEY", canonicalBase64Key),
+  MFA_TICKET_PEPPER: required("MFA_TICKET_PEPPER", (value) => value.length >= 32),
+};
+if (new Set(Object.values(authenticationSecrets)).size !== Object.keys(authenticationSecrets).length) {
+  throw new Error("authentication secrets and encryption keys must all be independent values");
+}
+
+const values = new Map([
+  ["__GITHUB_REPOSITORY__", required("DO_GITHUB_REPOSITORY", (value) => /^[^/\s]+\/[^/\s]+$/.test(value))],
+  ["__GITHUB_BRANCH__", optional("DO_GITHUB_BRANCH", "main", (value) => /^[A-Za-z0-9._/-]+$/.test(value))],
+  ["__DATABASE_CLUSTER__", required("DO_DATABASE_CLUSTER", (value) => /^[A-Za-z0-9_-]{2,63}$/.test(value))],
+  ["__DATABASE_NAME__", optional("DO_DATABASE_NAME", "platform_staging", (value) => /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value))],
+  ["__DATABASE_RUNTIME_USER__", runtimeDatabaseUser],
+  ["__MIGRATION_DATABASE_URL__", migrationDatabaseUrl],
+  ["__SESSION_TOKEN_PEPPER__", authenticationSecrets.SESSION_TOKEN_PEPPER],
+  ["__OTP_HASH_PEPPER__", authenticationSecrets.OTP_HASH_PEPPER],
+  ["__OTP_DELIVERY_KEY__", authenticationSecrets.OTP_DELIVERY_KEY],
+  ["__MFA_ENCRYPTION_KEY__", authenticationSecrets.MFA_ENCRYPTION_KEY],
+  ["__MFA_TICKET_PEPPER__", authenticationSecrets.MFA_TICKET_PEPPER],
+]);
+
+let rendered = await readFile(templatePath, "utf8");
+for (const [token, value] of values) rendered = rendered.replaceAll(token, JSON.stringify(value));
+
+const unresolved = rendered.match(/__[A-Z0-9_]+__/g);
+if (unresolved) throw new Error(`unresolved template values: ${[...new Set(unresolved)].join(", ")}`);
+if (rendered.includes("OTP_LOCAL_CODE") || rendered.includes("LOCAL_MESSAGE_REVEAL_CONTENT")) {
+  throw new Error("local-only authentication controls are forbidden in the staging spec");
+}
+
+if (checkOnly) {
+  process.stdout.write("DigitalOcean staging App Spec inputs are valid.\n");
+} else {
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, rendered, { mode: 0o600 });
+  await chmod(outputPath, 0o600);
+  process.stdout.write(`Rendered git-ignored App Spec to ${outputPath}. It contains secrets; do not commit it.\n`);
+}

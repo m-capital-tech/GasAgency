@@ -1,5 +1,7 @@
 # PRD addendum — B2B pivot (18 Sep 2026)
 
+> Historical pivot document. For the active production product—especially tenant registration, agency assignment, verification, authentication, messaging, permissions, and credit authority—see `PRD_PRODUCTION_V1.md`.
+
 Decision by Pranav: the product is **B2B only** — businesses and shops that buy commercial cylinders. Domestic (household) supply is dropped entirely. This addendum supersedes the corresponding sections of `PRD_LPG_Booking_Platform.md`.
 
 ## Decisions taken

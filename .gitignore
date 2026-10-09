@@ -3,6 +3,11 @@ dist
 .next
 .expo
 .turbo
+.pnpm-store
+.env
+.env.*
+!.env.production.example
+.do/app.yaml
 *.log
 .DS_Store
 ios

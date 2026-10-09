@@ -2,17 +2,23 @@
   "name": "gassetu",
   "private": true,
   "packageManager": "pnpm@11.1.2",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "demo": "turbo run dev --parallel --filter=@gassetu/mock-api --filter=@gassetu/web --filter=@gassetu/mobile",
     "demo:ios": "turbo run dev --parallel --filter=@gassetu/mock-api --filter=@gassetu/web & pnpm --filter @gassetu/mobile ios",
     "dev": "turbo run dev --parallel",
     "api": "pnpm --filter @gassetu/mock-api dev",
+    "api:production": "pnpm --filter @platform/api dev",
+    "worker": "pnpm --filter @platform/worker dev",
     "web": "pnpm --filter @gassetu/web dev",
     "mobile": "pnpm --filter @gassetu/mobile dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "pnpm --filter @gassetu/engine test",
-    "seed:check": "pnpm --filter @gassetu/mock-data check"
+    "seed:check": "pnpm --filter @gassetu/mock-data check",
+    "deploy:staging:render": "node infra/digitalocean/render-app-spec.mjs"
   },
   "devDependencies": {
     "turbo": "^2.10.13",

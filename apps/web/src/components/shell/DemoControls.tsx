@@ -91,7 +91,7 @@ export function DemoControls() {
                 <p className="text-sm font-semibold">Bypass order rules</p>
                 <p className="text-xs text-muted-foreground">Skips credit-limit, overdue and quantity-cap checks so a business can keep ordering during the pitch.</p>
               </div>
-              <Switch checked={!!demoState.data?.bypassRules} onCheckedChange={(v) => run("bypass", () => post("/demo/bypass-rules", { enabled: v }).then(() => qc.invalidateQueries({ queryKey: ["demo-state"] })), v ? "Refill rules bypassed" : "Refill rules back on")} aria-label="Bypass refill rules" />
+              <Switch checked={!!demoState.data?.bypassRules} onCheckedChange={(v) => run("bypass", () => post("/demo/bypass-rules", { enabled: v }).then(() => qc.invalidateQueries({ queryKey: ["demo-state"] })), v ? "Order rules bypassed" : "Order rules back on")} aria-label="Bypass order rules" />
             </section>
             <section className="rounded-xl border border-danger/30 bg-danger-soft/40 p-3">
               <div className="flex items-center justify-between gap-3">

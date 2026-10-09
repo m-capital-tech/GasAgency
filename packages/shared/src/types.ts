@@ -1,5 +1,5 @@
 // Core domain types for GasSetu — B2B commercial LPG marketplace
-// Customers are businesses (restaurants, cloud kitchens, hotels, canteens…) buying 19 kg / 47.5 kg cylinders.
+// Tenants are businesses (restaurants, hotels, cloud kitchens, canteens…) buying 19 kg / 47.5 kg cylinders.
 
 export type Role = "business" | "agency_owner" | "agency_staff" | "delivery" | "admin";
 export type Language = "en" | "hi" | "te";

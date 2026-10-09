@@ -77,5 +77,5 @@ export const STATUS_LABELS: Record<BookingStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-/** Ordered steps shown on the customer timeline. */
+/** Ordered steps shown on the tenant order timeline. */
 export const TIMELINE_STEPS: BookingStatus[] = ["PLACED", "ACCEPTED", "ASSIGNED", "OUT_FOR_DELIVERY", "DELIVERED"];

@@ -32,7 +32,7 @@ export default function ConfigPage() {
   const num = (k: string) => ({ type: "number" as const, value: c[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setC({ ...c, [k]: e.target.value }) });
   return (
     <>
-      <PageHeader title="Platform config" subtitle="Every value here feeds the pricing engine, refill rules and admin revenue numbers.">
+      <PageHeader title="Platform config" subtitle="Every value here feeds the pricing engine, commercial order rules and admin revenue numbers.">
         <Button onClick={save} loading={busy}>
           Save config
         </Button>

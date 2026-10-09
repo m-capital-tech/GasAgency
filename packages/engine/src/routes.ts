@@ -43,7 +43,7 @@ add("GET", "/me/:userId", (e, p) => {
   return { user, profile: e.profileFor(user) };
 });
 
-// ---- businesses (customer side)
+// ---- businesses (tenant side)
 add("GET", "/businesses/:id", (e, p) => e.expandBusiness(e.business(p.id)));
 add("PUT", "/businesses/:id/profile", (e, p, r) => e.upsertBusiness(p.id, r.body));
 add("POST", "/businesses/:id/outlets", (e, p, r) => e.addOutlet(p.id, r.body));

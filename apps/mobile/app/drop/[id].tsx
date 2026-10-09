@@ -20,7 +20,7 @@ export default function DropScreen() {
   const startTrip = async () => {
     try {
       await action.mutateAsync({ id: id!, action: "start-trip" });
-      toast.success("Trip started", "Live location is now shared with the customer and agency.");
+      toast.success("Trip started", "Live location is now shared with the outlet and agency.");
     } catch (e) {
       toast.error("Couldn't start trip", (e as Error).message);
     }

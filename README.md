@@ -1,4 +1,6 @@
-# GasSetu for Business — commercial LPG marketplace (investor prototype)
+# GasSetu for Business — commercial LPG marketplace
+
+> **Production direction:** [`PRD_PRODUCTION_V1.md`](./PRD_PRODUCTION_V1.md) is the canonical specification for the production build. The implementation described below is the current investor prototype; its self-registration, automatic verification, mock authentication, and in-memory persistence are not the production target.
 
 A clickable, mock-data prototype of a **B2B** LPG platform: restaurants, cloud kitchens, hotels, canteens and tea stalls order **19 kg / 47.5 kg commercial cylinders** from their gas agency, on credit, with standing orders and GST invoices — while the agency runs its business from a web panel and the platform admin verifies businesses and sets credit terms.
 
@@ -8,6 +10,8 @@ A clickable, mock-data prototype of a **B2B** LPG platform: restaurants, cloud k
 | **Web — Agency panel ("LMS")** | Suresh, HP Gas distributor in Amberpet | `http://localhost:3000/agency` |
 | **Web — Platform admin** | Ops team — verifies businesses, decides credit | `http://localhost:3000/admin` |
 | **Mock API** | in-memory store + WebSocket live events | `http://localhost:4000` |
+
+The repository now also contains the isolated production path: `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, the tenant mobile routes under `/(tenant)`, the agency fulfillment console at `/operations`, and Platform Control at `/control`. These do not read from or fall back to the demo engine.
 
 Everything runs locally with **no API keys, no real payments, no SMS**. An order placed on the phone shows up on the agency board within a second; accepting and assigning on the web updates the phone live; "Start trip" moves a marker on every map.
 
@@ -36,7 +40,7 @@ pnpm demo
 | Suresh — agency owner | `suresh@demo` | `123456` |
 | Ops admin | `admin@demo` | `123456` |
 
-Any other 10-digit mobile number registers a **new business** (owner, business type, GSTIN/FSSAI, first outlet, current stock) → link a commercial connection or auto-assign the nearest agency → lands in the admin's onboarding queue.
+In this prototype only, any other 10-digit mobile number opens the legacy self-registration demo. Production rejects unknown phone numbers: an authorized platform operator creates the tenant, explicitly selects its agency, and a separate Platform Admin approves it before SMS invitation and OTP access.
 
 ### Demo controls (PRD §6.5)
 

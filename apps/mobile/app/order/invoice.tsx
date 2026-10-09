@@ -51,7 +51,7 @@ export default function InvoiceScreen() {
             {b.outlet.label} · {b.outlet.line1}, {b.outlet.line2}, {b.outlet.city} {b.outlet.pincode}
           </Text>
           <Text variant="small" tone="muted">
-            {biz.data?.gstin ? `GSTIN ${biz.data.gstin}` : "Unregistered (B2C invoice)"}
+            {biz.data?.gstin ? `GSTIN ${biz.data.gstin}` : "GSTIN not provided"}
             {biz.data?.fssai ? ` · FSSAI ${biz.data.fssai}` : ""}
           </Text>
           <Divider />
