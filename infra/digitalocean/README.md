@@ -131,11 +131,32 @@ Staging was provisioned in the confirmed DigitalOcean project on 9 October 2026:
 - app: `commercial-lpg-staging` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`;
-- deployment: `dbf5d0ae-6a93-4bfd-93e0-115b5f42ac74`, sourced from commit `27a03ee`;
+- active deployment: `a4009638-cfad-41df-9313-b344e14b9450`, a successful manual rollback to baseline deployment `dbf5d0ae-6a93-4bfd-93e0-115b5f42ac74`, sourced from commit `27a03ee`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
-The release reached `ACTIVE` with all 14 deployment steps complete. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests. Automatic deployment remains disabled.
+The active rollback reached `ACTIVE` with all 14 deployment steps complete. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests. Automatic deployment remains disabled.
+
+## Recovery drill evidence
+
+The first staging recovery drills completed on 9 October 2026.
+
+### Logical database restore
+
+- PostgreSQL 16 client tools created a compressed logical backup of `platform_staging` and restored it into a uniquely named temporary database on the same managed cluster. The source database remained online and unchanged.
+- The 221,696-byte staging backup reached a queryable restored state in 22 seconds. This is an observed empty-staging recovery time, not a production recovery-time objective; it will increase with data volume.
+- The restored database contained the same 47 application tables, all 8 migration records, identical schema-object inventory, identical column catalog, and identical data dump.
+- Migration idempotence, all eight SQL verification suites, and the least-privilege runtime grant policy passed against the restored database.
+- The temporary database and its logical backup were deleted after verification. Temporary local credentials were removed, and the managed database firewall was restored to its single App Platform trusted source.
+- The drill used client tools matching the server's PostgreSQL 16 major version. Recovery automation must keep this version match explicit.
+
+DigitalOcean also reported an automated managed backup. Restoring that provider backup creates a new primary cluster, so a full managed-backup or point-in-time cluster restore remains a separate pre-production drill with an explicitly approved temporary cost and cleanup window.
+
+### Application rollback
+
+- Forced deployment `edd15686-6793-46c5-9cce-0768e3830c9d` built commit `79d3f5d`, reached `ACTIVE` at 14/14 steps, and passed all three public route checks.
+- The app was then rolled back to known-good deployment `dbf5d0ae-6a93-4bfd-93e0-115b5f42ac74`. DigitalOcean created rollback deployment `a4009638-cfad-41df-9313-b344e14b9450`, which reached `ACTIVE` at 14/14 steps from commit `27a03ee`.
+- `/v1`, `/control/login`, and `/operations/login` returned HTTP 200 after rollback. Database data and migration history remained intact.
 
 ## Provisioning and release gate
 
@@ -149,7 +170,8 @@ Current status:
 - [x] The managed database, separate runtime/migration users, app-only firewall rule, migrations, and runtime grant verification are complete.
 - [x] The first App Platform deployment and public route smoke tests pass.
 - [ ] A real SMS provider adapter and staging credentials exist before enabling the worker or login smoke tests.
-- [ ] Database restore and application rollback drills pass before enabling automatic deployment.
+- [x] An isolated logical database restore and an App Platform rollback pass in staging.
+- [ ] A managed-backup or point-in-time cluster restore passes before production promotion.
 - [ ] Authorization and real-provider delivery smoke tests pass before production promotion.
 
 The temporary bootstrap API token is retained only until the operator confirms revocation. Future routine deployments should use a narrowly scoped team credential or CI identity rather than a personal bootstrap token.
