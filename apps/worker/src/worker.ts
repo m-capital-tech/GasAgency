@@ -10,6 +10,7 @@ import { createLogger, installShutdownHandlers } from "@platform/runtime";
 import { loadWorkerConfig } from "./config";
 import { createMessagingHandlers, type EventHandler } from "./messaging/handlers";
 import { LocalMessagingProvider } from "./messaging/local-provider";
+import { MessageIndiaProvider } from "./messaging/messageindia-provider";
 
 const config = loadWorkerConfig();
 const logger = createLogger("platform-worker", config.logLevel);
@@ -25,7 +26,9 @@ const pool = createDatabasePool({
 
 pool.on("error", (error) => logger.error("database_pool_error", { error }));
 
-const messagingProvider = new LocalMessagingProvider(logger, config.localMessageRevealContent);
+const messagingProvider = config.messageProvider === "messageindia"
+  ? new MessageIndiaProvider(config.messageIndia!)
+  : new LocalMessagingProvider(logger, config.localMessageRevealContent);
 const handlers = createMessagingHandlers({ pool, provider: messagingProvider, otpDeliveryKey: config.otpDeliveryKey, logger });
 let stopping = false;
 let wake: (() => void) | undefined;

@@ -42,8 +42,17 @@ Values marked secret are configured through encrypted App Platform environment v
 | `OBJECT_STORAGE_ACCESS_KEY` | API, worker | Secret | Dedicated application credential |
 | `OBJECT_STORAGE_SECRET_KEY` | API, worker | Secret | Dedicated application credential |
 | `LOG_LEVEL` | API, worker | General | Structured-log verbosity |
+| `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned staging integration |
+| `MESSAGEINDIA_SEND_URL` | Worker | General | Provider-issued HTTPS submission endpoint; plaintext HTTP is rejected |
+| `MESSAGEINDIA_TRANSPORT` | Worker | General | Must be `post` in staging/production so credentials are never placed in URLs |
+| `MESSAGEINDIA_USERNAME` | Worker | Secret | MessageIndia account identifier |
+| `MESSAGEINDIA_API_KEY` | Worker | Secret | MessageIndia API credential stored only as an encrypted runtime variable |
+| `MESSAGEINDIA_SENDER_NAME` | Worker | General | Approved six-character DLT sender header |
+| `MESSAGEINDIA_ENTITY_ID` | Worker | General | TRAI DLT principal entity ID |
+| `MESSAGEINDIA_*_TEMPLATE_ID` | Worker | General | Approved DLT template IDs for login OTP, tenant registration and platform access |
+| `MESSAGEINDIA_*_TEMPLATE_TEXT` | Worker | General | Exact approved DLT bodies with controlled placeholders |
 
-SMS and WhatsApp variables are intentionally absent until the Phase 2 provider selection. They will be introduced as provider-neutral adapter configuration rather than embedded vendor names.
+The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled staging specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
 
 ## Version-controlled staging specification
 
@@ -58,7 +67,7 @@ SMS and WhatsApp variables are intentionally absent until the Phase 2 provider s
 - an existing managed PostgreSQL 16 cluster attached through separate runtime and migration bindings, with its public TLS endpoint restricted to the app as the only trusted source;
 - Bangalore App Platform region `blr`, Node.js 22 from the root engine declaration, and the root pnpm workspace build context.
 
-The messaging worker is intentionally not present in the staging specification yet. Its runtime rejects the local provider in staging/production, so deploying it before a real provider adapter exists would create a permanently failing component. Add the worker only with the provider adapter and its encrypted credentials.
+The messaging worker is intentionally not present in the staging specification yet. Although the real adapter now exists, the inspected MessageIndia account exposes no DLT template or entity IDs and its dashboard documents a plaintext HTTP endpoint. The advertised public HTTPS path did not resolve to an API. Add the worker only after MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke test plan.
 
 ## Staging budget guardrail
 
@@ -169,7 +178,8 @@ Current status:
 - [x] A secret-safe App Platform staging template and validated renderer exist.
 - [x] The managed database, separate runtime/migration users, app-only firewall rule, migrations, and runtime grant verification are complete.
 - [x] The first App Platform deployment and public route smoke tests pass.
-- [ ] A real SMS provider adapter and staging credentials exist before enabling the worker or login smoke tests.
+- [x] A real MessageIndia SMS adapter with enforced HTTPS, DLT mapping, credential redaction, timeout handling, and unit tests exists.
+- [ ] MessageIndia supplies an operational HTTPS endpoint plus approved entity/template IDs before enabling the worker or login smoke tests.
 - [x] An isolated logical database restore and an App Platform rollback pass in staging.
 - [ ] A managed-backup or point-in-time cluster restore passes before production promotion.
 - [ ] Authorization and real-provider delivery smoke tests pass before production promotion.
