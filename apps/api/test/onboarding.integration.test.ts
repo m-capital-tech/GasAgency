@@ -15,6 +15,7 @@ const integrationTest = connectionString ? test : test.skip;
 integrationTest("delegated creator submits and a separate administrator activates one tenant", async () => {
   const tokenPepper = "integration-test-pepper-at-least-32-characters";
   const superToken = "integration-super-session-token-more-than-32-characters";
+  const platformAdminToken = "integration-platform-admin-session-token-more-than-32-characters";
   const creatorToken = "integration-creator-session-token-more-than-32-characters";
   const agencyOperatorToken = "integration-agency-session-token-more-than-32-characters";
   const pool = createDatabasePool({ connectionString: connectionString!, applicationName: "tenant-onboarding-integration-test", maxConnections: 4, sslMode: "disable" });
@@ -148,22 +149,66 @@ integrationTest("delegated creator submits and a separate administrator activate
   const jsonHeaders = (token: string) => ({ authorization: `Bearer ${token}`, "content-type": "application/json" });
 
   try {
-    const reservedRole = await fetch(`${origin}/admin/roles`, {
+    const platformAdminRoleResponse = await fetch(`${origin}/admin/roles`, {
       method: "POST", headers: jsonHeaders(superToken),
+      body: JSON.stringify({
+        name: "Integration Platform Administrator",
+        roleType: "platform_admin",
+        permissionKeys: [
+          "tenant.view", "tenant.create", "tenant.edit", "tenant.submit", "tenant.approve", "tenant.reject",
+          "agency.view", "credit.approve", "report.view", "user.view", "user.create", "role.view", "role.create", "role.manage",
+        ],
+        reason: "Delegated global platform administration for integration verification",
+      }),
+    });
+    assert.equal(platformAdminRoleResponse.status, 201);
+    const platformAdminRole = (await platformAdminRoleResponse.json() as { role: { publicId: string } }).role;
+
+    const platformAdminResponse = await fetch(`${origin}/admin/team-members`, {
+      method: "POST", headers: jsonHeaders(superToken),
+      body: JSON.stringify({
+        fullName: "Integration Platform Administrator", phoneE164: "+919900000006", email: "platform-admin@example.test",
+        rolePublicId: platformAdminRole.publicId, scope: { kind: "global" },
+        reason: "Assigned to administer the end-to-end integration workflow",
+      }),
+    });
+    assert.equal(platformAdminResponse.status, 201);
+    const platformAdminBody = await platformAdminResponse.json() as { user: { publicId: string }; invitation: { status: string; channel: string } };
+    assert.deepEqual(
+      { status: platformAdminBody.invitation.status, channel: platformAdminBody.invitation.channel },
+      { status: "queued", channel: "sms" },
+    );
+    const platformAdmin = (
+      await pool.query<{ id: string }>("update app.users set status = 'active' where public_id = $1 returning id::text", [platformAdminBody.user.publicId])
+    ).rows[0]!;
+    await pool.query(
+      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
+       values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+      [uuidV7(), platformAdmin.id, hashSessionToken(platformAdminToken, tokenPepper)],
+    );
+
+    const nestedPlatformAdminRole = await fetch(`${origin}/admin/roles`, {
+      method: "POST", headers: jsonHeaders(platformAdminToken),
+      body: JSON.stringify({ name: "Forbidden Nested Platform Admin", roleType: "platform_admin", permissionKeys: ["tenant.view"], reason: "Must be rejected" }),
+    });
+    assert.equal(nestedPlatformAdminRole.status, 403);
+
+    const reservedRole = await fetch(`${origin}/admin/roles`, {
+      method: "POST", headers: jsonHeaders(platformAdminToken),
       body: JSON.stringify({ name: "Invalid Approver", roleType: "platform_team", permissionKeys: ["tenant.create", "tenant.approve"], reason: "Must reject reserved delegation" }),
     });
     assert.equal(reservedRole.status, 403);
     assert.equal((await reservedRole.json() as { error: { code: string } }).error.code, "reserved_permission");
 
     const roleResponse = await fetch(`${origin}/admin/roles`, {
-      method: "POST", headers: jsonHeaders(superToken),
+      method: "POST", headers: jsonHeaders(platformAdminToken),
       body: JSON.stringify({ name: "Integration Onboarding Executive", roleType: "platform_team", permissionKeys: ["tenant.view", "tenant.create", "tenant.edit", "tenant.submit"], reason: "Delegated integration onboarding role" }),
     });
     assert.equal(roleResponse.status, 201);
     const role = (await roleResponse.json() as { role: { publicId: string } }).role;
 
     const memberResponse = await fetch(`${origin}/admin/team-members`, {
-      method: "POST", headers: jsonHeaders(superToken),
+      method: "POST", headers: jsonHeaders(platformAdminToken),
       body: JSON.stringify({
         fullName: "Integration Onboarding Creator", phoneE164: "+919900000003", email: "creator@example.test",
         rolePublicId: role.publicId, scope: { kind: "city", value: "Bengaluru" },
@@ -208,6 +253,22 @@ integrationTest("delegated creator submits and a separate administrator activate
     const unauthenticated = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": "tenant-integration-unauth" }, body: JSON.stringify(payload) });
     assert.equal(unauthenticated.status, 401);
 
+    const missingRequiredFieldCases: Array<[string, Record<string, unknown>]> = [
+      ["gstin", { ...payload, gstin: undefined }],
+      ["address", { ...payload, outlet: { ...payload.outlet, addressLine1: undefined } }],
+      ["requirement", { ...payload, requirement: undefined }],
+      ["serving-agency", { ...payload, agencyPublicId: undefined }],
+    ];
+    for (const [field, invalidPayload] of missingRequiredFieldCases) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { ...jsonHeaders(creatorToken), "idempotency-key": `tenant-integration-missing-${field}` },
+        body: JSON.stringify(invalidPayload),
+      });
+      assert.equal(response.status, 400, `tenant creation must reject a missing ${field}`);
+      assert.equal((await response.json() as { error: { code: string } }).error.code, "invalid_request");
+    }
+
     const created = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify(payload) });
     assert.equal(created.status, 201);
     const createdBody = await created.json() as { tenant: { publicId: string; status: string } };
@@ -243,7 +304,7 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(creatorApproval.status, 403);
 
     const approved = await fetch(`${endpoint}/${createdBody.tenant.publicId}/reviews`, {
-      method: "POST", headers: jsonHeaders(superToken),
+      method: "POST", headers: jsonHeaders(platformAdminToken),
       body: JSON.stringify({
         decision: "approved", reason: "Business, GSTIN, requirement, and agency assignment reviewed",
         commercialDecision: { decision: "approved", creditLimit: 50_000, netTermDays: 15, note: "Approved after commercial review" },
@@ -430,10 +491,10 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(overview.month.orders, 1);
     assert.equal(overview.month.gmv, "10030.00");
     assert.equal(overview.receivables.open, "10030.00");
-    const rolesResponse = await fetch(`${origin}/admin/roles`, { headers: { authorization: `Bearer ${superToken}` } });
+    const rolesResponse = await fetch(`${origin}/admin/roles`, { headers: { authorization: `Bearer ${platformAdminToken}` } });
     assert.equal(rolesResponse.status, 200);
     assert.ok((await rolesResponse.json() as { roles: Array<{ name: string }> }).roles.some((role) => role.name === "Integration Onboarding Executive"));
-    const teamResponse = await fetch(`${origin}/admin/team-members`, { headers: { authorization: `Bearer ${superToken}` } });
+    const teamResponse = await fetch(`${origin}/admin/team-members`, { headers: { authorization: `Bearer ${platformAdminToken}` } });
     assert.equal(teamResponse.status, 200);
     assert.ok((await teamResponse.json() as { teamMembers: Array<{ fullName: string }> }).teamMembers.some((memberRow) => memberRow.fullName === "Integration Onboarding Creator"));
 
