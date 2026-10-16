@@ -140,11 +140,19 @@ Staging was provisioned in the confirmed DigitalOcean project on 9 October 2026:
 - app: `commercial-lpg-staging` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`;
-- active deployment: `bfb0b0af-e1e6-46e9-926f-a7fabe409c1f`, a successful manual release sourced from commit `f33ad65`;
+- active deployment: `40235cce-3dfc-4512-923a-93cec3306fd0`, a successful manual release sourced from commit `f886baa`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
-The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests; protected admin and session routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `f33ad65`, and automatic deployment remains disabled.
+The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` routes passed HTTPS smoke tests; protected admin, session, agency-account, and tenant-billing routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `f886baa`, and automatic deployment remains disabled.
+
+### 16 October 2026 commercial-account release
+
+- GitHub `main` release commit `f886baa` was deployed manually as deployment `40235cce-3dfc-4512-923a-93cec3306fd0`.
+- The pre-deploy job applied `0009_agency_commercial_controls` and successfully reapplied the least-privilege grants for `platform_runtime` before service cutover.
+- DigitalOcean recorded the API readiness probe at HTTP 200 and the Next.js service ready before marking the deployment live.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts`. Unauthenticated `/v1/admin/overview`, `/v1/auth/session`, `/v1/agencies/:agency/accounts`, and `/v1/tenants/:tenant/billing` returned HTTP 401.
+- The API component reports source hash `f886baa`; automatic deployment remains Off.
 
 ### 16 October 2026 release verification
 

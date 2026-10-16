@@ -7,6 +7,8 @@
 - Built production tenant order history, fulfillment timeline, billing summary, GST invoice detail, and tenant-visible payment allocations in the mobile path. Every query is constrained to the authenticated tenant's active membership and serving account.
 - Added migration `0009_agency_commercial_controls` with indexed payment and allocation ledgers, cross-account integrity triggers, and database-enforced immutability. PostgreSQL best-practice guidance informed exact numerics, foreign-key indexes, ordered short transactions, and keyset pagination.
 - On a fresh disposable PostgreSQL 17 database, applied all nine migrations and passed 9/9 SQL verification suites, 11/11 API tests, 5/5 worker tests, and 3/3 database concurrency/security tests. Repository type checking passed all 11 targets and every production build target passed. The disposable database was removed after verification.
+- Pushed release commit `f886baa` to the organization repository and deployed it manually to DigitalOcean as deployment `40235cce-3dfc-4512-923a-93cec3306fd0`. The release reached live status after the API returned HTTP 200 readiness, the web service became ready, migration `0009_agency_commercial_controls` completed, and runtime privileges were reapplied.
+- Confirmed DigitalOcean source hash `f886baa` with Autodeploy Off. Public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` returned HTTP 200; unauthenticated admin/session, agency-account, and tenant-billing APIs returned HTTP 401.
 - MessageIndia production delivery remains intentionally deferred as the final external integration; no provider credential was added to code, Git, or the cloud configuration during this work.
 
 ## 2026-10-16 — Staging release and end-to-end verification
