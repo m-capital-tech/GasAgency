@@ -31,7 +31,7 @@ Values marked secret are configured through encrypted App Platform environment v
 | `OTP_HASH_PEPPER` | API, worker | Secret | Server-side OTP hashing pepper |
 | `OTP_DELIVERY_KEY` | API, worker | Secret | Independent base64 AES-256 key for OTP delivery envelopes |
 | `MFA_ENCRYPTION_KEY` | API | Secret | Independent base64 AES-256 key for TOTP secret envelopes |
-| `PUSH_TOKEN_ENCRYPTION_KEY` | API | Secret | Independent base64 AES-256 key for Expo push-token envelopes; never reuse an OTP or MFA key |
+| `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker | Secret | Independent base64 AES-256 key for Expo push-token envelopes; never reuse an OTP or MFA key |
 | `MFA_TICKET_PEPPER` | API | Secret | Independent HMAC pepper for MFA tickets and recovery codes |
 | `MFA_ISSUER` | API | General | Neutral product label shown by authenticator apps |
 | `PRIVILEGED_SESSION_TTL_SECONDS` | API | General | MFA-verified privileged session lifetime; default 8 hours, maximum 24 hours |
@@ -52,6 +52,10 @@ Values marked secret are configured through encrypted App Platform environment v
 | `MESSAGEINDIA_ENTITY_ID` | Worker | General | TRAI DLT principal entity ID |
 | `MESSAGEINDIA_*_TEMPLATE_ID` | Worker | General | Approved DLT template IDs for login OTP, tenant registration and platform access |
 | `MESSAGEINDIA_*_TEMPLATE_TEXT` | Worker | General | Exact approved DLT bodies with controlled placeholders |
+| `PUSH_PROVIDER` | Worker | General | `expo` for the provider-neutral push adapter |
+| `EXPO_PUSH_ACCESS_TOKEN` | Worker | Secret | Optional Expo enhanced-security access token; omit unless enabled for the Expo project |
+| `EXPO_PUSH_REQUEST_TIMEOUT_MS` | Worker | General | Bounded Expo HTTPS submission timeout |
+| `PUSH_MAX_DELIVERY_ATTEMPTS` | Worker | General | Per-event/device retry ceiling before a terminal ledger result |
 
 The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled production specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
 
@@ -68,7 +72,7 @@ The MessageIndia adapter is implemented behind the provider-neutral contract. It
 - an existing managed PostgreSQL 16 cluster attached through separate runtime and migration bindings, with its public TLS endpoint restricted to the app as the only trusted source;
 - Bangalore App Platform region `blr`, Node.js 22 from the root engine declaration, and the root pnpm workspace build context.
 
-The messaging worker is intentionally not present in the production specification yet. Although the real adapter now exists, the inspected MessageIndia account exposes no DLT template or entity IDs and its dashboard documents a plaintext HTTP endpoint. The advertised public HTTPS path did not resolve to an API. Add the worker only after MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke test plan.
+The production specification includes one background events worker for Expo push delivery. It runs with `MESSAGE_PROVIDER=disabled`, so no local or incomplete SMS provider can execute in production. Once MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke-test plan, the same worker can be switched to `MESSAGE_PROVIDER=messageindia` without adding another paid component.
 
 ## Production budget guardrail
 
@@ -76,12 +80,11 @@ The approved production ceiling is **USD 45 per month including applicable India
 
 - a 512 MiB shared API service (`apps-s-1vcpu-0.5gb`);
 - a fixed 1 GiB shared dashboard service (`apps-s-1vcpu-1gb-fixed`);
+- a 512 MiB shared push/events worker (`apps-s-1vcpu-0.5gb`);
 - a 512 MiB pre-deploy migration job, billed only while it runs; and
 - a single-node 1 GiB managed PostgreSQL cluster.
 
-The ordinary recurring services cost approximately USD 30.15 before tax, or USD 35.58 with 18% GST: USD 15 for the API and dashboard plus USD 15.15 for PostgreSQL. DigitalOcean's proposal also presents the release job at its USD 5 monthly rate even though jobs are charged only while running; the conservative proposal total is therefore USD 35.15 before tax, or about USD 41.48 with GST.
-
-A future 512 MiB messaging worker would raise the conservative proposal to about USD 47.38 with GST. It must not be enabled until the footprint is reduced or the ceiling is explicitly changed. Spaces, high availability, dedicated CPUs, dedicated egress IPs, additional database nodes, and autoscaling likewise require separate approval.
+The ordinary recurring services cost approximately USD 35.15 before tax, or USD 41.48 with 18% GST: USD 20 for the API, dashboard and events worker plus USD 15.15 for PostgreSQL. The pre-deploy job is charged only while a release runs; its few minutes of usage must be monitored so the total stays below the USD 45 ceiling. Spaces, high availability, dedicated CPUs, dedicated egress IPs, additional database nodes, and autoscaling require separate approval.
 
 Treat USD 45 as an authorization ceiling, not as a DigitalOcean-enforced hard cap. Review the provider's proposal before creation and monitor month-to-date billing after deployment.
 
@@ -199,7 +202,8 @@ Current status:
 - [x] The managed database, separate runtime/migration users, app-only firewall rule, migrations, and runtime grant verification are complete.
 - [x] The first App Platform deployment and public route smoke tests pass.
 - [x] A real MessageIndia SMS adapter with enforced HTTPS, DLT mapping, credential redaction, timeout handling, and unit tests exists.
-- [ ] MessageIndia supplies an operational HTTPS endpoint plus approved entity/template IDs before enabling the worker or login smoke tests.
+- [x] Provider-neutral Expo push registration and delivery, encrypted token storage, idempotent delivery ledger, bounded retries, and stale-device handling pass locally.
+- [ ] MessageIndia supplies an operational HTTPS endpoint plus approved entity/template IDs before enabling SMS delivery or real-provider login smoke tests.
 - [x] An isolated logical database restore and an App Platform rollback passed before the in-place production promotion.
 - [ ] A managed-backup or point-in-time cluster restore passes as a production operations drill.
 - [ ] Authorization and real-provider delivery smoke tests pass before external tenant onboarding begins.

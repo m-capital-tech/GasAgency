@@ -11,6 +11,8 @@ import { loadWorkerConfig } from "./config";
 import { createMessagingHandlers, type EventHandler } from "./messaging/handlers";
 import { LocalMessagingProvider } from "./messaging/local-provider";
 import { MessageIndiaProvider } from "./messaging/messageindia-provider";
+import { ExpoPushProvider } from "./push/expo-provider";
+import { createPushHandlers } from "./push/handlers";
 
 const config = loadWorkerConfig();
 const logger = createLogger("platform-worker", config.logLevel);
@@ -26,10 +28,26 @@ const pool = createDatabasePool({
 
 pool.on("error", (error) => logger.error("database_pool_error", { error }));
 
-const messagingProvider = config.messageProvider === "messageindia"
-  ? new MessageIndiaProvider(config.messageIndia!)
-  : new LocalMessagingProvider(logger, config.localMessageRevealContent);
-const handlers = createMessagingHandlers({ pool, provider: messagingProvider, otpDeliveryKey: config.otpDeliveryKey, logger });
+const handlers = new Map<string, EventHandler>();
+if (config.messageProvider !== "disabled") {
+  const messagingProvider = config.messageProvider === "messageindia"
+    ? new MessageIndiaProvider(config.messageIndia!)
+    : new LocalMessagingProvider(logger, config.localMessageRevealContent);
+  for (const [eventType, handler] of createMessagingHandlers({ pool, provider: messagingProvider, otpDeliveryKey: config.otpDeliveryKey!, logger })) {
+    handlers.set(eventType, handler);
+  }
+}
+if (config.pushProvider === "expo") {
+  const pushProvider = new ExpoPushProvider(config.expoPush!);
+  for (const [eventType, handler] of createPushHandlers({
+    pool,
+    provider: pushProvider,
+    pushTokenEncryptionKey: config.pushTokenEncryptionKey!,
+    maxDeliveryAttempts: config.pushMaxDeliveryAttempts,
+  })) {
+    handlers.set(eventType, handler);
+  }
+}
 let stopping = false;
 let wake: (() => void) | undefined;
 

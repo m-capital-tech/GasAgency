@@ -188,6 +188,88 @@ services:
         type: GENERAL
         value: http://api
 
+workers:
+  - name: events-worker
+    github:
+      repo: __GITHUB_REPOSITORY__
+      branch: __GITHUB_BRANCH__
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: pnpm --filter @platform/worker build
+    run_command: pnpm --filter @platform/worker start
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: APP_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+      - key: NODE_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: ${platform-db.DATABASE_URL}
+      - key: DATABASE_SSL_MODE
+        scope: RUN_TIME
+        type: GENERAL
+        value: verify-full
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+        value: ${platform-db.CA_CERT}
+      - key: DATABASE_POOL_MAX
+        scope: RUN_TIME
+        type: GENERAL
+        value: "5"
+      - key: DATABASE_STATEMENT_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "15000"
+      - key: WORKER_POLL_INTERVAL_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "1000"
+      - key: WORKER_BATCH_SIZE
+        scope: RUN_TIME
+        type: GENERAL
+        value: "10"
+      - key: WORKER_STALE_LOCK_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "300"
+      - key: LOG_LEVEL
+        scope: RUN_TIME
+        type: GENERAL
+        value: info
+      - key: SHUTDOWN_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "15000"
+      - key: MESSAGE_PROVIDER
+        scope: RUN_TIME
+        type: GENERAL
+        value: disabled
+      - key: PUSH_PROVIDER
+        scope: RUN_TIME
+        type: GENERAL
+        value: expo
+      - key: PUSH_TOKEN_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __PUSH_TOKEN_ENCRYPTION_KEY__
+      - key: EXPO_PUSH_REQUEST_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "10000"
+      - key: PUSH_MAX_DELIVERY_ATTEMPTS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "5"
+
 jobs:
   - name: database-migrations
     kind: PRE_DEPLOY

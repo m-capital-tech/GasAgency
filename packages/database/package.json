@@ -14,7 +14,7 @@
     "grant:runtime": "node --enable-source-maps dist/grant-runtime.js",
     "release": "pnpm migrate && pnpm grant:runtime",
     "migrate:dev": "tsx scripts/migrate.ts",
-    "verify": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f verification/foundation.sql -f verification/auth_rbac_onboarding.sql -f verification/approval_and_invitation.sql -f verification/messaging_and_otp.sql -f verification/tenant_ordering.sql -f verification/agency_fulfillment.sql -f verification/admin_read_models.sql -f verification/privileged_mfa.sql -f verification/agency_commercial_controls.sql -f verification/push_devices.sql",
+    "verify": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f verification/foundation.sql -f verification/auth_rbac_onboarding.sql -f verification/approval_and_invitation.sql -f verification/messaging_and_otp.sql -f verification/tenant_ordering.sql -f verification/agency_fulfillment.sql -f verification/admin_read_models.sql -f verification/privileged_mfa.sql -f verification/agency_commercial_controls.sql -f verification/push_devices.sql -f verification/push_delivery_ledger.sql",
     "test:integration": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

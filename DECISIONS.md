@@ -10,6 +10,8 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 ## Mobile notifications and OTA boundary (16 Oct 2026)
 - **Expo Go is the immediate review surface, not the remote-push acceptance surface.** It supports the current UI and local notifications, while a signed development/preview build is required to validate remote push and EAS Update behavior.
 - **Push registrations are tenant-authenticated and installation-unique.** Expo tokens are encrypted with a dedicated production key, never logged or returned, and atomically reassigned on an account switch so a physical installation cannot keep receiving notifications for a previous user. Logout independently attempts push-token and session revocation.
+- **Push delivery reuses the transactional outbox.** Order, invoice, and payment events fan out only to active devices owned by active members of the affected active tenant. Each event/device result is idempotent and inspectable, transient failures have a bounded retry ceiling, and an Expo `DeviceNotRegistered` result makes the installation stale.
+- **The production worker can be push-only.** `MESSAGE_PROVIDER=disabled` keeps incomplete SMS delivery fail-closed while `PUSH_PROVIDER=expo` processes commercial notifications. The same worker will add MessageIndia later rather than introducing a second paid component.
 - **The final commercial identity precedes EAS project creation.** The working GasSetu label and `com.gassetu.demo` identifiers remain review-only. A permanent Expo project, bundle IDs, Apple/FCM credentials, and production OTA publishing wait for the approved final name and ownership account.
 
 ## Production Phase 1 commercial-account and tenant self-service slice (16 Oct 2026)

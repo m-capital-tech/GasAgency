@@ -23,7 +23,7 @@ const schema = z
     WORKER_STALE_LOCK_SECONDS: integer(300, 30, 3_600),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     SHUTDOWN_TIMEOUT_MS: integer(15_000, 1_000, 60_000),
-    MESSAGE_PROVIDER: z.enum(["local", "messageindia"]).default("local"),
+    MESSAGE_PROVIDER: z.enum(["disabled", "local", "messageindia"]).default("local"),
     OTP_DELIVERY_KEY: z.string().optional(),
     LOCAL_MESSAGE_REVEAL_CONTENT: boolean("false"),
     MESSAGEINDIA_SEND_URL: z.string().url().optional(),
@@ -39,6 +39,11 @@ const schema = z
     MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID: z.string().regex(/^[0-9]{6,30}$/).optional(),
     MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT: z.string().min(1).max(1000).optional(),
     MESSAGEINDIA_REQUEST_TIMEOUT_MS: integer(10_000, 1_000, 30_000),
+    PUSH_PROVIDER: z.enum(["disabled", "expo"]).default("disabled"),
+    PUSH_TOKEN_ENCRYPTION_KEY: z.string().optional(),
+    EXPO_PUSH_ACCESS_TOKEN: z.string().min(16).optional(),
+    EXPO_PUSH_REQUEST_TIMEOUT_MS: integer(10_000, 1_000, 30_000),
+    PUSH_MAX_DELIVERY_ATTEMPTS: integer(5, 1, 10),
   })
   .superRefine((value, context) => {
     if (value.APP_ENV === "production" && value.DATABASE_SSL_MODE !== "verify-full") {
@@ -50,10 +55,13 @@ const schema = z
     if (value.OTP_DELIVERY_KEY && !isBase64Key(value.OTP_DELIVERY_KEY)) {
       context.addIssue({ code: "custom", path: ["OTP_DELIVERY_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
     }
+    if (value.PUSH_TOKEN_ENCRYPTION_KEY && !isBase64Key(value.PUSH_TOKEN_ENCRYPTION_KEY)) {
+      context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
+    }
     if (["staging", "production"].includes(value.APP_ENV) && value.MESSAGE_PROVIDER === "local") {
       context.addIssue({ code: "custom", path: ["MESSAGE_PROVIDER"], message: "the local messaging provider is forbidden outside local/test" });
     }
-    if (["staging", "production"].includes(value.APP_ENV) && !value.OTP_DELIVERY_KEY) {
+    if (["staging", "production"].includes(value.APP_ENV) && value.MESSAGE_PROVIDER !== "disabled" && !value.OTP_DELIVERY_KEY) {
       context.addIssue({ code: "custom", path: ["OTP_DELIVERY_KEY"], message: "a dedicated OTP delivery encryption key is required outside local/test" });
     }
     if (["staging", "production"].includes(value.APP_ENV) && value.LOCAL_MESSAGE_REVEAL_CONTENT) {
@@ -82,6 +90,9 @@ const schema = z
         context.addIssue({ code: "custom", path: ["MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT"], message: "must contain {{businessName}}" });
       }
     }
+    if (value.PUSH_PROVIDER === "expo" && !value.PUSH_TOKEN_ENCRYPTION_KEY) {
+      context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "is required for Expo push delivery" });
+    }
   });
 
 export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
@@ -99,7 +110,7 @@ export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
     logLevel: value.LOG_LEVEL,
     shutdownTimeoutMs: value.SHUTDOWN_TIMEOUT_MS,
     messageProvider: value.MESSAGE_PROVIDER,
-    otpDeliveryKey: value.OTP_DELIVERY_KEY ?? Buffer.alloc(32, 7).toString("base64"),
+    otpDeliveryKey: value.MESSAGE_PROVIDER === "disabled" ? undefined : value.OTP_DELIVERY_KEY ?? Buffer.alloc(32, 7).toString("base64"),
     localMessageRevealContent: value.LOCAL_MESSAGE_REVEAL_CONTENT,
     messageIndia: value.MESSAGE_PROVIDER === "messageindia" ? {
       sendUrl: value.MESSAGEINDIA_SEND_URL!,
@@ -115,5 +126,12 @@ export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
         platform_access: { id: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID!, text: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT! },
       },
     } : undefined,
+    pushProvider: value.PUSH_PROVIDER,
+    pushTokenEncryptionKey: value.PUSH_TOKEN_ENCRYPTION_KEY,
+    expoPush: value.PUSH_PROVIDER === "expo" ? {
+      accessToken: value.EXPO_PUSH_ACCESS_TOKEN,
+      requestTimeoutMs: value.EXPO_PUSH_REQUEST_TIMEOUT_MS,
+    } : undefined,
+    pushMaxDeliveryAttempts: value.PUSH_MAX_DELIVERY_ATTEMPTS,
   } as const;
 }

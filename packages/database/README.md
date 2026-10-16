@@ -31,6 +31,8 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0010_push_devices.sql` adds tenant-owned Expo push-device registrations. Raw provider tokens are never indexed or stored in plaintext: a SHA-256 digest provides installation uniqueness while an authenticated encryption envelope preserves the token for delivery. A token can belong to only one current user, preventing an account switch on the same installation from leaving notifications attached to the previous user. Explicit active, stale, and revoked states retain lifecycle state without broad deletes.
 
+`0011_push_delivery_ledger.sql` adds an idempotent event/device delivery ledger for provider-neutral push processing. It records only bounded provider references and safe error codes, keeps accepted, retryable-failure, exhausted, and stale outcomes inspectable, and prevents the same outbox event from creating more than one delivery identity for a device.
+
 Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules
