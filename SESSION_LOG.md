@@ -8,6 +8,7 @@
 - Added a provider-neutral Expo push sender for order, invoice, and payment events. It resolves active tenant memberships only, decrypts tokens only for delivery, sends bounded HTTPS batches, records an idempotent event/device ledger, applies bounded retries, and marks `DeviceNotRegistered` installations stale without logging provider tokens.
 - Added a push-only production worker specification with SMS disabled until MessageIndia is ready. The ordinary recurring footprint remains within the approved USD 45 including-GST ceiling; activating this additional paid component remains an explicit release decision.
 - Added a dedicated encrypted `PUSH_TOKEN_ENCRYPTION_KEY` to the production API configuration. A fresh disposable PostgreSQL database applied all eleven migrations; all SQL verification suites, all 13 API tests, all 12 worker tests including both database integrations, all 11 TypeScript targets, production builds, engine tests, and mock-data integrity checks passed.
+- Pushed release commit `5a0f1bc` and deployed it manually to DigitalOcean as deployment `f8f888b5-3af4-40c2-abbf-5f64117d3e3d`. Migration `0011_push_delivery_ledger` completed, both service readiness checks passed, and the release became the healthy live deployment. Public API/login/redirect/auth-boundary smoke tests passed.
 
 ## 2026-10-16 — Parallel production account controls and tenant self-service
 

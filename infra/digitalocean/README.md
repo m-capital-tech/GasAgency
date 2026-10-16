@@ -145,13 +145,21 @@ The environment was provisioned on 9 October 2026 and promoted in place to produ
 - app: `commercial-lpg-production` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`; these legacy internal identifiers are retained to avoid a risky data migration and do not define the runtime environment;
-- active deployment: `40235cce-3dfc-4512-923a-93cec3306fd0`, a successful manual release sourced from commit `f886baa`;
+- active deployment: `f8f888b5-3af4-40c2-abbf-5f64117d3e3d`, a successful manual release sourced from commit `5a0f1bc`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
 The DigitalOcean project environment, API `APP_ENV`, and dashboard `APP_ENV` are all set to `production`. Renaming the app does not rename the stable provider-generated hostname.
 
-The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` routes passed HTTPS smoke tests; protected admin, session, agency-account, and tenant-billing routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `f886baa`, and automatic deployment remains disabled.
+The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` routes passed HTTPS smoke tests; protected admin, session, agency-account, and tenant-billing routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `5a0f1bc`, and automatic deployment remains disabled.
+
+### 16 October 2026 notification-foundation release
+
+- GitHub `main` release commit `5a0f1bc` was deployed manually as deployment `f8f888b5-3af4-40c2-abbf-5f64117d3e3d` after the dedicated push-token encryption secret was installed.
+- The pre-deploy job applied `0010_push_devices` and `0011_push_delivery_ledger`, then reapplied least-privilege runtime grants before service cutover.
+- DigitalOcean recorded the release as `Success`, `Live Deployment`, and `Healthy` after the API and web readiness gates passed.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, and `/operations/login`; `/admin` and `/agency` returned production redirects to the corresponding login surfaces; unauthenticated `POST /v1/auth/push-devices` returned HTTP 401.
+- The paid push/events worker is implemented and present in the version-controlled production template but was not added to the live app in this release. Its activation remains coupled to final Expo project identity and explicit confirmation of the additional recurring USD 5 component.
 
 ### 16 October 2026 commercial-account release
 
