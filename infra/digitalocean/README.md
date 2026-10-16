@@ -140,11 +140,19 @@ Staging was provisioned in the confirmed DigitalOcean project on 9 October 2026:
 - app: `commercial-lpg-staging` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`;
-- active deployment: `a4009638-cfad-41df-9313-b344e14b9450`, a successful manual rollback to baseline deployment `dbf5d0ae-6a93-4bfd-93e0-115b5f42ac74`, sourced from commit `27a03ee`;
+- active deployment: `bfb0b0af-e1e6-46e9-926f-a7fabe409c1f`, a successful manual release sourced from commit `f33ad65`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
-The active rollback reached `ACTIVE` with all 14 deployment steps complete. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests. Automatic deployment remains disabled.
+The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests; protected admin and session routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `f33ad65`, and automatic deployment remains disabled.
+
+### 16 October 2026 release verification
+
+- The previous rollback pin was removed through DigitalOcean's zero-downtime revert-rollback operation, then current GitHub `main` at `f33ad65` was deployed manually.
+- The migration job completed successfully, the API readiness check reached HTTP 200, the dashboard became ready, and deployment `bfb0b0af-e1e6-46e9-926f-a7fabe409c1f` went live.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, and `/operations/login`; unauthenticated `/v1/admin/overview` and `/v1/auth/session` requests returned HTTP 401; an unknown-number OTP request returned the enumeration-safe HTTP 202 response without exposing account existence.
+- A fresh disposable local PostgreSQL database applied all eight migrations. All eight SQL verification suites, all seven API tests including delegated RBAC/onboarding/order/fulfilment, and all five worker tests including encrypted OTP outbox delivery passed. The test database was dropped after confirming zero active sessions.
+- Repository-wide type checking passed for all 11 targets and all production build targets passed. Local tooling used Node.js 26 while repository and DigitalOcean builds target Node.js 22; the live DigitalOcean release built and ran under the configured Node.js 22 contract.
 
 ## Recovery drill evidence
 

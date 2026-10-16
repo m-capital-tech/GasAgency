@@ -1,5 +1,14 @@
 # SESSION_LOG.md
 
+## 2026-10-16 — Staging release and end-to-end verification
+
+- Removed the DigitalOcean rollback pin through its zero-downtime revert operation, then manually deployed GitHub `main` at `f33ad65` as deployment `bfb0b0af-e1e6-46e9-926f-a7fabe409c1f`.
+- Confirmed the pre-deploy migration job, API readiness, dashboard readiness, public `/v1`, Platform Control login, and agency operations login. Protected admin/session routes remained closed to unauthenticated requests, and unknown-number OTP requests retained their enumeration-safe response.
+- Confirmed DigitalOcean source hash `f33ad65` and `Autodeploy: Off` after the release.
+- Created an isolated local database, applied all eight migrations, bootstrapped a test-only Super Admin, and passed the complete delegated Super Admin → Platform Admin → onboarding team → tenant approval → credit order → agency fulfilment integration scenario.
+- Passed 7/7 API tests, 8/8 SQL verification suites, 5/5 worker tests, 11/11 type-check targets, and every production build target. Removed the disposable database after verifying no active sessions.
+- Real staging login and invitation delivery remain gated by the provider's operational HTTPS SMS endpoint and approved DLT entity/template configuration; no SMS credential was stored in the repository or cloud environment.
+
 ## 2026-09-16 — Session 1: build the investor prototype from PRD
 
 ### Timeline
