@@ -29,6 +29,8 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0009_agency_commercial_controls.sql` adds an append-only agency payment collection ledger, invoice allocations, cross-account integrity guards, and timeline indexes. Agencies can record collections without receiving authority over platform-owned credit limits or net terms.
 
+`0010_push_devices.sql` adds tenant-owned Expo push-device registrations. Raw provider tokens are never indexed or stored in plaintext: a SHA-256 digest provides installation uniqueness while an authenticated encryption envelope preserves the token for delivery. A token can belong to only one current user, preventing an account switch on the same installation from leaving notifications attached to the previous user. Explicit active, stale, and revoked states retain lifecycle state without broad deletes.
+
 Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules
@@ -38,7 +40,7 @@ Payment-provider records, agency replenishment/adjustment workflows, driver auth
 - Timestamps use `timestamptz`; money uses exact `numeric` values.
 - Domain states use text plus database check constraints so application and database rules remain inspectable.
 - Every foreign-key access path has a leading-column index.
-- Sensitive session/ticket tokens, OTP values, and recovery codes are stored only as hashes. TOTP seeds use an authenticated encryption envelope with factor-bound associated data.
+- Sensitive session/ticket tokens, OTP values, and recovery codes are stored only as hashes. TOTP seeds and push-provider tokens use dedicated authenticated encryption envelopes with domain-bound associated data; push tokens also have a one-way digest for lookup and uniqueness.
 
 ## Applying the migration
 

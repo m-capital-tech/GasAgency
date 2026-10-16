@@ -1,4 +1,5 @@
 import { PLATFORM_API_URL } from "./config";
+import type { PushTokenRegistration } from "./push-notifications";
 
 export interface TenantAccess {
   publicId: string;
@@ -318,6 +319,22 @@ export function restoreTenantSession(): Promise<TenantSessionResponse> {
 
 export function revokeTenantSession(): Promise<void> {
   return request("/auth/logout", { method: "POST", authenticated: true });
+}
+
+/**
+ * Authenticated boundary for associating an Expo token with the current user.
+ * The mobile bridge calls this only when push registration is explicitly enabled.
+ */
+export function registerPlatformPushToken(registration: PushTokenRegistration): Promise<void> {
+  return request("/auth/push-devices", { method: "POST", body: registration, authenticated: true });
+}
+
+export function revokePlatformPushToken(registration: PushTokenRegistration): Promise<void> {
+  return request("/auth/push-devices", {
+    method: "POST",
+    body: { ...registration, action: "revoke" },
+    authenticated: true,
+  });
 }
 
 export function loadTenantHome(tenantPublicId: string): Promise<TenantHomeResponse> {

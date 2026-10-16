@@ -1,19 +1,20 @@
-# GasSetu for Business — commercial LPG marketplace
+# Commercial LPG Platform — B2B operations
 
 > **Production direction:** [`PRD_PRODUCTION_V1.md`](./PRD_PRODUCTION_V1.md) is the canonical specification. The repository contains an isolated PostgreSQL-backed production path alongside the investor prototype described below; the prototype's self-registration, automatic verification, mock authentication, and in-memory persistence are not production behavior.
 
-A clickable, mock-data prototype of a **B2B** LPG platform: restaurants, cloud kitchens, hotels, canteens and tea stalls order **19 kg / 47.5 kg commercial cylinders** from their gas agency, on credit, with standing orders and GST invoices — while the agency runs its business from a web panel and the platform admin verifies businesses and sets credit terms.
+The active product is a **B2B commercial LPG platform** for restaurants, cloud kitchens, hotels, canteens and similar businesses. Platform teams onboard and approve tenants, serving agencies fulfil orders and manage commercial accounts, and tenants order **19 kg / 47.5 kg commercial cylinders** from the Expo app.
 
 | App | Who | Where |
 |---|---|---|
-| **Mobile (Expo)** — Business mode + Delivery mode | Imran (Al-Madina Tiffin Centre, 2 outlets, credit), Fatima (Star Kitchens Cloud, credit requested), Ramesh (delivery partner) | iOS Simulator / Expo Go, or `http://localhost:8081` in a browser |
-| **Web — Agency panel ("LMS")** | Suresh, HP Gas distributor in Amberpet | `http://localhost:3000/agency` |
-| **Web — Platform admin** | Ops team — verifies businesses, decides credit | `http://localhost:3000/admin` |
-| **Mock API** | in-memory store + WebSocket live events | `http://localhost:4000` |
+| **Tenant mobile app (production path)** | Registered restaurant/hotel users | Expo Go for UI review; native development build for remote push |
+| **Platform Control (production path)** | Super Admin, Platform Admin, scoped platform team | `http://localhost:3000/control/login` |
+| **Agency Operations (production path)** | Authorized serving-agency users | `http://localhost:3000/operations/login` |
+| **Demo Admin / Agency** | Seeded investor walkthrough only | `http://localhost:3000/admin` / `http://localhost:3000/agency` |
+| **Mock API** | Demo-only in-memory store + WebSocket events | `http://localhost:4000` |
 
 The production path consists of `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, tenant authentication/ordering/tracking/billing under `/(tenant)`, agency fulfillment/account operations at `/operations`, and Platform Control onboarding, lifecycle, credit, RBAC, and analytics at `/control`. These do not read from or fall back to the demo engine.
 
-Everything runs locally with **no API keys, no real payments, no SMS**. An order placed on the phone shows up on the agency board within a second; accepting and assigning on the web updates the phone live; "Start trip" moves a marker on every map.
+The explicit demo mode runs locally with **no API keys, no real payments, and no SMS**. It is isolated from the PostgreSQL-backed production routes and is never linked from the production landing page.
 
 ---
 

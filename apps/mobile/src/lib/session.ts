@@ -5,11 +5,14 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { setToken } from "./api";
 import {
   restoreTenantSession,
+  revokePlatformPushToken,
   revokeTenantSession,
   setPlatformAccessToken,
   type TenantAccess,
   type TenantSessionUser,
 } from "./platform-api";
+import { PUSH_REGISTRATION_ENABLED } from "./config";
+import { revokeRemotePushNotifications } from "./push-notifications";
 import { clearSecureSessionToken, readSecureSessionToken, saveSecureSessionToken } from "./secure-session";
 
 export type Mode = "business" | "delivery";
@@ -94,10 +97,15 @@ export const useSession = create<SessionState>()(
         setToken(null);
         set({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null, onboarding: "done", mode: "business" });
         try {
-          if (tenantSession) await revokeTenantSession();
-        } catch {
-          // Local logout must still succeed if the network or server is unavailable.
+          if (tenantSession) {
+            const revocations: Array<Promise<void>> = [revokeTenantSession()];
+            if (PUSH_REGISTRATION_ENABLED) {
+              revocations.push(revokeRemotePushNotifications(revokePlatformPushToken));
+            }
+            await Promise.allSettled(revocations);
+          }
         } finally {
+          // Local logout must still succeed if either remote revocation is unavailable.
           setPlatformAccessToken(null);
           await clearSecureSessionToken();
         }

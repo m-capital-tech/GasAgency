@@ -28,6 +28,7 @@ integrationTest("delegated creator submits and a separate administrator activate
     otpHashPepper: "integration-test-otp-hash-pepper-more-than-32-characters",
     otpDeliveryKey: Buffer.alloc(32, 7).toString("base64"),
     mfaEncryptionKey: Buffer.alloc(32, 11).toString("base64"),
+    pushTokenEncryptionKey: Buffer.alloc(32, 13).toString("base64"),
     mfaTicketPepper: "integration-test-mfa-ticket-pepper-more-than-32-characters",
     mfaIssuer: "Commercial LPG Platform",
     mfaTicketTtlSeconds: 600,

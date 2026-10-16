@@ -26,6 +26,7 @@ const schema = z
     OTP_HASH_PEPPER: z.string().min(32).optional(),
     OTP_DELIVERY_KEY: z.string().optional(),
     MFA_ENCRYPTION_KEY: z.string().optional(),
+    PUSH_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     MFA_TICKET_PEPPER: z.string().min(32).optional(),
     MFA_ISSUER: z.string().trim().min(2).max(80).default("Commercial LPG Platform"),
     MFA_TICKET_TTL_SECONDS: integer(600, 300, 900),
@@ -54,6 +55,9 @@ const schema = z
     if (["staging", "production"].includes(value.APP_ENV) && !value.MFA_ENCRYPTION_KEY) {
       context.addIssue({ code: "custom", path: ["MFA_ENCRYPTION_KEY"], message: "a dedicated MFA encryption key is required outside local/test" });
     }
+    if (["staging", "production"].includes(value.APP_ENV) && !value.PUSH_TOKEN_ENCRYPTION_KEY) {
+      context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "a dedicated push-token encryption key is required outside local/test" });
+    }
     if (["staging", "production"].includes(value.APP_ENV) && !value.MFA_TICKET_PEPPER) {
       context.addIssue({ code: "custom", path: ["MFA_TICKET_PEPPER"], message: "a dedicated MFA ticket pepper is required outside local/test" });
     }
@@ -62,6 +66,9 @@ const schema = z
     }
     if (value.MFA_ENCRYPTION_KEY && !isBase64Key(value.MFA_ENCRYPTION_KEY)) {
       context.addIssue({ code: "custom", path: ["MFA_ENCRYPTION_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
+    }
+    if (value.PUSH_TOKEN_ENCRYPTION_KEY && !isBase64Key(value.PUSH_TOKEN_ENCRYPTION_KEY)) {
+      context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
     }
     if (["staging", "production"].includes(value.APP_ENV) && (value.OTP_LOCAL_CODE || value.OTP_LOCAL_EXPOSE_CODE)) {
       context.addIssue({ code: "custom", path: ["OTP_LOCAL_CODE"], message: "local OTP controls are forbidden outside local/test" });
@@ -83,6 +90,7 @@ export interface ApiConfig {
   otpHashPepper: string;
   otpDeliveryKey: string;
   mfaEncryptionKey: string;
+  pushTokenEncryptionKey: string;
   mfaTicketPepper: string;
   mfaIssuer: string;
   mfaTicketTtlSeconds: number;
@@ -117,6 +125,7 @@ export function loadApiConfig(environment: NodeJS.ProcessEnv = process.env): Api
     otpHashPepper: value.OTP_HASH_PEPPER ?? "local-only-otp-hash-pepper-do-not-deploy",
     otpDeliveryKey: value.OTP_DELIVERY_KEY ?? Buffer.alloc(32, 7).toString("base64"),
     mfaEncryptionKey: value.MFA_ENCRYPTION_KEY ?? Buffer.alloc(32, 11).toString("base64"),
+    pushTokenEncryptionKey: value.PUSH_TOKEN_ENCRYPTION_KEY ?? Buffer.alloc(32, 13).toString("base64"),
     mfaTicketPepper: value.MFA_TICKET_PEPPER ?? "local-only-mfa-ticket-pepper-do-not-deploy",
     mfaIssuer: value.MFA_ISSUER,
     mfaTicketTtlSeconds: value.MFA_TICKET_TTL_SECONDS,

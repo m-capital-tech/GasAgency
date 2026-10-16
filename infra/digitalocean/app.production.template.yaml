@@ -1,4 +1,4 @@
-name: commercial-lpg-staging
+name: commercial-lpg-production
 region: blr
 features:
   - buildpack-stack=ubuntu-22
@@ -51,7 +51,7 @@ services:
       - key: APP_ENV
         scope: RUN_TIME
         type: GENERAL
-        value: staging
+        value: production
       - key: NODE_ENV
         scope: RUN_TIME
         type: GENERAL
@@ -104,6 +104,10 @@ services:
         scope: RUN_TIME
         type: SECRET
         value: __MFA_ENCRYPTION_KEY__
+      - key: PUSH_TOKEN_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __PUSH_TOKEN_ENCRYPTION_KEY__
       - key: MFA_TICKET_PEPPER
         scope: RUN_TIME
         type: SECRET
@@ -170,7 +174,7 @@ services:
       - key: APP_ENV
         scope: RUN_TIME
         type: GENERAL
-        value: staging
+        value: production
       - key: NODE_ENV
         scope: RUN_TIME
         type: GENERAL

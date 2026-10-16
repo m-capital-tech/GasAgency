@@ -9,6 +9,7 @@ import type { ApiConfig } from "./config";
 import { HttpError } from "./http/error";
 import { authOtpRouter } from "./routes/auth-otp";
 import { authMfaRouter } from "./routes/auth-mfa";
+import { authPushDevicesRouter } from "./routes/auth-push-devices";
 import { authSessionRouter } from "./routes/auth-session";
 import { agencyAccountsRouter } from "./routes/agency-accounts";
 import { agencyOrdersRouter } from "./routes/agency-orders";
@@ -76,6 +77,7 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   });
   app.use("/v1", authOtpRouter({ pool, config }));
   app.use("/v1", authMfaRouter({ pool, config }));
+  app.use("/v1", authPushDevicesRouter({ pool, tokenPepper: config.sessionTokenPepper, encryptionKey: config.pushTokenEncryptionKey }));
   app.use("/v1", authSessionRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminReadRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", platformTeamRouter({ pool, tokenPepper: config.sessionTokenPepper }));

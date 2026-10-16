@@ -7,6 +7,7 @@ This service is separate from the investor-demo API. Its current protected produ
 - `POST /v1/auth/otp/request` and `POST /v1/auth/otp/verify` for enumeration-resistant tenant phone login;
 - `POST /v1/auth/mfa/enroll`, `POST /v1/auth/mfa/enroll/verify`, and `POST /v1/auth/mfa/verify` for privileged authenticator enrollment, verification, and recovery-code login;
 - `GET /v1/auth/session` and `POST /v1/auth/logout` for session restoration and explicit revocation;
+- `POST /v1/auth/push-devices` for active tenant users to register or revoke an Expo push token without storing it in plaintext;
 - `POST /v1/admin/roles` for permission-ceiling-enforced Platform Admin/team roles;
 - `POST /v1/admin/team-members` for scoped role assignment and SMS-first access invitation;
 - `POST /v1/admin/tenants` for an authenticated, authorized, idempotent tenant draft;
@@ -87,6 +88,8 @@ Replaying the same key and normalized body returns the original `201` response w
 Local and test environments may set `OTP_LOCAL_CODE=123456` and `OTP_LOCAL_EXPOSE_CODE=true`. The request response then includes `localDebugCode`; neither option is accepted in staging or production.
 
 OTP codes are HMAC-hashed for verification and separately AES-256-GCM encrypted for worker delivery. Plaintext OTPs are never stored in the challenge table or outbox. Requests are limited by keyed phone and IP hashes, active challenges have resend windows, failed attempts persist, and codes are single-use.
+
+Expo push tokens are SHA-256 digested for installation uniqueness and separately stored in an AES-256-GCM envelope. Registering the same installation after an account switch atomically reassigns it to the current authenticated tenant user so notifications cannot continue targeting a previous account. Set `PUSH_TOKEN_ENCRYPTION_KEY` to a dedicated canonical base64-encoded 32-byte key in staging and production; it must not reuse the OTP or MFA encryption keys. The token itself is excluded from responses, audit records, and application logs. Registrations retain explicit active, stale, and revoked lifecycle state instead of broad deletes.
 
 Phone OTP activates tenant users. Privileged platform users with `mfa_required=true` receive a short-lived, hashed MFA ticket after phone verification—not an application session. First login enrolls a TOTP authenticator and returns ten one-time recovery codes once. Later logins require a fresh authenticator or unused recovery code. TOTP secrets are AES-256-GCM encrypted, repeated time steps are rejected, failed attempts are bounded, and only successful MFA creates an `otp_mfa` session. Privileged sessions default to eight hours and cannot be configured beyond 24 hours; tenant sessions retain their separate lifetime.
 

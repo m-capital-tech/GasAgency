@@ -2,6 +2,16 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## DigitalOcean in-place production promotion (16 Oct 2026)
+- **The existing paid environment is production.** The DigitalOcean project environment, App Platform app name, and API/web `APP_ENV` values were changed from staging to production in place. This preserves the tested app, firewall attachment, database, stable provider hostname, and USD 45 monthly ceiling instead of paying for a duplicate environment.
+- **Legacy database identifiers remain labels only.** The managed cluster and database keep their existing `commercial-lpg-staging-db` and `platform_staging` identifiers to avoid a risky data move. Runtime behavior is controlled by `APP_ENV=production`; future infrastructure uses the production-named template.
+- **Automatic deployment stays off.** Production releases remain deliberate until real SMS delivery, authorization acceptance testing, and operational monitoring are complete.
+
+## Mobile notifications and OTA boundary (16 Oct 2026)
+- **Expo Go is the immediate review surface, not the remote-push acceptance surface.** It supports the current UI and local notifications, while a signed development/preview build is required to validate remote push and EAS Update behavior.
+- **Push registrations are tenant-authenticated and installation-unique.** Expo tokens are encrypted with a dedicated production key, never logged or returned, and atomically reassigned on an account switch so a physical installation cannot keep receiving notifications for a previous user. Logout independently attempts push-token and session revocation.
+- **The final commercial identity precedes EAS project creation.** The working GasSetu label and `com.gassetu.demo` identifiers remain review-only. A permanent Expo project, bundle IDs, Apple/FCM credentials, and production OTA publishing wait for the approved final name and ownership account.
+
 ## Production Phase 1 commercial-account and tenant self-service slice (16 Oct 2026)
 - **Agency controls stop at the commercial boundary.** Agency users may globally pause new credit ordering, maintain lower negotiated account prices, and record collections. Credit approval, account limits, and net terms remain platform-admin decisions and have separate permissions and endpoints.
 - **Collection history is an append-only ledger.** Each payment is recorded once, idempotently allocated to the oldest outstanding invoices, protected by cross-account database guards, and rejected if it exceeds current receivables. Advance balances require a later explicit model rather than an implicit negative invoice balance.

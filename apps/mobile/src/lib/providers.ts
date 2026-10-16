@@ -3,6 +3,7 @@ import type { AuthProvider, LocationProvider, NotificationProvider, PaymentOrder
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { post } from "./api";
+import { configureNotificationPresentation } from "./push-notifications";
 
 export const mockAuth: AuthProvider = {
   name: "MockOtpProvider",
@@ -52,9 +53,9 @@ export const localNotifications: NotificationProvider = {
   requestPermission: async () => {
     if (Platform.OS === "web") return false;
     try {
+      configureNotificationPresentation();
       const r = await Notifications.requestPermissionsAsync();
       notifReady = r.granted;
-      if (notifReady) Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }) });
       return notifReady;
     } catch {
       return false;

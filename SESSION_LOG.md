@@ -1,5 +1,12 @@
 # SESSION_LOG.md
 
+## 2026-10-16 — DigitalOcean production promotion and mobile release foundation
+
+- Promoted the existing DigitalOcean environment in place: the project environment is now Production, the app is named `commercial-lpg-production`, and API/web `APP_ENV` values are `production`. The existing provider hostname and legacy database identifiers remain unchanged.
+- Renamed the tracked App Platform template and renderer command to production terminology; deploy-on-push remains disabled.
+- Completed the Expo notification runtime and EAS Update configuration foundation while preserving Expo Go as the immediate UI-review path. Added authenticated, encrypted push-device registration, account-switch-safe token ownership, and logout revocation. Remote push delivery and published OTA updates still require the final Expo/EAS project identity, Apple/FCM credentials, a sending worker, and native development/production builds.
+- Added a dedicated encrypted `PUSH_TOKEN_ENCRYPTION_KEY` to the production API configuration. A fresh disposable PostgreSQL database applied all ten migrations; all SQL verification suites, all 13 API tests, all 11 TypeScript targets, engine tests, and mock-data integrity checks passed.
+
 ## 2026-10-16 — Parallel production account controls and tenant self-service
 
 - Built post-activation Platform Control for scoped tenant suspension/reinstatement and credit approval, limit/net-term changes, suspension, and reinstatement. Tenant suspension revokes live tenant sessions; credit exposure guards prevent unsafe limit reductions.

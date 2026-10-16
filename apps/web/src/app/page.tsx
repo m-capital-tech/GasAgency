@@ -1,41 +1,52 @@
-"use client";
-import { Flame, LayoutDashboard, ShieldCheck, Smartphone } from "lucide-react";
+import { Building2, ShieldCheck, Smartphone } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+
+const accessPoints = [
+  {
+    href: "/control/login",
+    icon: ShieldCheck,
+    title: "Platform Control",
+    description: "Super Admin and Platform Admin access for tenant onboarding, approvals, credit policy, RBAC, and scoped analytics.",
+  },
+  {
+    href: "/operations/login",
+    icon: Building2,
+    title: "Agency Operations",
+    description: "Agency access for order fulfilment, inventory, negotiated prices, credit availability, collections, and account operations.",
+  },
+] as const;
 
 export default function Landing() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16">
-      <div className="flex items-center gap-2 text-primary">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white">
-          <Flame className="size-5" />
-        </span>
-        <span className="text-2xl font-bold tracking-tight text-foreground">GasSetu</span>
-      </div>
-      <p className="mt-3 max-w-md text-center text-sm text-muted-foreground">Commercial LPG for restaurants, kitchens and canteens — B2B investor prototype. Mock data only, no real payments.</p>
-      <div className="mt-10 grid w-full max-w-3xl gap-4 md:grid-cols-3">
-        <Link href="/login?as=agency" className="group rounded-2xl border bg-card p-5 transition hover:border-primary hover:shadow-md">
-          <LayoutDashboard className="size-6 text-primary" />
-          <p className="mt-3 font-semibold">Agency panel</p>
-          <p className="mt-1 text-xs text-muted-foreground">Live order board, business accounts, credit receivables, stock. Log in as Suresh (HP Gas, Amberpet).</p>
-        </Link>
-        <Link href="/login?as=admin" className="group rounded-2xl border bg-card p-5 transition hover:border-primary hover:shadow-md">
-          <ShieldCheck className="size-6 text-info" />
-          <p className="mt-3 font-semibold">Platform admin</p>
-          <p className="mt-1 text-xs text-muted-foreground">GMV, credit book, business verification & credit terms, agency approvals.</p>
-        </Link>
-        <div className="rounded-2xl border bg-card p-5">
-          <Smartphone className="size-6 text-success" />
-          <p className="mt-3 font-semibold">Mobile app</p>
-          <p className="mt-1 text-xs text-muted-foreground">Run <code className="rounded bg-muted px-1">pnpm demo</code> and open the Expo app on the iOS Simulator for Imran (tiffin centre) and Ramesh (delivery).</p>
+    <main className="flex min-h-screen flex-col items-center justify-center px-6 py-16">
+      <div className="w-full max-w-4xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Commercial LPG operations</p>
+        <h1 className="mt-4 max-w-2xl text-4xl font-bold tracking-tight text-foreground md:text-5xl">Secure business access</h1>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+          Production access for platform teams and serving agencies. Tenant businesses order and manage billing through the mobile app.
+        </p>
+
+        <div className="mt-10 grid gap-5 md:grid-cols-2">
+          {accessPoints.map(({ href, icon: Icon, title, description }) => (
+            <Link key={href} href={href} className="group rounded-2xl border bg-card p-6 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Icon className="size-5" /></span>
+              <h2 className="mt-5 text-xl font-semibold">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+              <p className="mt-5 text-sm font-semibold text-primary">Continue securely →</p>
+            </Link>
+          ))}
         </div>
+
+        <div className="mt-5 flex items-start gap-4 rounded-2xl border bg-card p-6">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gold-soft text-gold"><Smartphone className="size-5" /></span>
+          <div>
+            <h2 className="text-lg font-semibold">Tenant business app</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">Registered restaurants and hotels sign in with their approved mobile number and OTP in the tenant app.</p>
+          </div>
+        </div>
+
+        <p className="mt-8 text-xs text-faint">Authorized business users only. Access attempts and account actions are auditable.</p>
       </div>
-      <div className="mt-8 flex gap-3">
-        <Button onClick={() => (window.location.href = "/agency/register")} variant="outline">
-          Register a new agency
-        </Button>
-      </div>
-      <p className="mt-10 text-xs text-faint">Demo logins: suresh@demo · admin@demo · password 123456</p>
     </main>
   );
 }

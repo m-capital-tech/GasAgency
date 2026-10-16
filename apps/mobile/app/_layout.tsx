@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { DemoFab } from "@/components/DemoFab";
+import { NotificationBridge } from "@/components/NotificationBridge";
 import { RazorpaySheet } from "@/components/RazorpaySheet";
 import { ToastHost, toast } from "@/components/Toast";
 import { useLiveSync } from "@/features/hooks";
@@ -82,6 +83,7 @@ export default function RootLayout() {
             <Stack.Screen name="drop/complete" options={{ presentation: "modal" }} />
             <Stack.Screen name="drop/fail" options={{ presentation: "modal" }} />
           </Stack>
+          <NotificationBridge />
           {sessionKind === "demo" ? <DemoLiveBridge /> : null}
           <ToastHost />
           <RazorpaySheet />

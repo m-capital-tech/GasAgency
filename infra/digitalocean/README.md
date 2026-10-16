@@ -2,9 +2,9 @@
 
 The production cloud is DigitalOcean. The primary region is Bangalore: App Platform uses `blr`, while the associated regional resources and VPC use `blr1`.
 
-The commercial product name is not finalized. Resource names should therefore use neutral operational identifiers such as `commercial-lpg-staging-api`; application behavior must not depend on the working name GasSetu or on a custom domain.
+The commercial product name is not finalized. Resource names therefore use neutral operational identifiers such as `commercial-lpg-production`; application behavior does not depend on the working name GasSetu or on a custom domain.
 
-## Staging topology
+## Production topology
 
 | Component | DigitalOcean target | Exposure |
 |---|---|---|
@@ -23,14 +23,15 @@ Values marked secret are configured through encrypted App Platform environment v
 
 | Variable | Components | Classification | Purpose |
 |---|---|---|---|
-| `APP_ENV` | All | General | `staging` or `production` |
-| `DATABASE_URL` | API, worker | Secret | App Platform database binding for the least-privilege runtime user; staging uses the public TLS endpoint with CA-verified hostname checks and an app-only database firewall rule |
+| `APP_ENV` | All | General | `production` in the active DigitalOcean app |
+| `DATABASE_URL` | API, worker | Secret | App Platform database binding for the least-privilege runtime user; production uses the public TLS endpoint with CA-verified hostname checks and an app-only database firewall rule |
 | `MIGRATION_DATABASE_URL` | Migration job only | Secret | Dedicated schema-owner binding supplied by App Platform during controlled releases |
 | `DATABASE_RUNTIME_ROLE` | Migration job only | General | Pre-created login role that receives tightly scoped runtime grants after each migration |
 | `SESSION_TOKEN_PEPPER` | API | Secret | Server-side session-token hashing pepper |
 | `OTP_HASH_PEPPER` | API, worker | Secret | Server-side OTP hashing pepper |
 | `OTP_DELIVERY_KEY` | API, worker | Secret | Independent base64 AES-256 key for OTP delivery envelopes |
 | `MFA_ENCRYPTION_KEY` | API | Secret | Independent base64 AES-256 key for TOTP secret envelopes |
+| `PUSH_TOKEN_ENCRYPTION_KEY` | API | Secret | Independent base64 AES-256 key for Expo push-token envelopes; never reuse an OTP or MFA key |
 | `MFA_TICKET_PEPPER` | API | Secret | Independent HMAC pepper for MFA tickets and recovery codes |
 | `MFA_ISSUER` | API | General | Neutral product label shown by authenticator apps |
 | `PRIVILEGED_SESSION_TTL_SECONDS` | API | General | MFA-verified privileged session lifetime; default 8 hours, maximum 24 hours |
@@ -42,7 +43,7 @@ Values marked secret are configured through encrypted App Platform environment v
 | `OBJECT_STORAGE_ACCESS_KEY` | API, worker | Secret | Dedicated application credential |
 | `OBJECT_STORAGE_SECRET_KEY` | API, worker | Secret | Dedicated application credential |
 | `LOG_LEVEL` | API, worker | General | Structured-log verbosity |
-| `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned staging integration |
+| `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned production integration |
 | `MESSAGEINDIA_SEND_URL` | Worker | General | Provider-issued HTTPS submission endpoint; plaintext HTTP is rejected |
 | `MESSAGEINDIA_TRANSPORT` | Worker | General | Must be `post` in staging/production so credentials are never placed in URLs |
 | `MESSAGEINDIA_USERNAME` | Worker | Secret | MessageIndia account identifier |
@@ -52,11 +53,11 @@ Values marked secret are configured through encrypted App Platform environment v
 | `MESSAGEINDIA_*_TEMPLATE_ID` | Worker | General | Approved DLT template IDs for login OTP, tenant registration and platform access |
 | `MESSAGEINDIA_*_TEMPLATE_TEXT` | Worker | General | Exact approved DLT bodies with controlled placeholders |
 
-The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled staging specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
+The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled production specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
 
-## Version-controlled staging specification
+## Version-controlled production specification
 
-`app.staging.template.yaml` follows the current App Platform specification and keeps all repository identities, database identities, and secrets as unresolved tokens. It defines:
+`app.production.template.yaml` follows the current App Platform specification and keeps all repository identities, database identities, and secrets as unresolved tokens. It defines:
 
 - the Next.js dashboard as the public root service;
 - the production API under the preserved `/v1` path;
@@ -67,11 +68,11 @@ The MessageIndia adapter is implemented behind the provider-neutral contract. It
 - an existing managed PostgreSQL 16 cluster attached through separate runtime and migration bindings, with its public TLS endpoint restricted to the app as the only trusted source;
 - Bangalore App Platform region `blr`, Node.js 22 from the root engine declaration, and the root pnpm workspace build context.
 
-The messaging worker is intentionally not present in the staging specification yet. Although the real adapter now exists, the inspected MessageIndia account exposes no DLT template or entity IDs and its dashboard documents a plaintext HTTP endpoint. The advertised public HTTPS path did not resolve to an API. Add the worker only after MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke test plan.
+The messaging worker is intentionally not present in the production specification yet. Although the real adapter now exists, the inspected MessageIndia account exposes no DLT template or entity IDs and its dashboard documents a plaintext HTTP endpoint. The advertised public HTTPS path did not resolve to an API. Add the worker only after MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke test plan.
 
-## Staging budget guardrail
+## Production budget guardrail
 
-The approved staging ceiling is **USD 45 per month including applicable Indian GST**. The initial specification therefore uses:
+The approved production ceiling is **USD 45 per month including applicable Indian GST**. The current specification therefore uses:
 
 - a 512 MiB shared API service (`apps-s-1vcpu-0.5gb`);
 - a fixed 1 GiB shared dashboard service (`apps-s-1vcpu-1gb-fixed`);
@@ -98,9 +99,10 @@ export SESSION_TOKEN_PEPPER='independent-random-secret-at-least-32-characters'
 export OTP_HASH_PEPPER='another-independent-random-secret-at-least-32-characters'
 export OTP_DELIVERY_KEY='canonical-base64-encoded-32-byte-key'
 export MFA_ENCRYPTION_KEY='another-canonical-base64-encoded-32-byte-key'
+export PUSH_TOKEN_ENCRYPTION_KEY='a-third-canonical-base64-encoded-32-byte-key'
 export MFA_TICKET_PEPPER='another-independent-random-secret-at-least-32-characters'
 
-pnpm deploy:staging:render -- .do/app.yaml
+pnpm deploy:production:render -- .do/app.yaml
 ```
 
 The database runtime login must already exist, must not own schema objects, and must not inherit any other PostgreSQL role. The release job applies migrations as the schema owner and then grants only schema usage, table read/write access, sequence usage, and the single delete permission required for authentication rate-limit expiry.
@@ -114,7 +116,7 @@ doctl apps spec validate .do/app.yaml --schema-only
 doctl apps propose --spec .do/app.yaml
 ```
 
-`propose` returns the resolved configuration and projected cost without creating the app. Review it, confirm the target project ID and component prices, then explicitly create staging:
+`propose` returns the resolved configuration and projected cost without creating the app. Review it, confirm the target project ID and component prices, then explicitly create production:
 
 ```bash
 doctl apps create \
@@ -129,20 +131,22 @@ After App Platform encrypts the first-submission secrets, download its canonical
 doctl apps spec get '<app-id>' --format yaml
 ```
 
-The active staging checkout follows this rule: `.do/app.yaml` is mode `0600`, git-ignored, contains DigitalOcean-encrypted `EV[...]` values, and contains no plaintext PostgreSQL URL. Temporary local database passwords and connection exports are removed after deployment.
+The active production checkout follows this rule: `.do/app.yaml` is mode `0600`, git-ignored, contains DigitalOcean-encrypted `EV[...]` values, and contains no plaintext PostgreSQL URL. Temporary local database passwords and connection exports are removed after deployment.
 
-Do not enable deploy-on-push until database restore, rollback, authorization, and provider-delivery smoke tests have all passed in staging.
+Deploy-on-push remains disabled until authorization and provider-delivery smoke tests have passed in production.
 
-## Active staging deployment
+## Active production deployment
 
-Staging was provisioned in the confirmed DigitalOcean project on 9 October 2026:
+The environment was provisioned on 9 October 2026 and promoted in place to production on 16 October 2026:
 
-- app: `commercial-lpg-staging` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
+- app: `commercial-lpg-production` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
-- PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`;
+- PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`; these legacy internal identifiers are retained to avoid a risky data migration and do not define the runtime environment;
 - active deployment: `40235cce-3dfc-4512-923a-93cec3306fd0`, a successful manual release sourced from commit `f886baa`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
+
+The DigitalOcean project environment, API `APP_ENV`, and dashboard `APP_ENV` are all set to `production`. Renaming the app does not rename the stable provider-generated hostname.
 
 The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` routes passed HTTPS smoke tests; protected admin, session, agency-account, and tenant-billing routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `f886baa`, and automatic deployment remains disabled.
 
@@ -191,13 +195,13 @@ Current status:
 - [x] The repository is connected to the organization GitHub remote.
 - [x] The initial schema, verification suite, and outbox concurrency test pass locally.
 - [x] The DigitalOcean project is confirmed and both paid resources are assigned to it.
-- [x] A secret-safe App Platform staging template and validated renderer exist.
+- [x] A secret-safe App Platform production template and validated renderer exist.
 - [x] The managed database, separate runtime/migration users, app-only firewall rule, migrations, and runtime grant verification are complete.
 - [x] The first App Platform deployment and public route smoke tests pass.
 - [x] A real MessageIndia SMS adapter with enforced HTTPS, DLT mapping, credential redaction, timeout handling, and unit tests exists.
 - [ ] MessageIndia supplies an operational HTTPS endpoint plus approved entity/template IDs before enabling the worker or login smoke tests.
-- [x] An isolated logical database restore and an App Platform rollback pass in staging.
-- [ ] A managed-backup or point-in-time cluster restore passes before production promotion.
-- [ ] Authorization and real-provider delivery smoke tests pass before production promotion.
+- [x] An isolated logical database restore and an App Platform rollback passed before the in-place production promotion.
+- [ ] A managed-backup or point-in-time cluster restore passes as a production operations drill.
+- [ ] Authorization and real-provider delivery smoke tests pass before external tenant onboarding begins.
 
 The temporary bootstrap API token is retained only until the operator confirms revocation. Future routine deployments should use a narrowly scoped team credential or CI identity rather than a personal bootstrap token.

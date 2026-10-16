@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
-const templatePath = path.join(directory, "app.staging.template.yaml");
+const templatePath = path.join(directory, "app.production.template.yaml");
 const checkOnly = process.argv.includes("--check");
 const positional = process.argv.slice(2).filter((argument) => !["--", "--check"].includes(argument));
 const outputPath = path.resolve(positional[0] ?? ".do/app.yaml");
@@ -44,6 +44,7 @@ const authenticationSecrets = {
   OTP_HASH_PEPPER: required("OTP_HASH_PEPPER", (value) => value.length >= 32),
   OTP_DELIVERY_KEY: required("OTP_DELIVERY_KEY", canonicalBase64Key),
   MFA_ENCRYPTION_KEY: required("MFA_ENCRYPTION_KEY", canonicalBase64Key),
+  PUSH_TOKEN_ENCRYPTION_KEY: required("PUSH_TOKEN_ENCRYPTION_KEY", canonicalBase64Key),
   MFA_TICKET_PEPPER: required("MFA_TICKET_PEPPER", (value) => value.length >= 32),
 };
 if (new Set(Object.values(authenticationSecrets)).size !== Object.keys(authenticationSecrets).length) {
@@ -61,6 +62,7 @@ const values = new Map([
   ["__OTP_HASH_PEPPER__", authenticationSecrets.OTP_HASH_PEPPER],
   ["__OTP_DELIVERY_KEY__", authenticationSecrets.OTP_DELIVERY_KEY],
   ["__MFA_ENCRYPTION_KEY__", authenticationSecrets.MFA_ENCRYPTION_KEY],
+  ["__PUSH_TOKEN_ENCRYPTION_KEY__", authenticationSecrets.PUSH_TOKEN_ENCRYPTION_KEY],
   ["__MFA_TICKET_PEPPER__", authenticationSecrets.MFA_TICKET_PEPPER],
 ]);
 
@@ -70,11 +72,11 @@ for (const [token, value] of values) rendered = rendered.replaceAll(token, JSON.
 const unresolved = rendered.match(/__[A-Z0-9_]+__/g);
 if (unresolved) throw new Error(`unresolved template values: ${[...new Set(unresolved)].join(", ")}`);
 if (rendered.includes("OTP_LOCAL_CODE") || rendered.includes("LOCAL_MESSAGE_REVEAL_CONTENT")) {
-  throw new Error("local-only authentication controls are forbidden in the staging spec");
+  throw new Error("local-only authentication controls are forbidden in the production spec");
 }
 
 if (checkOnly) {
-  process.stdout.write("DigitalOcean staging App Spec inputs are valid.\n");
+  process.stdout.write("DigitalOcean production App Spec inputs are valid.\n");
 } else {
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, rendered, { mode: 0o600 });
