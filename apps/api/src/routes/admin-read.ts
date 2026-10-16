@@ -209,7 +209,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
       const row = (await options.pool.query<{
         public_id: string; legal_name: string; display_name: string; business_type: string; gstin: string; fssai_number: string | null;
         alternate_phone_e164: string | null; internal_notes: string | null; status: string; created_at: Date; submitted_at: Date | null;
-        approved_at: Date | null; creator_name: string; creator_public_id: string; owner_public_id: string; owner_name: string;
+        approved_at: Date | null; suspended_at: Date | null; creator_name: string; creator_public_id: string; owner_public_id: string; owner_name: string;
         owner_phone_e164: string; owner_email: string | null; outlet_public_id: string; outlet_label: string; address_line_1: string;
         address_line_2: string | null; city: string; state_code: string; pincode: string; latitude: string; longitude: string;
         contact_name: string | null; contact_phone_e164: string | null; delivery_instructions: string | null;
@@ -218,10 +218,14 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
         requirement_period: string; preferred_delivery_days: number[]; preferred_slot: string | null; requirement_items: unknown[];
         proposal_public_id: string; requested_payment_mode: string; proposed_credit_limit: string | null; proposed_net_term_days: number | null;
         proposal_note: string | null; proposal_status: string; decision_note: string | null; reviews: unknown[];
+        commercial_account_public_id: string | null; commercial_account_status: string | null; payment_mode: string | null;
+        credit_account_public_id: string | null; credit_status: string | null; credit_limit: string | null;
+        net_term_days: number | null; credit_suspended_at: Date | null; credit_decisions: unknown[];
+        pending_credit_orders: string; outstanding_invoices: string; overdue_invoices: string;
       }>(
         `select tenant.public_id::text, tenant.legal_name, tenant.display_name, tenant.business_type,
                 tenant.gstin, tenant.fssai_number, tenant.alternate_phone_e164, tenant.internal_notes,
-                tenant.status, tenant.created_at, tenant.submitted_at, tenant.approved_at,
+                tenant.status, tenant.created_at, tenant.submitted_at, tenant.approved_at, tenant.suspended_at,
                 creator.full_name as creator_name, creator.public_id::text as creator_public_id,
                 owner_user.public_id::text as owner_public_id, owner_user.full_name as owner_name,
                 owner_user.phone_e164 as owner_phone_e164, owner_user.email as owner_email,
@@ -237,7 +241,15 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
                 proposal.public_id::text as proposal_public_id, proposal.requested_payment_mode,
                 proposal.proposed_credit_limit::text, proposal.proposed_net_term_days, proposal.proposal_note,
                 proposal.decision_status as proposal_status, proposal.decision_note,
-                coalesce(reviews.value, '[]'::jsonb) as reviews
+                coalesce(reviews.value, '[]'::jsonb) as reviews,
+                account.public_id::text as commercial_account_public_id,
+                account.status as commercial_account_status, account.payment_mode,
+                credit.public_id::text as credit_account_public_id, credit.status as credit_status,
+                credit.credit_limit::text, credit.net_term_days, credit.suspended_at as credit_suspended_at,
+                coalesce(credit_decisions.value, '[]'::jsonb) as credit_decisions,
+                coalesce(exposure.pending_credit_orders, 0)::text as pending_credit_orders,
+                coalesce(exposure.outstanding_invoices, 0)::text as outstanding_invoices,
+                coalesce(exposure.overdue_invoices, 0)::text as overdue_invoices
            from app.tenants tenant
            join app.users creator on creator.id = tenant.created_by_user_id
            join app.tenant_memberships owner_membership on owner_membership.tenant_id = tenant.id and owner_membership.membership_type = 'owner'
@@ -248,6 +260,14 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
            join app.agencies agency on agency.id = assignment.agency_id
            join app.tenant_commercial_proposals proposal on proposal.tenant_id = tenant.id
            left join lateral (
+             select candidate.*
+               from app.commercial_accounts candidate
+              where candidate.tenant_id = tenant.id
+              order by (candidate.status in ('open', 'suspended')) desc, candidate.created_at desc, candidate.id desc
+              limit 1
+           ) account on true
+           left join app.credit_accounts credit on credit.commercial_account_id = account.id
+           left join lateral (
              select jsonb_agg(jsonb_build_object('cylinderTypeCode', cylinder.code, 'displayName', cylinder.display_name, 'expectedQuantity', item.expected_quantity) order by cylinder.weight_kg) as value
                from app.tenant_requirement_items item join app.cylinder_types cylinder on cylinder.id = item.cylinder_type_id
               where item.tenant_requirement_id = requirement.id
@@ -257,23 +277,83 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
                from app.tenant_reviews review join app.users reviewer on reviewer.id = review.reviewer_user_id
               where review.tenant_id = tenant.id
            ) reviews on true
+           left join lateral (
+             select jsonb_agg(jsonb_build_object(
+                      'publicId', decision.public_id,
+                      'decision', decision.decision,
+                      'previousLimit', decision.previous_limit::text,
+                      'newLimit', decision.new_limit::text,
+                      'previousNetTermDays', decision.previous_net_term_days,
+                      'newNetTermDays', decision.new_net_term_days,
+                      'reason', decision.reason,
+                      'decidedByName', decider.full_name,
+                      'createdAt', decision.created_at
+                    ) order by decision.created_at desc, decision.id desc) as value
+               from app.credit_decisions decision
+               join app.users decider on decider.id = decision.decided_by_user_id
+              where decision.credit_account_id = credit.id
+           ) credit_decisions on true
+           left join lateral (
+             select
+               coalesce((select sum(order_row.total_amount)
+                           from app.orders order_row
+                          where order_row.commercial_account_id = account.id
+                            and order_row.payment_method = 'credit'
+                            and order_row.status not in ('delivered', 'rejected', 'cancelled')), 0) as pending_credit_orders,
+               coalesce((select sum(invoice.outstanding_amount)
+                           from app.invoices invoice
+                          where invoice.commercial_account_id = account.id
+                            and invoice.status in ('open', 'overdue')
+                            and invoice.outstanding_amount > 0), 0) as outstanding_invoices,
+               (select count(*)
+                  from app.invoices invoice
+                 where invoice.commercial_account_id = account.id
+                   and invoice.status in ('open', 'overdue')
+                   and invoice.outstanding_amount > 0
+                   and (invoice.status = 'overdue' or invoice.due_at < now())) as overdue_invoices
+           ) exposure on account.id is not null
           where tenant.public_id = $1`,
         [id.data],
       )).rows[0];
       if (!row) throw new HttpError(404, "tenant_not_found", "The tenant was not found.");
       const target = { city: row.city, region: row.state_code, agencyPublicId: row.agency_public_id, tenantPublicId: row.public_id };
       if (!isAuthorized(principal, "tenant.view", target)) throw new HttpError(403, "permission_denied", "You do not have permission to view this tenant.");
+      const canViewCredit = isAuthorized(principal, "credit.view", target)
+        || isAuthorized(principal, "credit.approve", target)
+        || isAuthorized(principal, "credit.suspend", target);
+      const exposureTotal = Number(row.pending_credit_orders) + Number(row.outstanding_invoices);
       response.status(200).json({
         tenant: {
           publicId: row.public_id, legalName: row.legal_name, displayName: row.display_name, businessType: row.business_type,
           gstin: row.gstin, fssaiNumber: row.fssai_number, alternatePhoneE164: row.alternate_phone_e164, internalNotes: row.internal_notes,
           status: row.status, createdAt: row.created_at.toISOString(), submittedAt: row.submitted_at?.toISOString() ?? null,
-          approvedAt: row.approved_at?.toISOString() ?? null, creator: { publicId: row.creator_public_id, fullName: row.creator_name },
+          approvedAt: row.approved_at?.toISOString() ?? null, suspendedAt: row.suspended_at?.toISOString() ?? null,
+          creator: { publicId: row.creator_public_id, fullName: row.creator_name },
           owner: { publicId: row.owner_public_id, fullName: row.owner_name, phoneE164: row.owner_phone_e164, email: row.owner_email },
           outlet: { publicId: row.outlet_public_id, label: row.outlet_label, addressLine1: row.address_line_1, addressLine2: row.address_line_2, city: row.city, stateCode: row.state_code, pincode: row.pincode, latitude: Number(row.latitude), longitude: Number(row.longitude), contactName: row.contact_name, contactPhoneE164: row.contact_phone_e164, deliveryInstructions: row.delivery_instructions, stock: { inUse: row.in_use_count, spareFull: row.spare_full_count, empty: row.empty_count } },
           agency: { publicId: row.agency_public_id, displayName: row.agency_display_name, legalName: row.agency_legal_name, creditEnabled: row.agency_credit_enabled, assignmentReason: row.assignment_reason, assignmentStatus: row.assignment_status },
           requirement: { period: row.requirement_period, preferredDeliveryDays: row.preferred_delivery_days, preferredSlot: row.preferred_slot, items: row.requirement_items },
           commercialProposal: { publicId: row.proposal_public_id, requestedPaymentMode: row.requested_payment_mode, proposedCreditLimit: row.proposed_credit_limit, proposedNetTermDays: row.proposed_net_term_days, proposalNote: row.proposal_note, decisionStatus: row.proposal_status, decisionNote: row.decision_note },
+          commercialAccount: row.commercial_account_public_id ? {
+            publicId: row.commercial_account_public_id,
+            status: row.commercial_account_status,
+            paymentMode: row.payment_mode,
+            creditAccount: canViewCredit && row.credit_account_public_id ? {
+              publicId: row.credit_account_public_id,
+              status: row.credit_status,
+              creditLimit: row.credit_limit,
+              netTermDays: row.net_term_days,
+              suspendedAt: row.credit_suspended_at?.toISOString() ?? null,
+              exposure: {
+                pendingOrders: row.pending_credit_orders,
+                outstandingInvoices: row.outstanding_invoices,
+                total: exposureTotal.toFixed(2),
+                available: Math.max(0, Number(row.credit_limit ?? 0) - exposureTotal).toFixed(2),
+                overdueInvoices: Number(row.overdue_invoices),
+              },
+              decisions: row.credit_decisions,
+            } : null,
+          } : null,
           reviews: row.reviews,
           capabilities: {
             canSubmit: isAuthorized(principal, "tenant.submit", target),
@@ -281,6 +361,19 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
             canOverrideApproval: hasRoleType(principal, "super_admin") && isAuthorized(principal, "tenant.approve", target),
             canReject: isAuthorized(principal, "tenant.reject", target),
             canApproveCredit: isAuthorized(principal, "credit.approve", target),
+            canSuspendTenant: row.status === "active" && isAuthorized(principal, "tenant.suspend", target),
+            canReinstateTenant: row.status === "suspended" && isAuthorized(principal, "tenant.suspend", target),
+            canViewCredit,
+            canApprovePostActivationCredit: ["active", "suspended"].includes(row.status)
+              && !row.credit_account_public_id
+              && row.agency_credit_enabled
+              && isAuthorized(principal, "credit.approve", target),
+            canUpdateCredit: ["approved", "suspended"].includes(row.credit_status ?? "")
+              && isAuthorized(principal, "credit.approve", target),
+            canSuspendCredit: row.credit_status === "approved" && isAuthorized(principal, "credit.suspend", target),
+            canReinstateCredit: row.credit_status === "suspended"
+              && row.agency_credit_enabled
+              && isAuthorized(principal, "credit.suspend", target),
           },
         },
       });

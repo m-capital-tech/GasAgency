@@ -1,6 +1,6 @@
 # GasSetu for Business — commercial LPG marketplace
 
-> **Production direction:** [`PRD_PRODUCTION_V1.md`](./PRD_PRODUCTION_V1.md) is the canonical specification for the production build. The implementation described below is the current investor prototype; its self-registration, automatic verification, mock authentication, and in-memory persistence are not the production target.
+> **Production direction:** [`PRD_PRODUCTION_V1.md`](./PRD_PRODUCTION_V1.md) is the canonical specification. The repository contains an isolated PostgreSQL-backed production path alongside the investor prototype described below; the prototype's self-registration, automatic verification, mock authentication, and in-memory persistence are not production behavior.
 
 A clickable, mock-data prototype of a **B2B** LPG platform: restaurants, cloud kitchens, hotels, canteens and tea stalls order **19 kg / 47.5 kg commercial cylinders** from their gas agency, on credit, with standing orders and GST invoices — while the agency runs its business from a web panel and the platform admin verifies businesses and sets credit terms.
 
@@ -11,7 +11,7 @@ A clickable, mock-data prototype of a **B2B** LPG platform: restaurants, cloud k
 | **Web — Platform admin** | Ops team — verifies businesses, decides credit | `http://localhost:3000/admin` |
 | **Mock API** | in-memory store + WebSocket live events | `http://localhost:4000` |
 
-The repository now also contains the isolated production path: `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, the tenant mobile routes under `/(tenant)`, the agency fulfillment console at `/operations`, and Platform Control at `/control`. These do not read from or fall back to the demo engine.
+The production path consists of `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, tenant authentication/ordering/tracking/billing under `/(tenant)`, agency fulfillment/account operations at `/operations`, and Platform Control onboarding, lifecycle, credit, RBAC, and analytics at `/control`. These do not read from or fall back to the demo engine.
 
 Everything runs locally with **no API keys, no real payments, no SMS**. An order placed on the phone shows up on the agency board within a second; accepting and assigning on the web updates the phone live; "Start trip" moves a marker on every map.
 

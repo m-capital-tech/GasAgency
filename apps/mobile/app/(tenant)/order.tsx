@@ -103,7 +103,8 @@ export default function TenantOrderScreen() {
             <Divider />
             <KeyValue k="Total" v={rupees(order.totalAmount)} strong tone="primary" />
           </Card>
-          <Button title="Back to business" style={{ marginTop: 24 }} onPress={() => router.replace("/(tenant)/home")} />
+          <Button title="Track this order" style={{ marginTop: 24 }} onPress={() => router.replace({ pathname: "/(tenant)/order-detail", params: { id: order.publicId } })} />
+          <Button title="Back to business" variant="ghost" style={{ marginTop: 10 }} onPress={() => router.replace("/(tenant)/home")} />
         </View>
       </Screen>
     );

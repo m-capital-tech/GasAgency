@@ -1,5 +1,14 @@
 # SESSION_LOG.md
 
+## 2026-10-16 — Parallel production account controls and tenant self-service
+
+- Built post-activation Platform Control for scoped tenant suspension/reinstatement and credit approval, limit/net-term changes, suspension, and reinstatement. Tenant suspension revokes live tenant sessions; credit exposure guards prevent unsafe limit reductions.
+- Built agency commercial-account operations for an agency-wide credit availability switch, lower negotiated account prices, append-only payment collection, oldest-invoice-first allocation, and receivables/collection views. Agency mutations cannot alter platform-owned limits or net terms.
+- Built production tenant order history, fulfillment timeline, billing summary, GST invoice detail, and tenant-visible payment allocations in the mobile path. Every query is constrained to the authenticated tenant's active membership and serving account.
+- Added migration `0009_agency_commercial_controls` with indexed payment and allocation ledgers, cross-account integrity triggers, and database-enforced immutability. PostgreSQL best-practice guidance informed exact numerics, foreign-key indexes, ordered short transactions, and keyset pagination.
+- On a fresh disposable PostgreSQL 17 database, applied all nine migrations and passed 9/9 SQL verification suites, 11/11 API tests, 5/5 worker tests, and 3/3 database concurrency/security tests. Repository type checking passed all 11 targets and every production build target passed. The disposable database was removed after verification.
+- MessageIndia production delivery remains intentionally deferred as the final external integration; no provider credential was added to code, Git, or the cloud configuration during this work.
+
 ## 2026-10-16 — Staging release and end-to-end verification
 
 - Removed the DigitalOcean rollback pin through its zero-downtime revert operation, then manually deployed GitHub `main` at `f33ad65` as deployment `bfb0b0af-e1e6-46e9-926f-a7fabe409c1f`.

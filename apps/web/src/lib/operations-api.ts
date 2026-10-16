@@ -46,6 +46,39 @@ export interface OperationsOrder {
 export interface OperationsStaff { publicId: string; fullName: string; phoneE164: string; vehicleType: string; vehicleNumber: string; status: string; activeDrops: number; }
 export interface OperationsInventory { publicId: string; cylinderTypeCode: string; displayName: string; fullOnHand: number; reservedFull: number; availableFull: number; emptyOnHand: number; withAccounts: number; lowStockThreshold: number; }
 
+export interface OperationsAccountPrice {
+  cylinderTypeCode: string;
+  displayName: string;
+  baseUnitPrice: string;
+  negotiatedUnitPrice: string | null;
+  negotiatedActive: boolean;
+}
+
+export interface OperationsCommercialAccount {
+  publicId: string;
+  status: "open" | "suspended";
+  paymentMode: "prepaid" | "credit";
+  tenant: { publicId: string; displayName: string; legalName: string; gstin: string; businessType: string };
+  credit: null | { status: "approved" | "suspended" | "closed"; limit: string; netTermDays: number };
+  receivables: { outstanding: string; overdue: string; openInvoiceCount: number };
+  collections: { total: string; lastReceivedAt: string | null };
+  prices: OperationsAccountPrice[];
+}
+
+export interface OperationsPayment {
+  publicId: string;
+  amount: string;
+  paymentMethod: "cash" | "upi" | "bank_transfer" | "cheque" | "other";
+  reference: string | null;
+  note: string | null;
+  receivedAt: string;
+  recordedAt: string;
+  recordedBy: string;
+  account: { publicId: string };
+  tenant: { publicId: string; displayName: string };
+  allocations: Array<{ invoicePublicId: string; invoiceNumber: string; amount: string }>;
+}
+
 export class OperationsApiError extends Error {
   constructor(public code: string, message: string, public status: number, public details?: unknown) { super(message); }
 }
@@ -78,4 +111,9 @@ export const operationsApi = {
   staff: (agencyPublicId: string) => request<{ staff: OperationsStaff[] }>(`agencies/${agencyPublicId}/delivery-staff`),
   inventory: (agencyPublicId: string) => request<{ inventory: OperationsInventory[] }>(`agencies/${agencyPublicId}/inventory`),
   transition: (agencyPublicId: string, orderPublicId: string, body: Record<string, unknown>, idempotencyKey = `web:${orderPublicId}:${body.action}:${crypto.randomUUID()}`) => request<{ order: OperationsOrder }>(`agencies/${agencyPublicId}/orders/${orderPublicId}/transitions`, { method: "POST", body, idempotencyKey }),
+  accounts: (agencyPublicId: string) => request<{ agency: OperationsAgency & { creditEnabled: boolean }; accounts: OperationsCommercialAccount[]; nextCursor: string | null }>(`agencies/${agencyPublicId}/accounts`),
+  payments: (agencyPublicId: string) => request<{ payments: OperationsPayment[] }>(`agencies/${agencyPublicId}/payments`),
+  setCreditPolicy: (agencyPublicId: string, body: { creditEnabled: boolean; reason: string }, idempotencyKey = `web:${agencyPublicId}:credit-policy:${crypto.randomUUID()}`) => request<{ agency: OperationsAgency & { creditEnabled: boolean } }>(`agencies/${agencyPublicId}/credit-policy`, { method: "POST", body, idempotencyKey }),
+  setNegotiatedPrice: (agencyPublicId: string, accountPublicId: string, body: { cylinderTypeCode: string; active: true; unitPrice: string; reason: string } | { cylinderTypeCode: string; active: false; reason: string }, idempotencyKey = `web:${accountPublicId}:price:${body.cylinderTypeCode}:${crypto.randomUUID()}`) => request<{ price: { publicId: string; cylinderTypeCode: string; displayName: string; baseUnitPrice: string; unitPrice: string | null; active: boolean } }>(`agencies/${agencyPublicId}/accounts/${accountPublicId}/prices`, { method: "POST", body, idempotencyKey }),
+  recordPayment: (agencyPublicId: string, accountPublicId: string, body: { amount: string; paymentMethod: OperationsPayment["paymentMethod"]; reference?: string; note?: string; receivedAt?: string }, idempotencyKey = `web:${accountPublicId}:payment:${crypto.randomUUID()}`) => request<{ payment: OperationsPayment }>(`agencies/${agencyPublicId}/accounts/${accountPublicId}/payments`, { method: "POST", body, idempotencyKey }),
 };

@@ -29,6 +29,152 @@ export interface OtpRequestResponse {
 
 export type TenantPaymentMethod = "cod" | "credit";
 export type TenantDeliverySlot = "before_opening" | "standard" | "evening" | "express";
+export type TenantOrderStatus =
+  | "pending_payment"
+  | "payment_failed"
+  | "placed"
+  | "accepted"
+  | "assigned"
+  | "out_for_delivery"
+  | "delivery_failed"
+  | "delivered"
+  | "rejected"
+  | "cancelled";
+export type TenantInvoiceStatus = "open" | "overdue" | "paid" | "void";
+
+export interface TenantOrderSummary {
+  publicId: string;
+  orderNumber: string;
+  status: TenantOrderStatus;
+  payment: { method: TenantPaymentMethod; status: string };
+  deliverySlot: TenantDeliverySlot;
+  requestedDeliveryDate: string | null;
+  totalAmount: string;
+  currency: "INR";
+  placedAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  outlet: { publicId: string; label: string };
+  agency: { publicId: string; displayName: string };
+  cylinderCount: number;
+  items: Array<{
+    cylinderTypeCode: string;
+    displayName: string;
+    quantity: number;
+    unitPrice: string;
+    lineSubtotal: string;
+  }>;
+  invoice: null | {
+    publicId: string;
+    invoiceNumber: string;
+    status: TenantInvoiceStatus;
+    outstandingAmount: string;
+    dueAt: string | null;
+  };
+}
+
+export interface TenantOrderDetail extends Omit<TenantOrderSummary, "outlet" | "agency" | "invoice"> {
+  subtotal: string;
+  deliveryFee: string;
+  slotSurcharge: string;
+  taxableAmount: string;
+  gstRate: number;
+  gstAmount: string;
+  emptiesExpected: number;
+  emptiesCollected: number;
+  deliveryInstructions: string | null;
+  acceptedAt: string | null;
+  assignedAt: string | null;
+  dispatchedAt: string | null;
+  cancelledAt: string | null;
+  failureReason: string | null;
+  outlet: {
+    publicId: string;
+    label: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    stateCode: string;
+    pincode: string;
+  };
+  agency: { publicId: string; displayName: string; phoneE164: string };
+  deliveryPartner: null | { name: string; vehicleType: string; vehicleNumber: string };
+  invoice: null | {
+    publicId: string;
+    invoiceNumber: string;
+    status: TenantInvoiceStatus;
+    taxableAmount: string;
+    gstAmount: string;
+    totalAmount: string;
+    outstandingAmount: string;
+    issuedAt: string;
+    dueAt: string | null;
+    paidAt: string | null;
+  };
+  timeline: Array<{
+    publicId: string;
+    fromStatus: TenantOrderStatus | null;
+    toStatus: TenantOrderStatus;
+    note: string | null;
+    occurredAt: string;
+  }>;
+}
+
+export interface TenantInvoiceSummary {
+  publicId: string;
+  invoiceNumber: string;
+  status: TenantInvoiceStatus;
+  taxableAmount: string;
+  gstAmount: string;
+  totalAmount: string;
+  outstandingAmount: string;
+  currency: "INR";
+  issuedAt: string;
+  dueAt: string | null;
+  paidAt: string | null;
+  order: { publicId: string; orderNumber: string };
+  outletLabel: string;
+}
+
+export interface TenantBillingResponse {
+  tenant: { publicId: string; displayName: string; gstin: string };
+  account: {
+    paymentMode: "prepaid" | "credit";
+    credit: null | {
+      status: string;
+      limit: string;
+      used: string;
+      available: string;
+      netTermDays: number;
+    };
+  };
+  summary: { outstandingAmount: string; overdueAmount: string; paidLast30Days: string; currency: "INR" };
+  invoices: TenantInvoiceSummary[];
+  nextCursor: string | null;
+}
+
+export interface TenantInvoiceDetail extends TenantInvoiceSummary {
+  tenant: {
+    legalName: string;
+    gstin: string;
+    outletLabel: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    stateCode: string;
+    pincode: string;
+  };
+  agency: { displayName: string; gstin: string; city: string; stateCode: string };
+  items: TenantOrderSummary["items"];
+  payments: Array<{
+    publicId: string;
+    amount: string;
+    paymentMethod: "cash" | "upi" | "bank_transfer" | "cheque" | "other";
+    reference: string | null;
+    receivedAt: string;
+  }>;
+}
 
 export interface TenantHomeResponse {
   tenant: { publicId: string; displayName: string; gstin: string };
@@ -194,4 +340,34 @@ export function placeTenantOrder(tenantPublicId: string, quotePublicId: string, 
     authenticated: true,
     headers: { "idempotency-key": idempotencyKey },
   });
+}
+
+export function loadTenantOrders(
+  tenantPublicId: string,
+  options: { limit?: number; cursor?: string; status?: TenantOrderStatus } = {},
+): Promise<{ orders: TenantOrderSummary[]; nextCursor: string | null }> {
+  const query = new URLSearchParams();
+  query.set("limit", String(options.limit ?? 20));
+  if (options.cursor) query.set("cursor", options.cursor);
+  if (options.status) query.set("status", options.status);
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/orders?${query.toString()}`, { authenticated: true });
+}
+
+export function loadTenantOrder(tenantPublicId: string, orderPublicId: string): Promise<{ order: TenantOrderDetail }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/orders/${encodeURIComponent(orderPublicId)}`, { authenticated: true });
+}
+
+export function loadTenantBilling(
+  tenantPublicId: string,
+  options: { limit?: number; cursor?: string; status?: TenantInvoiceStatus } = {},
+): Promise<TenantBillingResponse> {
+  const query = new URLSearchParams();
+  query.set("limit", String(options.limit ?? 20));
+  if (options.cursor) query.set("cursor", options.cursor);
+  if (options.status) query.set("status", options.status);
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/billing?${query.toString()}`, { authenticated: true });
+}
+
+export function loadTenantInvoice(tenantPublicId: string, invoicePublicId: string): Promise<{ invoice: TenantInvoiceDetail }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/invoices/${encodeURIComponent(invoicePublicId)}`, { authenticated: true });
 }

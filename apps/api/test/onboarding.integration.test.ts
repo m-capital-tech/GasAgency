@@ -101,7 +101,7 @@ integrationTest("delegated creator submits and a separate administrator activate
      select $1, permission.id, $2
        from app.permissions permission
       where permission.resource || '.' || permission.action = any($3::text[])`,
-    [agencyRole.id, superAdmin.id, ["agency.view", "order.view", "order.edit", "order.execute"]],
+    [agencyRole.id, superAdmin.id, ["agency.view", "agency.edit", "order.view", "order.edit", "order.execute", "payment.view", "payment.create"]],
   );
   await pool.query(
     `insert into app.role_assignments (
@@ -311,7 +311,7 @@ integrationTest("delegated creator submits and a separate administrator activate
       }),
     });
     assert.equal(approved.status, 200);
-    const approvedBody = await approved.json() as { tenant: { status: string }; invitation: { status: string; channel: string }; commercialAccount: { paymentMode: string } };
+    const approvedBody = await approved.json() as { tenant: { status: string }; invitation: { status: string; channel: string }; commercialAccount: { publicId: string; paymentMode: string } };
     assert.equal(approvedBody.tenant.status, "active");
     assert.deepEqual({ status: approvedBody.invitation.status, channel: approvedBody.invitation.channel }, { status: "queued", channel: "sms" });
     assert.equal(approvedBody.commercialAccount.paymentMode, "credit");
@@ -477,6 +477,126 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.deepEqual(updatedHomeBody.outlets[0]!.stock, { inUse: 2, spareFull: 6, empty: 0 });
     assert.deepEqual({ used: updatedHomeBody.credit.used, available: updatedHomeBody.credit.available }, { used: "10030.00", available: "39970.00" });
 
+    const accountsEndpoint = `${origin}/agencies/${agencyPublicId}/accounts`;
+    const tenantAccountAccess = await fetch(accountsEndpoint, { headers: tenantAuthorization });
+    assert.equal(tenantAccountAccess.status, 403);
+    const accountsResponse = await fetch(accountsEndpoint, { headers: agencyAuthorization });
+    assert.equal(accountsResponse.status, 200);
+    const accountsBody = await accountsResponse.json() as {
+      agency: { creditEnabled: boolean };
+      accounts: Array<{
+        publicId: string;
+        credit: { limit: string; netTermDays: number };
+        receivables: { outstanding: string; overdue: string; openInvoiceCount: number };
+        collections: { total: string };
+        prices: Array<{ cylinderTypeCode: string; negotiatedUnitPrice: string; negotiatedActive: boolean }>;
+      }>;
+    };
+    assert.equal(accountsBody.agency.creditEnabled, true);
+    assert.equal(accountsBody.accounts.length, 1);
+    assert.equal(accountsBody.accounts[0]!.publicId, approvedBody.commercialAccount.publicId);
+    assert.deepEqual(accountsBody.accounts[0]!.credit, { status: "approved", limit: "50000.00", netTermDays: 15 });
+    assert.deepEqual(accountsBody.accounts[0]!.receivables, { outstanding: "10030.00", overdue: "0.00", openInvoiceCount: 1 });
+    assert.deepEqual(accountsBody.accounts[0]!.prices, [{ cylinderTypeCode: "commercial_19kg", displayName: "19 kg commercial cylinder", baseUnitPrice: "1800.00", negotiatedUnitPrice: "1700.00", negotiatedActive: true }]);
+
+    const priceEndpoint = `${accountsEndpoint}/${approvedBody.commercialAccount.publicId}/prices`;
+    const priceHeaders = { ...agencyJsonHeaders, "idempotency-key": "agency-price-update-0001" };
+    const pricePayload = { cylinderTypeCode: "commercial_19kg", active: true, unitPrice: "1600.00", reason: "Renewed annual volume agreement" };
+    const updatedPrice = await fetch(priceEndpoint, { method: "POST", headers: priceHeaders, body: JSON.stringify(pricePayload) });
+    assert.equal(updatedPrice.status, 200);
+    assert.equal((await updatedPrice.json() as { price: { unitPrice: string; active: boolean } }).price.unitPrice, "1600.00");
+    const replayedPrice = await fetch(priceEndpoint, { method: "POST", headers: priceHeaders, body: JSON.stringify(pricePayload) });
+    assert.equal(replayedPrice.status, 200);
+    assert.equal(replayedPrice.headers.get("idempotent-replayed"), "true");
+
+    const creditPolicyEndpoint = `${origin}/agencies/${agencyPublicId}/credit-policy`;
+    const pausedCredit = await fetch(creditPolicyEndpoint, {
+      method: "POST", headers: { ...agencyJsonHeaders, "idempotency-key": "agency-credit-pause-0001" },
+      body: JSON.stringify({ creditEnabled: false, reason: "Temporary agency-wide credit pause for reconciliation" }),
+    });
+    assert.equal(pausedCredit.status, 200);
+    assert.equal((await pausedCredit.json() as { agency: { creditEnabled: boolean } }).agency.creditEnabled, false);
+    const pausedQuote = await fetch(`${origin}/tenants/${createdBody.tenant.publicId}/quotes`, {
+      method: "POST", headers: tenantJsonHeaders,
+      body: JSON.stringify({ outletPublicId: home.outlets[0]!.publicId, deliverySlot: "standard", paymentMethod: "credit", items: [{ cylinderTypeCode: "commercial_19kg", quantity: 1 }] }),
+    });
+    assert.equal(pausedQuote.status, 422);
+    const restoredCredit = await fetch(creditPolicyEndpoint, {
+      method: "POST", headers: { ...agencyJsonHeaders, "idempotency-key": "agency-credit-restore-0001" },
+      body: JSON.stringify({ creditEnabled: true, reason: "Agency reconciliation completed" }),
+    });
+    assert.equal(restoredCredit.status, 200);
+
+    const paymentEndpoint = `${accountsEndpoint}/${approvedBody.commercialAccount.publicId}/payments`;
+    const paymentHeaders = { ...agencyJsonHeaders, "idempotency-key": "agency-payment-record-0001" };
+    const paymentPayload = { amount: "4000.00", paymentMethod: "bank_transfer", reference: "UTR-INTEGRATION-0001", note: "Part settlement received from tenant" };
+    const recordedPayment = await fetch(paymentEndpoint, { method: "POST", headers: paymentHeaders, body: JSON.stringify(paymentPayload) });
+    assert.equal(recordedPayment.status, 201);
+    const recordedPaymentBody = await recordedPayment.json() as { payment: { amount: string; allocations: Array<{ invoiceNumber: string; amount: string }> } };
+    assert.equal(recordedPaymentBody.payment.amount, "4000.00");
+    assert.equal(recordedPaymentBody.payment.allocations.length, 1);
+    assert.equal(recordedPaymentBody.payment.allocations[0]!.amount, "4000.00");
+    const replayedPayment = await fetch(paymentEndpoint, { method: "POST", headers: paymentHeaders, body: JSON.stringify(paymentPayload) });
+    assert.equal(replayedPayment.status, 201);
+    assert.equal(replayedPayment.headers.get("idempotent-replayed"), "true");
+    assert.deepEqual(await replayedPayment.json(), recordedPaymentBody);
+    await assert.rejects(
+      pool.query("update app.payment_collections set note = 'Mutation must fail' where public_id = (select public_id from app.payment_collections order by id limit 1)"),
+      (error: unknown) => typeof error === "object" && error !== null && "code" in error && error.code === "55000",
+    );
+    const paymentsResponse = await fetch(`${origin}/agencies/${agencyPublicId}/payments`, { headers: agencyAuthorization });
+    assert.equal(paymentsResponse.status, 200);
+    assert.equal((await paymentsResponse.json() as { payments: Array<{ amount: string }> }).payments[0]!.amount, "4000.00");
+    const accountsAfterPayment = await fetch(accountsEndpoint, { headers: agencyAuthorization });
+    const accountAfterPayment = (await accountsAfterPayment.json() as { accounts: Array<{ receivables: { outstanding: string }; collections: { total: string }; prices: Array<{ negotiatedUnitPrice: string }> }> }).accounts[0]!;
+    assert.deepEqual({ outstanding: accountAfterPayment.receivables.outstanding, collected: accountAfterPayment.collections.total, negotiatedUnitPrice: accountAfterPayment.prices[0]!.negotiatedUnitPrice }, { outstanding: "6030.00", collected: "4000.00", negotiatedUnitPrice: "1600.00" });
+    const unchangedAdminCredit = await pool.query<{ credit_limit: string; net_term_days: number }>(
+      `select credit.credit_limit::text, credit.net_term_days
+         from app.credit_accounts credit
+         join app.commercial_accounts account on account.id = credit.commercial_account_id
+        where account.public_id = $1`,
+      [approvedBody.commercialAccount.publicId],
+    );
+    assert.deepEqual(unchangedAdminCredit.rows[0], { credit_limit: "50000.00", net_term_days: 15 });
+
+    const tenantOrdersResponse = await fetch(`${origin}/tenants/${createdBody.tenant.publicId}/orders`, { headers: tenantAuthorization });
+    assert.equal(tenantOrdersResponse.status, 200);
+    const tenantOrders = (await tenantOrdersResponse.json() as { orders: Array<{ publicId: string; status: string; invoice: { publicId: string; outstandingAmount: string } }> }).orders;
+    assert.equal(tenantOrders.length, 1);
+    assert.deepEqual(
+      { publicId: tenantOrders[0]!.publicId, status: tenantOrders[0]!.status, outstandingAmount: tenantOrders[0]!.invoice.outstandingAmount },
+      { publicId: placedBody.order.publicId, status: "delivered", outstandingAmount: "6030.00" },
+    );
+    const tenantOrderDetailResponse = await fetch(`${origin}/tenants/${createdBody.tenant.publicId}/orders/${placedBody.order.publicId}`, { headers: tenantAuthorization });
+    assert.equal(tenantOrderDetailResponse.status, 200);
+    const tenantOrderDetail = (await tenantOrderDetailResponse.json() as { order: { timeline: Array<{ toStatus: string }> } }).order;
+    assert.deepEqual(tenantOrderDetail.timeline.map((event) => event.toStatus), ["placed", "accepted", "assigned", "out_for_delivery", "delivered"]);
+    const billingResponse = await fetch(`${origin}/tenants/${createdBody.tenant.publicId}/billing`, { headers: tenantAuthorization });
+    assert.equal(billingResponse.status, 200);
+    const billing = await billingResponse.json() as {
+      account: { credit: { limit: string; used: string; available: string; netTermDays: number } };
+      summary: { outstandingAmount: string };
+      invoices: Array<{ publicId: string; status: string; outstandingAmount: string }>;
+    };
+    assert.deepEqual(billing.account.credit, { status: "approved", limit: "50000.00", used: "6030.00", available: "43970.00", netTermDays: 15 });
+    assert.equal(billing.summary.outstandingAmount, "6030.00");
+    assert.deepEqual(billing.invoices.map((invoice) => ({ status: invoice.status, outstandingAmount: invoice.outstandingAmount })), [{ status: "open", outstandingAmount: "6030.00" }]);
+    const invoiceDetailResponse = await fetch(`${origin}/tenants/${createdBody.tenant.publicId}/invoices/${billing.invoices[0]!.publicId}`, { headers: tenantAuthorization });
+    assert.equal(invoiceDetailResponse.status, 200);
+    const invoiceDetail = (await invoiceDetailResponse.json() as {
+      invoice: {
+        outstandingAmount: string;
+        items: Array<{ cylinderTypeCode: string; quantity: number }>;
+        payments: Array<{ amount: string; paymentMethod: string; reference: string }>;
+      };
+    }).invoice;
+    assert.equal(invoiceDetail.outstandingAmount, "6030.00");
+    assert.deepEqual(
+      invoiceDetail.payments.map((payment) => ({ amount: payment.amount, paymentMethod: payment.paymentMethod, reference: payment.reference })),
+      [{ amount: "4000.00", paymentMethod: "bank_transfer", reference: "UTR-INTEGRATION-0001" }],
+    );
+    assert.deepEqual(invoiceDetail.items.map((item) => ({ cylinderTypeCode: item.cylinderTypeCode, quantity: item.quantity })), [{ cylinderTypeCode: "commercial_19kg", quantity: 5 }]);
+
     const tenantDetailResponse = await fetch(`${origin}/admin/tenants/${createdBody.tenant.publicId}`, { headers: { authorization: `Bearer ${superToken}` } });
     assert.equal(tenantDetailResponse.status, 200);
     const tenantDetail = (await tenantDetailResponse.json() as { tenant: { status: string; owner: { phoneE164: string }; requirement: { items: Array<{ cylinderTypeCode: string; expectedQuantity: number }> }; capabilities: { canApproveCredit: boolean } } }).tenant;
@@ -490,7 +610,7 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.deepEqual(overview.onboarding, { total: 1, active: 1, pendingApprovals: 0, changesRequested: 0, pendingCreditDecisions: 0, approvalSlaBreaches: 0 });
     assert.equal(overview.month.orders, 1);
     assert.equal(overview.month.gmv, "10030.00");
-    assert.equal(overview.receivables.open, "10030.00");
+    assert.equal(overview.receivables.open, "6030.00");
     const rolesResponse = await fetch(`${origin}/admin/roles`, { headers: { authorization: `Bearer ${platformAdminToken}` } });
     assert.equal(rolesResponse.status, 200);
     assert.ok((await rolesResponse.json() as { roles: Array<{ name: string }> }).roles.some((role) => role.name === "Integration Onboarding Executive"));

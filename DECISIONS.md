@@ -2,6 +2,15 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Production Phase 1 commercial-account and tenant self-service slice (16 Oct 2026)
+- **Agency controls stop at the commercial boundary.** Agency users may globally pause new credit ordering, maintain lower negotiated account prices, and record collections. Credit approval, account limits, and net terms remain platform-admin decisions and have separate permissions and endpoints.
+- **Collection history is an append-only ledger.** Each payment is recorded once, idempotently allocated to the oldest outstanding invoices, protected by cross-account database guards, and rejected if it exceeds current receivables. Advance balances require a later explicit model rather than an implicit negative invoice balance.
+- **Suspension does not obstruct debt collection.** A suspended commercial account cannot receive pricing changes or new orders, but an authorized agency can still record settlement against its existing invoices. Closed accounts reject further collection activity.
+- **Tenant self-service is strictly tenant-scoped.** Order history, timelines, billing summaries, invoice details, and payment allocations require an active membership, active tenant, active agency assignment, approved agency, and open commercial account. Pagination uses opaque keyset cursors.
+- **Tenant lifecycle and credit state are separate controls.** Suspending a tenant revokes live sessions and blocks tenant access. Reinstating the tenant does not implicitly approve or reinstate credit; credit exposure is checked before reducing a limit or suspending an account.
+- **Agency-wide credit is an availability switch, not a terms mutation.** Disabling it blocks new agency credit orders and approvals without rewriting platform-owned per-account limits, net terms, or historical invoices.
+- **Database design follows production PostgreSQL safeguards.** Foreign-key access paths are indexed, payment writes use short ordered row-lock transactions, monetary values are exact numerics, and hot lists use composite keyset pagination rather than offsets.
+
 ## DigitalOcean staging deployment slice (30 Sep 2026; deployed 9 Oct 2026)
 - **Staging has a USD 45 all-in monthly authorization ceiling.** The deployed footprint uses a 512 MiB API, fixed 1 GiB dashboard, short-lived 512 MiB migration job, and single-node 1 GiB PostgreSQL. The ordinary recurring estimate is USD 35.58 including 18% GST; the conservative provider proposal, including the job's nominal monthly rate, is about USD 41.48. Adding even the smallest worker would raise that conservative proposal above the ceiling, so the worker, Spaces, HA, dedicated compute/IPs, extra database nodes, and autoscaling remain gated on optimization or separate approval.
 - **One App Platform app fronts the dashboard and API.** The Next.js dashboard owns `/`, while ingress preserves `/v1` for the API. Dashboard server calls use App Platform's private `http://api` service route, and mobile clients use the public `/v1` route on the provider-generated domain.

@@ -11,7 +11,9 @@ This service is separate from the investor-demo API. Its current protected produ
 - `POST /v1/admin/team-members` for scoped role assignment and SMS-first access invitation;
 - `POST /v1/admin/tenants` for an authenticated, authorized, idempotent tenant draft;
 - `POST /v1/admin/tenants/:tenantPublicId/submit` for maker submission;
-- `POST /v1/admin/tenants/:tenantPublicId/reviews` for changes, rejection, or approval/activation.
+- `POST /v1/admin/tenants/:tenantPublicId/reviews` for changes, rejection, or approval/activation;
+- `POST /v1/admin/tenants/:tenantPublicId/lifecycle` for scoped suspension or reinstatement;
+- `POST /v1/admin/tenants/:tenantPublicId/credit-decisions` for platform-owned credit approval, limit/term changes, suspension, or reinstatement;
 - `GET /v1/admin/overview` for scope-bounded daily, weekly, monthly, onboarding, and receivables summaries;
 - `GET /v1/admin/agencies` for approved agencies available within the actor's assignment scope;
 - `GET /v1/admin/tenants` and `GET /v1/admin/tenants/:tenantPublicId` for a keyset-paginated queue and complete review record;
@@ -19,9 +21,15 @@ This service is separate from the investor-demo API. Its current protected produ
 - `GET /v1/tenants/:tenantPublicId/home` for the tenant's outlets, stock, serving agency, account prices, slots, and payment eligibility;
 - `POST /v1/tenants/:tenantPublicId/quotes` for an expiring server-authoritative order quotation;
 - `POST /v1/tenants/:tenantPublicId/orders` for idempotent COD or approved-credit order placement;
+- `GET /v1/tenants/:tenantPublicId/orders` and `GET /v1/tenants/:tenantPublicId/orders/:orderPublicId` for tenant-scoped history, detail, and fulfillment timeline;
+- `GET /v1/tenants/:tenantPublicId/billing` and `GET /v1/tenants/:tenantPublicId/invoices/:invoicePublicId` for tenant-scoped receivables, GST invoices, and allocated collections;
 - `GET /v1/agencies/:agencyPublicId/orders` and `GET /v1/agencies/:agencyPublicId/orders/:orderPublicId` for the scoped fulfillment queue and order detail;
 - `GET /v1/agencies/:agencyPublicId/delivery-staff` and `GET /v1/agencies/:agencyPublicId/inventory` for active delivery capacity and current cylinder custody;
-- `POST /v1/agencies/:agencyPublicId/orders/:orderPublicId/transitions` for idempotent accept, reject, cancel, assign, dispatch, fail, reschedule, and deliver actions.
+- `POST /v1/agencies/:agencyPublicId/orders/:orderPublicId/transitions` for idempotent accept, reject, cancel, assign, dispatch, fail, reschedule, and deliver actions;
+- `GET /v1/agencies/:agencyPublicId/accounts` and `GET /v1/agencies/:agencyPublicId/payments` for scoped commercial accounts, receivables, prices, and collection history;
+- `POST /v1/agencies/:agencyPublicId/credit-policy` for an agency-wide credit availability switch;
+- `POST /v1/agencies/:agencyPublicId/accounts/:accountPublicId/prices` for lower negotiated account prices; and
+- `POST /v1/agencies/:agencyPublicId/accounts/:accountPublicId/payments` for idempotent, append-only collection recording and oldest-invoice-first allocation.
 
 Draft creation, submission, and review are separate authorized transitions. Approval atomically activates the tenant and agency assignment, opens the commercial account, optionally approves credit, and queues the SMS-first tenant invitation. Tenant OTP verification activates invited memberships and issues an opaque, hashed, revocable session.
 
@@ -29,7 +37,9 @@ Tenant ordering is scoped through active membership, tenant, outlet, agency assi
 
 Agency fulfillment is scoped through active RBAC assignments and separates `order.view`, `order.edit`, and reserved `order.execute` authority. Acceptance reserves inventory, dispatch removes physical stock, failed delivery returns it, and completion records typed empties, outlet stock, account custody, payment state, and an invoice. Status, audit, outbox, inventory, and invoice effects commit atomically. The production web console is available at `/operations`; its Next.js gateway keeps the opaque API token in an HttpOnly cookie and requires the server-side `PLATFORM_API_URL` setting.
 
-Platform Control is available at `/control`. Its read models apply the same RBAC assignments inside every database query, use keyset pagination for tenant lists, and calculate daily/weekly/monthly periods in `Asia/Kolkata`. Super Admin receives global results only through global scope; Platform Admin/team results remain bounded to their region, city, agency, selected agencies, or tenant. The UI cannot bypass maker–checker or credit permissions because every decision is re-authorized by the API.
+Agency account operations preserve the confirmed commercial boundary: agencies can pause new credit orders globally, set account-specific negotiated prices, and record invoice settlements. They cannot create credit approval, alter an account limit, or change net terms. Collection records and their invoice allocations are append-only at the database layer; overpayments are rejected until an advance-payment model is explicitly introduced.
+
+Platform Control is available at `/control`. Its read models apply the same RBAC assignments inside every database query, use keyset pagination for tenant lists, and calculate daily/weekly/monthly periods in `Asia/Kolkata`. Super Admin receives global results only through global scope; Platform Admin/team results remain bounded to their region, city, agency, selected agencies, or tenant. The UI cannot bypass maker–checker, lifecycle, or credit permissions because every decision is re-authorized by the API. Suspending a tenant revokes its live sessions; reinstatement restores eligibility without silently altering its separately managed credit state.
 
 ## Super Admin bootstrap
 
@@ -82,13 +92,13 @@ Phone OTP activates tenant users. Privileged platform users with `mfa_required=t
 
 ## Tests
 
-Unit tests run without external services. The onboarding integration scenario also exercises the complete agency fulfillment lifecycle when a disposable migrated PostgreSQL database is supplied:
+Unit tests run without external services. The database-backed integration suites exercise delegated onboarding, lifecycle and credit controls, tenant ordering/tracking/billing, agency fulfillment, negotiated pricing, credit availability, and append-only payment collection when a disposable migrated PostgreSQL database is supplied:
 
 ```bash
 pnpm --filter @platform/api test
 ```
 
-The onboarding integration test is skipped unless a disposable migrated PostgreSQL database is supplied:
+Database integration tests are skipped unless a disposable migrated PostgreSQL database is supplied:
 
 ```bash
 TEST_DATABASE_URL='postgresql://...' node --import tsx --test apps/api/test/*.test.ts

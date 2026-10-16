@@ -10,10 +10,13 @@ import { HttpError } from "./http/error";
 import { authOtpRouter } from "./routes/auth-otp";
 import { authMfaRouter } from "./routes/auth-mfa";
 import { authSessionRouter } from "./routes/auth-session";
+import { agencyAccountsRouter } from "./routes/agency-accounts";
 import { agencyOrdersRouter } from "./routes/agency-orders";
 import { adminReadRouter } from "./routes/admin-read";
 import { platformTeamRouter } from "./routes/platform-team";
 import { tenantDraftRouter } from "./routes/tenant-drafts";
+import { tenantAccountRouter } from "./routes/tenant-account";
+import { tenantAccountManagementRouter } from "./routes/tenant-account-management";
 import { tenantOrdersRouter } from "./routes/tenant-orders";
 import { tenantWorkflowRouter } from "./routes/tenant-workflow";
 
@@ -79,6 +82,9 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   app.use("/v1", tenantDraftRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantWorkflowRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantOrdersRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", tenantAccountRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", tenantAccountManagementRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", agencyAccountsRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", agencyOrdersRouter({ pool, tokenPepper: config.sessionTokenPepper }));
 
   app.use((_request, response) => {

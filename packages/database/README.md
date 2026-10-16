@@ -27,7 +27,9 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0008_privileged_mfa.sql` adds encrypted TOTP factor records, short-lived hashed phone-to-MFA handoff tickets, replay state, and individually hashed one-time recovery codes. Partial indexes cover only current factors, live tickets, and unused recovery codes.
 
-Payment-provider records, agency replenishment/adjustment workflows, payment collections, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
+`0009_agency_commercial_controls.sql` adds an append-only agency payment collection ledger, invoice allocations, cross-account integrity guards, and timeline indexes. Agencies can record collections without receiving authority over platform-owned credit limits or net terms.
+
+Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules
 

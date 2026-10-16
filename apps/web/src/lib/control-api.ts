@@ -16,14 +16,26 @@ export interface TenantSummary {
   commercialProposal: { requestedPaymentMode: string; proposedCreditLimit: string | null; proposedNetTermDays: number | null; decisionStatus: string };
 }
 export interface TenantDetail extends TenantSummary {
-  fssaiNumber: string | null; alternatePhoneE164: string | null; internalNotes: string | null; approvedAt: string | null;
+  fssaiNumber: string | null; alternatePhoneE164: string | null; internalNotes: string | null; approvedAt: string | null; suspendedAt: string | null;
   creator: { publicId: string; fullName: string }; owner: { publicId: string; fullName: string; phoneE164: string; email: string | null };
   outlet: { publicId: string; label: string; addressLine1: string; addressLine2: string | null; city: string; stateCode: string; pincode: string; latitude: number; longitude: number; contactName: string | null; contactPhoneE164: string | null; deliveryInstructions: string | null; stock: { inUse: number; spareFull: number; empty: number } };
   agency: { publicId: string; displayName: string; legalName: string; creditEnabled: boolean; assignmentReason: string; assignmentStatus: string };
   requirement: { period: string; preferredDeliveryDays: number[]; preferredSlot: string | null; items: Array<{ cylinderTypeCode: string; displayName: string; expectedQuantity: number }> };
   commercialProposal: { publicId: string; requestedPaymentMode: string; proposedCreditLimit: string | null; proposedNetTermDays: number | null; proposalNote: string | null; decisionStatus: string; decisionNote: string | null };
+  commercialAccount: null | {
+    publicId: string; status: string; paymentMode: string;
+    creditAccount: null | {
+      publicId: string; status: string; creditLimit: string; netTermDays: number; suspendedAt: string | null;
+      exposure: { pendingOrders: string; outstandingInvoices: string; total: string; available: string; overdueInvoices: number };
+      decisions: Array<{ publicId: string; decision: string; previousLimit: string | null; newLimit: string | null; previousNetTermDays: number | null; newNetTermDays: number | null; reason: string; decidedByName: string; createdAt: string }>;
+    };
+  };
   reviews: Array<{ publicId: string; decision: string; fromStatus: string; toStatus: string; reason: string | null; overrideUsed: boolean; reviewerName: string; createdAt: string }>;
-  capabilities: { canSubmit: boolean; canApprove: boolean; canOverrideApproval: boolean; canReject: boolean; canApproveCredit: boolean };
+  capabilities: {
+    canSubmit: boolean; canApprove: boolean; canOverrideApproval: boolean; canReject: boolean; canApproveCredit: boolean;
+    canSuspendTenant: boolean; canReinstateTenant: boolean; canViewCredit: boolean; canApprovePostActivationCredit: boolean;
+    canUpdateCredit: boolean; canSuspendCredit: boolean; canReinstateCredit: boolean;
+  };
 }
 export interface AdminRole { publicId: string; name: string; roleType: string; status: string; managedByName: string | null; permissionKeys: string[]; }
 export interface AdminPermission { key: string; resource: string; action: string; description: string; reserved: boolean; }
@@ -49,6 +61,8 @@ export const controlApi = {
   tenant: (publicId: string) => request<{ tenant: TenantDetail }>(`admin/tenants/${publicId}`),
   submitTenant: (publicId: string) => request<{ tenant: { status: string }; alreadySubmitted: boolean }>(`admin/tenants/${publicId}/submit`, { method: "POST" }),
   reviewTenant: (publicId: string, body: Record<string, unknown>) => request<{ tenant: { status: string }; invitation: unknown; commercialAccount: unknown }>(`admin/tenants/${publicId}/reviews`, { method: "POST", body }),
+  changeTenantLifecycle: (publicId: string, body: { action: "suspend" | "reinstate"; reason: string }) => request<{ tenant: { publicId: string; status: string }; commercialAccount: { publicId: string; status: string }; revokedSessions: number }>(`admin/tenants/${publicId}/lifecycle`, { method: "POST", body }),
+  decideTenantCredit: (publicId: string, body: Record<string, unknown>) => request<{ creditAccount: { publicId: string; status: string; creditLimit: string; netTermDays: number }; exposure: { pendingOrders: number; outstandingInvoices: number; total: number } }>(`admin/tenants/${publicId}/credit-decisions`, { method: "POST", body }),
   createTenant: (body: Record<string, unknown>, idempotencyKey: string) => request<{ tenant: { publicId: string; status: string } }>("admin/tenants", { method: "POST", body, idempotencyKey }),
   permissions: () => request<{ permissions: AdminPermission[] }>("admin/permissions"),
   roles: () => request<{ roles: AdminRole[] }>("admin/roles"),

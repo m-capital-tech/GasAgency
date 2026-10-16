@@ -66,6 +66,15 @@ export default function TenantHomeScreen() {
             </Row>
           </Card>
 
+          <Row gap={10} style={{ marginTop: 14 }}>
+            <View style={{ flex: 1 }}>
+              <Button title="Orders" variant="secondary" icon="cube-outline" onPress={() => router.push("/(tenant)/orders")} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button title="Billing" variant="secondary" icon="document-text-outline" onPress={() => router.push("/(tenant)/billing")} />
+            </View>
+          </Row>
+
           {home.credit ? (
             <Card style={{ marginTop: 14 }}>
               <Text variant="label" tone="muted">Available credit</Text>
