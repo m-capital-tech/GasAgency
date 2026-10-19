@@ -79,6 +79,30 @@ test("rejects missing project linkage and mismatched EAS routing", () => {
   assert.ok(errors.some((error) => error.includes("EAS environment")));
 });
 
+test("requires the Android Firebase client file when push registration is enabled", () => {
+  const errors = collectReleaseConfigurationErrors({
+    profile: "production",
+    config: validConfig,
+    easConfig: validEasConfig,
+    env: { ...validEnv, EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true" },
+  });
+  assert.ok(errors.some((error) => error.includes("GOOGLE_SERVICES_JSON")));
+
+  assert.deepEqual(
+    collectReleaseConfigurationErrors({
+      profile: "production",
+      config: validConfig,
+      easConfig: validEasConfig,
+      env: {
+        ...validEnv,
+        EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true",
+        GOOGLE_SERVICES_JSON: "/eas/files/google-services.json",
+      },
+    }),
+    [],
+  );
+});
+
 test("does not apply release-only checks to local development", () => {
   assert.deepEqual(
     collectReleaseConfigurationErrors({ profile: "development", config: {}, easConfig: {}, env: {} }),
