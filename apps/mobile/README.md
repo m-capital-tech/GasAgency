@@ -12,6 +12,22 @@ The production tenant path now includes serving-agency details, outlet stock, ac
 
 The app config includes the Expo Notifications native plugin, an Android high-importance `orders` channel, foreground presentation, cold/warm notification-response handling, and validated routing to tenant-owned order or invoice screens. Push registration is authenticated and off by default; enable `EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED=true` only after the server registration endpoint is deployed and an EAS project is configured.
 
-`eas.json` defines development, preview, and production update channels. Run `eas init` after the final commercial app identity is chosen, then supply its UUID as `EXPO_EAS_PROJECT_ID`. EAS builds fail closed when that value is absent. Runtime compatibility follows the native app version, so an update cannot cross an incompatible binary version.
+`eas.json` keeps development, preview, and production builds on matching EAS environments and update channels. Preview and production are pinned to the DigitalOcean production API over HTTPS, force demo mode off, and keep push registration off until the production worker is active. Runtime compatibility follows the native app version, so an update cannot cross an incompatible binary version.
+
+Run `eas init` only after the permanent commercial app name, Expo owner, slug, deep-link scheme, iOS bundle identifier, and Android package are approved. Commit the resulting non-secret project UUID under `expo.extra.eas.projectId` (or supply `EXPO_EAS_PROJECT_ID`). `pnpm release:check:preview` and `pnpm release:check:production` are mandatory preflights. The production preflight deliberately rejects a missing Expo owner, the temporary GasSetu identity, demo package identifiers, demo mode, missing project linkage, non-HTTPS/private API targets, and mismatched EAS environment/channel routing.
+
+From this directory, the controlled release commands are:
+
+```sh
+pnpm release:check:preview
+eas build --profile preview
+EAS_BUILD_PROFILE=preview eas update --channel preview --environment preview
+
+pnpm release:check:production
+eas build --profile production
+EAS_BUILD_PROFILE=production eas update --channel production --environment production
+```
+
+The explicit `EAS_BUILD_PROFILE` on update commands applies the same fail-closed validation while Expo evaluates the dynamic app config. Never publish an OTA update by omitting `--environment`.
 
 Expo Go remains the fast UI-review path and can exercise local notifications. Current Expo SDKs require a development/preview native build for remote push and for a realistic EAS Update test; Expo Go does not validate production remote delivery.

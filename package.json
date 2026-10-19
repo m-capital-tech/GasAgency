@@ -16,7 +16,7 @@
     "mobile": "pnpm --filter @gassetu/mobile dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "test": "pnpm --filter @gassetu/engine test",
+    "test": "pnpm --filter @gassetu/engine test && pnpm --filter @gassetu/mobile test:release-config",
     "seed:check": "pnpm --filter @gassetu/mock-data check",
     "deploy:production:render": "node infra/digitalocean/render-app-spec.mjs"
   },

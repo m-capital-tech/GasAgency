@@ -6,15 +6,28 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_PLATFORM_API_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app",
+        "EXPO_PUBLIC_DEMO_MODE": "false",
+        "EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED": "false"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PLATFORM_API_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app",
+        "EXPO_PUBLIC_DEMO_MODE": "false",
+        "EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED": "false"
+      }
     }
   },
   "submit": {

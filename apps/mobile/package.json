@@ -48,7 +48,10 @@
     "ios": "expo start --ios --port ${EXPO_PORT:-8081}",
     "android": "expo start --android",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:release-config": "node --test scripts/release-config.test.cjs",
+    "release:check:preview": "node scripts/check-release-config.cjs preview",
+    "release:check:production": "node scripts/check-release-config.cjs production"
   },
   "private": true
 }
