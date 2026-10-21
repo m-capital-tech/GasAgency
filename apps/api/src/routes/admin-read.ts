@@ -407,7 +407,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
                from app.role_permissions granted join app.permissions permission on permission.id = granted.permission_id
               where granted.role_id = role_row.id
            ) permission_list on true
-          where role_row.status = 'active' and role_row.role_type in ('platform_admin', 'platform_team')
+          where role_row.status in ('active', 'suspended') and role_row.role_type in ('platform_admin', 'platform_team')
             and ($1::boolean or role_row.managed_by_user_id = $2)
           order by role_row.role_type, role_row.name`,
         [superAdmin, principal.userId],
@@ -421,10 +421,11 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
       const principal = authenticatedPrincipal(response);
       requirePermissionScope(principal, "user.view");
       const superAdmin = hasRoleType(principal, "super_admin");
-      const rows = await options.pool.query<{ user_public_id: string; full_name: string; phone_e164: string; email: string | null; user_status: string; mfa_required: boolean; role_name: string; role_type: string; scope_kind: string; scope_value: string | null; assignment_status: string; created_at: Date; agencies: unknown[] }>(
-        `select user_row.public_id::text as user_public_id, user_row.full_name, user_row.phone_e164,
+      const rows = await options.pool.query<{ assignment_public_id: string; user_public_id: string; full_name: string; phone_e164: string; email: string | null; user_status: string; mfa_required: boolean; role_public_id: string; role_name: string; role_type: string; scope_kind: string; scope_value: string | null; assignment_status: string; created_at: Date; agencies: unknown[] }>(
+        `select assignment.public_id::text as assignment_public_id,
+                user_row.public_id::text as user_public_id, user_row.full_name, user_row.phone_e164,
                 user_row.email, user_row.status as user_status, user_row.mfa_required,
-                role_row.name as role_name, role_row.role_type, assignment.scope_kind, assignment.scope_value,
+                role_row.public_id::text as role_public_id, role_row.name as role_name, role_row.role_type, assignment.scope_kind, assignment.scope_value,
                 assignment.status as assignment_status, assignment.created_at,
                 coalesce(scoped_agencies.value, '[]'::jsonb) as agencies
            from app.role_assignments assignment
@@ -435,12 +436,12 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
                from app.role_assignment_agencies selected join app.agencies agency on agency.id = selected.agency_id
               where selected.role_assignment_id = assignment.id
            ) scoped_agencies on true
-          where assignment.status = 'active' and role_row.role_type in ('platform_admin', 'platform_team')
+          where assignment.status in ('active', 'suspended') and role_row.role_type in ('platform_admin', 'platform_team')
             and ($1::boolean or role_row.managed_by_user_id = $2)
           order by assignment.created_at desc, assignment.id desc limit 200`,
         [superAdmin, principal.userId],
       );
-      response.status(200).json({ teamMembers: rows.rows.map((row) => ({ publicId: row.user_public_id, fullName: row.full_name, phoneE164: row.phone_e164, email: row.email, status: row.user_status, mfaRequired: row.mfa_required, roleName: row.role_name, roleType: row.role_type, scope: { kind: row.scope_kind, value: row.scope_value, agencies: row.agencies }, assignmentStatus: row.assignment_status, assignedAt: row.created_at.toISOString() })) });
+      response.status(200).json({ teamMembers: rows.rows.map((row) => ({ assignmentPublicId: row.assignment_public_id, publicId: row.user_public_id, fullName: row.full_name, phoneE164: row.phone_e164, email: row.email, status: row.user_status, mfaRequired: row.mfa_required, rolePublicId: row.role_public_id, roleName: row.role_name, roleType: row.role_type, scope: { kind: row.scope_kind, value: row.scope_value, agencies: row.agencies }, assignmentStatus: row.assignment_status, assignedAt: row.created_at.toISOString() })) });
     } catch (error) { next(error); }
   });
 

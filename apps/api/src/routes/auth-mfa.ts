@@ -10,11 +10,13 @@ import { platformAccessFromAssignments } from "../domain/platform-access";
 import { HttpError } from "../http/error";
 import { generateRecoveryCodes, generateTotpSecret, hashMfaValue, normalizeRecoveryCode, totpUri, verifyTotp } from "../security/mfa";
 import { hashSessionToken } from "../security/token";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 
 const ticket = z.string().min(32).max(512);
 const enrollSchema = z.object({ mfaTicket: ticket, label: z.string().trim().min(2).max(120).default("Authenticator app") }).strict();
 const enrollmentVerifySchema = z.object({ mfaTicket: ticket, factorPublicId: z.string().uuid(), code: z.string().regex(/^[0-9]{6}$/) }).strict();
 const verifySchema = z.object({ mfaTicket: ticket, code: z.string().trim().min(6).max(20) }).strict();
+const stepUpSchema = z.object({ code: z.string().trim().min(6).max(20) }).strict();
 
 interface TicketRow { id: string; public_id: string; user_id: string; user_public_id: string; full_name: string; phone_e164: string; attempts_remaining: number; device_name: string | null; device_identifier_hash: Buffer | null; created_ip: string | null; }
 interface FactorRow { id: string; public_id: string; secret_envelope: string; status: "pending" | "active"; last_used_step: string | null; }
@@ -182,6 +184,54 @@ export function authMfaRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
       });
       if (result.invalid) throw new HttpError(422, "invalid_mfa_code", "The authenticator or recovery code is invalid.", { remainingAttempts: result.remainingAttempts });
       response.status(200).json({ ...(await authenticatedBody(pool, result.accessToken, config)), recoveryCodeUsed: result.recoveryCodeUsed });
+    } catch (error) { next(error); }
+  });
+
+  router.post("/auth/mfa/step-up", requireAuthentication({ pool, tokenPepper: config.sessionTokenPepper }), async (request, response, next) => {
+    try {
+      const parsed = stepUpSchema.safeParse(request.body);
+      if (!parsed.success) throw new HttpError(400, "invalid_request", "A current authenticator or recovery code is required.", parsed.error.flatten());
+      const principal = authenticatedPrincipal(response);
+      const result = await withTransaction(pool, async (client) => {
+        const factor = (await client.query<FactorRow>(
+          "select id::text, public_id::text, secret_envelope, status, last_used_step::text from app.mfa_factors where user_id = $1 and status = 'active' for update",
+          [principal.userId],
+        )).rows[0];
+        if (!factor) throw new HttpError(409, "mfa_enrollment_required", "No active authenticator is enrolled for this account.");
+
+        let method: "totp" | "recovery_code" | null = null;
+        let step: number | null = null;
+        if (/^[0-9]{6}$/.test(parsed.data.code)) {
+          const secret = decryptSecret(factor.secret_envelope, config.mfaEncryptionKey, factor.public_id);
+          step = verifyTotp(secret, parsed.data.code);
+          if (step !== null && factor.last_used_step !== null && step <= Number(factor.last_used_step)) step = null;
+          if (step !== null) method = "totp";
+        } else {
+          const normalized = normalizeRecoveryCode(parsed.data.code);
+          if (normalized.length === 8) {
+            const recovery = (await client.query<{ id: string }>(
+              "select id::text from app.mfa_recovery_codes where factor_id = $1 and code_hash = $2 and consumed_at is null for update",
+              [factor.id, hashMfaValue(normalized, config.mfaTicketPepper)],
+            )).rows[0];
+            if (recovery) {
+              await client.query("update app.mfa_recovery_codes set consumed_at = now() where id = $1", [recovery.id]);
+              method = "recovery_code";
+            }
+          }
+        }
+        if (!method) throw new HttpError(422, "invalid_mfa_code", "The authenticator or recovery code is invalid.");
+        if (step !== null) await client.query("update app.mfa_factors set last_used_step = $2, updated_at = now() where id = $1", [factor.id, step]);
+        await client.query("update app.device_sessions set mfa_verified_at = now(), last_seen_at = now() where id = $1", [principal.sessionId]);
+        await client.query(
+          `insert into app.audit_events (
+             public_id, actor_user_id, actor_role, action, entity_type, entity_public_id,
+             after_values, request_id, correlation_id, source_ip, user_agent
+           ) values ($1, $2, $3, 'mfa.step_up_verified', 'device_session', $4, $5::jsonb, $6, $7, $8, $9)`,
+          [uuidV7(), principal.userId, principal.assignments.map((assignment) => assignment.roleType).join(","), principal.sessionPublicId, JSON.stringify({ method }), uuidV7(), uuidV7(), request.ip || null, request.header("user-agent")?.slice(0, 500) ?? null],
+        );
+        return { method, verifiedAt: new Date() };
+      });
+      response.status(200).json({ verified: true, method: result.method, verifiedAt: result.verifiedAt.toISOString(), validForSeconds: 600 });
     } catch (error) { next(error); }
   });
 

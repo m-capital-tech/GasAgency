@@ -14,6 +14,7 @@ import { authSessionRouter } from "./routes/auth-session";
 import { agencyAccountsRouter } from "./routes/agency-accounts";
 import { agencyOrdersRouter } from "./routes/agency-orders";
 import { adminReadRouter } from "./routes/admin-read";
+import { adminDashboardRouter } from "./routes/admin-dashboard";
 import { platformTeamRouter } from "./routes/platform-team";
 import { tenantDraftRouter } from "./routes/tenant-drafts";
 import { tenantAccountRouter } from "./routes/tenant-account";
@@ -80,6 +81,7 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   app.use("/v1", authPushDevicesRouter({ pool, tokenPepper: config.sessionTokenPepper, encryptionKey: config.pushTokenEncryptionKey }));
   app.use("/v1", authSessionRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminReadRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", adminDashboardRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", platformTeamRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantDraftRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantWorkflowRouter({ pool, tokenPepper: config.sessionTokenPepper }));

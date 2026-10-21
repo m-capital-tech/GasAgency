@@ -32,3 +32,9 @@ export function authenticatedPrincipal(response: Response): AuthPrincipal {
   if (!principal) throw new HttpError(401, "authentication_required", "A valid bearer session is required.");
   return principal;
 }
+
+export function assertFreshMfa(principal: AuthPrincipal, maximumAgeMs = 10 * 60 * 1_000): void {
+  if (!principal.mfaVerifiedAt || Date.now() - principal.mfaVerifiedAt.getTime() > maximumAgeMs) {
+    throw new HttpError(403, "step_up_required", "Verify your authenticator again to continue with this privileged action.");
+  }
+}

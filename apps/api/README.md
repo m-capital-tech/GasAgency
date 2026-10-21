@@ -6,16 +6,20 @@ This service is separate from the investor-demo API. Its current protected produ
 - `GET /v1` for the version marker;
 - `POST /v1/auth/otp/request` and `POST /v1/auth/otp/verify` for enumeration-resistant tenant phone login;
 - `POST /v1/auth/mfa/enroll`, `POST /v1/auth/mfa/enroll/verify`, and `POST /v1/auth/mfa/verify` for privileged authenticator enrollment, verification, and recovery-code login;
+- `POST /v1/auth/mfa/step-up` for a fresh authenticator or one-time recovery-code check before privileged access changes;
 - `GET /v1/auth/session` and `POST /v1/auth/logout` for session restoration and explicit revocation;
 - `POST /v1/auth/push-devices` for active tenant users to register or revoke an Expo push token without storing it in plaintext;
 - `POST /v1/admin/roles` for permission-ceiling-enforced Platform Admin/team roles;
+- `POST /v1/admin/roles/:rolePublicId` for MFA-protected role editing, permission-ceiling changes, activation, and suspension;
 - `POST /v1/admin/team-members` for scoped role assignment and SMS-first access invitation;
+- `POST /v1/admin/team-members/:assignmentPublicId/lifecycle` for MFA-protected suspension, reinstatement, or revocation with immediate session invalidation;
 - `POST /v1/admin/tenants` for an authenticated, authorized, idempotent tenant draft;
 - `POST /v1/admin/tenants/:tenantPublicId/submit` for maker submission;
 - `POST /v1/admin/tenants/:tenantPublicId/reviews` for changes, rejection, or approval/activation;
 - `POST /v1/admin/tenants/:tenantPublicId/lifecycle` for scoped suspension or reinstatement;
 - `POST /v1/admin/tenants/:tenantPublicId/credit-decisions` for platform-owned credit approval, limit/term changes, suspension, or reinstatement;
 - `GET /v1/admin/overview` for scope-bounded daily, weekly, monthly, onboarding, and receivables summaries;
+- `GET /v1/admin/dashboard?period=daily|weekly|monthly` for scope-bounded performance, onboarding, credit aging, agency operations, exceptions, audit activity, and Super Admin-only system indicators;
 - `GET /v1/admin/agencies` for approved agencies available within the actor's assignment scope;
 - `GET /v1/admin/tenants` and `GET /v1/admin/tenants/:tenantPublicId` for a keyset-paginated queue and complete review record;
 - `GET /v1/admin/permissions`, `GET /v1/admin/roles`, and `GET /v1/admin/team-members` for permission-ceiling-aware team administration;
@@ -40,7 +44,7 @@ Agency fulfillment is scoped through active RBAC assignments and separates `orde
 
 Agency account operations preserve the confirmed commercial boundary: agencies can pause new credit orders globally, set account-specific negotiated prices, and record invoice settlements. They cannot create credit approval, alter an account limit, or change net terms. Collection records and their invoice allocations are append-only at the database layer; overpayments are rejected until an advance-payment model is explicitly introduced.
 
-Platform Control is available at `/control`. Its read models apply the same RBAC assignments inside every database query, use keyset pagination for tenant lists, and calculate daily/weekly/monthly periods in `Asia/Kolkata`. Super Admin receives global results only through global scope; Platform Admin/team results remain bounded to their region, city, agency, selected agencies, or tenant. The UI cannot bypass maker–checker, lifecycle, or credit permissions because every decision is re-authorized by the API. Suspending a tenant revokes its live sessions; reinstatement restores eligibility without silently altering its separately managed credit state.
+Platform Control is available at `/control`. Its read models apply the same RBAC assignments inside every database query, use keyset pagination for tenant lists, and calculate daily/weekly/monthly periods in `Asia/Kolkata`. Super Admin receives global results only through global scope; Platform Admin/team results remain bounded to their region, city, agency, selected agencies, or tenant. The expanded command centre reports operational facts only: platform revenue, support-case SLA, and forecasts are explicitly marked unavailable until their source ledgers exist. The UI cannot bypass maker–checker, lifecycle, credit, role, or team-access permissions because every decision is re-authorized by the API. Suspending a tenant revokes its live sessions; reinstatement restores eligibility without silently altering its separately managed credit state.
 
 ## Super Admin bootstrap
 
@@ -78,6 +82,9 @@ Replaying the same key and normalized body returns the original `201` response w
 - A role cannot grant permissions its creator does not possess.
 - Ordinary `platform_team` roles cannot contain reserved permissions such as tenant or credit approval.
 - A Platform Admin can assign only roles managed by their account and only within an authorization scope they control.
+- Creating or editing a role, appointing a privileged user, and suspending, reinstating, or revoking access requires an MFA verification no more than ten minutes old.
+- Platform Admin assignments can be created or edited only by Super Admin; ordinary platform-team roles cannot acquire reserved permissions.
+- Suspending a role or assignment immediately revokes affected active sessions. Administrators cannot change their own assignment from the dashboard.
 - New privileged users remain `invited`, require MFA, and cannot create a session until phone verification activates the identity.
 - Tenant creators submit drafts but cannot approve them. Super Admin self-approval requires an explicit audited override.
 - Credit requests may be approved, rejected, or deferred. Deferred and rejected requests activate the tenant on prepaid terms; approved requests atomically create the credit account.

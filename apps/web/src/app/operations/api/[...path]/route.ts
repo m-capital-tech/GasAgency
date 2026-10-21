@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 const sessionCookie = "platform_operations_session";
 const platformApiUrl = process.env.PLATFORM_API_URL ?? "http://127.0.0.1:8080";
 const agencyPath = /^agencies\/[0-9a-f-]{36}\/(orders(?:\/[0-9a-f-]{36}(?:\/transitions)?)?|delivery-staff|inventory|accounts(?:\/[0-9a-f-]{36}\/(?:prices|payments))?|payments|credit-policy)$/;
-const adminReadPath = /^admin\/(overview|agencies|permissions|roles|team-members|tenants(?:\/[0-9a-f-]{36})?)$/;
-const adminMutationPath = /^admin\/(roles|team-members|tenants|tenants\/[0-9a-f-]{36}\/(submit|reviews|lifecycle|credit-decisions))$/;
+const adminReadPath = /^admin\/(overview|dashboard|agencies|permissions|roles|team-members|tenants(?:\/[0-9a-f-]{36})?)$/;
+const adminMutationPath = /^admin\/(roles(?:\/[0-9a-f-]{36})?|team-members(?:\/[0-9a-f-]{36}\/lifecycle)?|tenants|tenants\/[0-9a-f-]{36}\/(submit|reviews|lifecycle|credit-decisions))$/;
 
 function allowed(path: string, method: string) {
   if (path === "auth/otp/request" && method === "POST") return true;
   if (path === "auth/otp/verify" && method === "POST") return true;
   if (["auth/mfa/enroll", "auth/mfa/enroll/verify", "auth/mfa/verify"].includes(path) && method === "POST") return true;
+  if (path === "auth/mfa/step-up" && method === "POST") return true;
   if (path === "auth/session" && method === "GET") return true;
   if (path === "auth/logout" && method === "POST") return true;
   if (adminReadPath.test(path) && method === "GET") return true;

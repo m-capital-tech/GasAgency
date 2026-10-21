@@ -9,6 +9,29 @@ export interface AdminOverview {
   receivables: { open: string; overdue: string };
 }
 
+export type DashboardPeriod = "daily" | "weekly" | "monthly";
+export interface AdminDashboard {
+  period: DashboardPeriod;
+  periodLabel: string;
+  timezone: string;
+  audience: "super_admin" | "platform_operations";
+  scope: { global: boolean; regions: string[]; cities: string[]; agencyCount: number; tenantCount: number };
+  window: { currentStart: string; previousStart: string; currentEnd: string };
+  performance: {
+    current: { orders: number; gmv: string; cylinders: number; delivered: number; collections: string };
+    previous: { orders: number; gmv: string; cylinders: number; delivered: number; collections: string };
+  };
+  footprint: { activeTenants: number; activeAgencies: number };
+  onboarding: { drafts: number; pendingApprovals: number; approvalSlaBreaches: number; approvals: number; rejections: number; invitations: number; firstLogins: number; firstOrders: number };
+  credit: { approvedLimit: string; outstanding: string; overdue: string; overdueAccounts: number; aging: { current: string; days_1_30: string; days_31_60: string; days_61_90: string; days_90_plus: string } };
+  attention: { approvalSlaBreaches: number; lowStockAgencies: number; overdueAccounts: number; deliveryFailures: number; messagingFailures: number };
+  orderStates: Array<{ status: string; count: number; value: string; cylinders: number }>;
+  agencies: Array<{ publicId: string; displayName: string; city: string; orders: number; gmv: string; delivered: number; backlog: number; failures: number; medianAcceptanceMinutes: number | null; lowStockItems: number }>;
+  recentActivity: Array<{ publicId: string; action: string; entityType: string; entityPublicId: string | null; actorName: string | null; actorRole: string | null; reason: string | null; occurredAt: string }>;
+  systemHealth: null | { queuedJobs: number; failedJobs: number; activeSessions: number; suspendedUsers: number };
+  dataCoverage: { platformRevenue: string; supportCases: string; forecasts: string };
+}
+
 export interface AdminAgency { publicId: string; displayName: string; legalName: string; gstin: string; phoneE164: string; city: string; stateCode: string; creditEnabled: boolean; status: string; }
 export interface TenantSummary {
   publicId: string; displayName: string; legalName: string; businessType: string; gstin: string; status: string; createdAt: string; submittedAt: string | null; city: string;
@@ -39,7 +62,7 @@ export interface TenantDetail extends TenantSummary {
 }
 export interface AdminRole { publicId: string; name: string; roleType: string; status: string; managedByName: string | null; permissionKeys: string[]; }
 export interface AdminPermission { key: string; resource: string; action: string; description: string; reserved: boolean; }
-export interface TeamMember { publicId: string; fullName: string; phoneE164: string; email: string | null; status: string; mfaRequired: boolean; roleName: string; roleType: string; scope: { kind: string; value: string | null; agencies: Array<{ publicId: string; displayName: string }> }; assignmentStatus: string; assignedAt: string; }
+export interface TeamMember { assignmentPublicId: string; publicId: string; fullName: string; phoneE164: string; email: string | null; status: string; mfaRequired: boolean; rolePublicId: string; roleName: string; roleType: string; scope: { kind: string; value: string | null; agencies: Array<{ publicId: string; displayName: string }> }; assignmentStatus: string; assignedAt: string; }
 
 async function request<T>(path: string, options: { method?: "GET" | "POST"; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const response = await fetch(`/operations/api/${path}`, {
@@ -56,6 +79,7 @@ export const controlApi = {
   session: (): Promise<OperationsSession> => operationsApi.session(),
   logout: () => operationsApi.logout(),
   overview: () => request<AdminOverview>("admin/overview"),
+  dashboard: (period: DashboardPeriod) => request<AdminDashboard>(`admin/dashboard?period=${period}`),
   agencies: () => request<{ agencies: AdminAgency[] }>("admin/agencies"),
   tenants: (status?: string, cursor?: string) => request<{ tenants: TenantSummary[]; nextCursor: string | null }>(`admin/tenants?limit=50${status ? `&status=${encodeURIComponent(status)}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
   tenant: (publicId: string) => request<{ tenant: TenantDetail }>(`admin/tenants/${publicId}`),
@@ -68,5 +92,8 @@ export const controlApi = {
   roles: () => request<{ roles: AdminRole[] }>("admin/roles"),
   teamMembers: () => request<{ teamMembers: TeamMember[] }>("admin/team-members"),
   createRole: (body: Record<string, unknown>) => request<{ role: AdminRole }>("admin/roles", { method: "POST", body }),
+  updateRole: (publicId: string, body: Record<string, unknown>) => request<{ role: AdminRole & { revokedSessions: number } }>(`admin/roles/${publicId}`, { method: "POST", body }),
   createTeamMember: (body: Record<string, unknown>) => request<{ user: { publicId: string }; invitation: { status: string } }>("admin/team-members", { method: "POST", body }),
+  changeTeamMemberAccess: (assignmentPublicId: string, body: { action: "suspend" | "reinstate" | "revoke"; reason: string }) => request<{ assignment: { assignmentPublicId: string; userPublicId: string; status: string; revokedSessions: number } }>(`admin/team-members/${assignmentPublicId}/lifecycle`, { method: "POST", body }),
+  stepUpMfa: (code: string) => request<{ verified: true; verifiedAt: string; validForSeconds: number }>("auth/mfa/step-up", { method: "POST", body: { code } }),
 };
