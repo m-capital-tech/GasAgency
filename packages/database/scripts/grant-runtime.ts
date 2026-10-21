@@ -102,6 +102,7 @@ try {
     await client.query("revoke all on all tables in schema app from " + roleName);
     await client.query("grant select, insert, update on all tables in schema app to " + roleName);
     await client.query("grant delete on app.auth_rate_events to " + roleName);
+    await client.query("grant delete on app.role_permissions to " + roleName);
     await client.query("revoke all on all sequences in schema app from " + roleName);
     await client.query("grant usage on all sequences in schema app to " + roleName);
     await client.query("revoke execute on all functions in schema app from public");
@@ -128,9 +129,10 @@ try {
       can_update_users: boolean;
       can_delete_users: boolean;
       can_delete_rate_events: boolean;
+      can_delete_role_permissions: boolean;
       can_delete_audit_events: boolean;
     }>(
-      "select has_database_privilege($1, current_database(), 'CONNECT') as can_connect, has_schema_privilege($1, 'app', 'USAGE') as can_use_schema, has_schema_privilege($1, 'app', 'CREATE') as can_create_in_schema, has_table_privilege($1, 'app.users', 'SELECT') as can_select_users, has_table_privilege($1, 'app.users', 'INSERT') as can_insert_users, has_table_privilege($1, 'app.users', 'UPDATE') as can_update_users, has_table_privilege($1, 'app.users', 'DELETE') as can_delete_users, has_table_privilege($1, 'app.auth_rate_events', 'DELETE') as can_delete_rate_events, has_table_privilege($1, 'app.audit_events', 'DELETE') as can_delete_audit_events",
+      "select has_database_privilege($1, current_database(), 'CONNECT') as can_connect, has_schema_privilege($1, 'app', 'USAGE') as can_use_schema, has_schema_privilege($1, 'app', 'CREATE') as can_create_in_schema, has_table_privilege($1, 'app.users', 'SELECT') as can_select_users, has_table_privilege($1, 'app.users', 'INSERT') as can_insert_users, has_table_privilege($1, 'app.users', 'UPDATE') as can_update_users, has_table_privilege($1, 'app.users', 'DELETE') as can_delete_users, has_table_privilege($1, 'app.auth_rate_events', 'DELETE') as can_delete_rate_events, has_table_privilege($1, 'app.role_permissions', 'DELETE') as can_delete_role_permissions, has_table_privilege($1, 'app.audit_events', 'DELETE') as can_delete_audit_events",
       [runtimeRole],
     )
   ).rows[0]!;
@@ -143,6 +145,7 @@ try {
     || !verification.can_update_users
     || verification.can_delete_users
     || !verification.can_delete_rate_events
+    || !verification.can_delete_role_permissions
     || verification.can_delete_audit_events
   ) {
     throw new Error("runtime privilege verification failed");

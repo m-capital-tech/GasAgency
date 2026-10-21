@@ -66,7 +66,7 @@ DATABASE_CA_CERT='-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----' \
   pnpm --filter @platform/database grant:runtime
 ```
 
-The command refuses missing, non-login, owner-equivalent, or elevated runtime roles. It grants schema usage; table `SELECT`, `INSERT`, and `UPDATE`; sequence usage; and `DELETE` only on bounded authentication rate events. It revokes runtime DDL, broad deletes, and function execution, applies equivalent default privileges for future migration-owned objects, then verifies the effective permissions.
+The command refuses missing, non-login, owner-equivalent, or elevated runtime roles. It grants schema usage; table `SELECT`, `INSERT`, and `UPDATE`; sequence usage; and `DELETE` only on bounded authentication rate events plus role-permission rows that authorized administrators replace during audited custom-role edits. It revokes runtime DDL, broad deletes, and function execution, applies equivalent default privileges for future migration-owned objects, then verifies the effective permissions.
 
 Run the outbox concurrency test against a disposable or staging database:
 
