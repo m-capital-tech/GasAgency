@@ -2,6 +2,12 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Production Operations command centre (21 Oct 2026)
+- **Agency reporting is transactional and scope-bound.** `/operations/dashboard` reads orders, fulfilment transitions, inventory, commercial accounts, invoices, collections, and named delivery capacity directly through the protected API. Every request requires `agency.view` inside the selected agency scope; no cross-agency aggregate or mock fallback exists.
+- **Operational periods use Asia/Kolkata.** Daily, weekly, and monthly comparisons share the Platform Control reporting timezone. Booked value is labelled separately from delivered value, collections, settlement, and revenue so the dashboard does not imply unsupported accounting equivalence.
+- **Exceptions stay actionable and factual.** The command centre identifies failed deliveries, delayed acceptance/assignment, low stock, and overdue accounts from persisted state. It does not invent targets, forecasts, staffing recommendations, or estimated service outcomes.
+- **Dashboard scans receive a dedicated access path.** Migration `0012_operations_dashboard` adds `(agency_id, created_at desc, id desc)` because the older status-leading index cannot efficiently serve all-status reporting windows.
+
 ## DigitalOcean in-place production promotion (16 Oct 2026)
 - **The existing paid environment is production.** The DigitalOcean project environment, App Platform app name, and API/web `APP_ENV` values were changed from staging to production in place. This preserves the tested app, firewall attachment, database, stable provider hostname, and USD 45 monthly ceiling instead of paying for a duplicate environment.
 - **Legacy database identifiers remain labels only.** The managed cluster and database keep their existing `commercial-lpg-staging-db` and `platform_staging` identifiers to avoid a risky data move. Runtime behavior is controlled by `APP_ENV=production`; future infrastructure uses the production-named template.

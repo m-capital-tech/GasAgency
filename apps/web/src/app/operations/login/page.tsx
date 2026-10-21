@@ -32,7 +32,7 @@ export default function OperationsLoginPage() {
       const result = await operationsApi.verifyOtp(challenge, code);
       if (result.status !== "authenticated") throw new Error("This privileged account requires MFA verification in Platform Control before operations access.");
       if (!result.agencies?.length) throw new Error("This account has no authorized agency operations scope.");
-      router.replace("/operations/orders");
+      router.replace("/operations/dashboard");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "OTP verification failed."); }
     finally { setBusy(false); }
   };

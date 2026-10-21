@@ -1,5 +1,12 @@
 # SESSION_LOG.md
 
+## 2026-10-21 — Production Operations dashboard expansion
+
+- Added the secured `/operations/dashboard` command centre with daily, weekly, and monthly comparisons for booked orders/value, cylinders, deliveries, and agency-recorded collections.
+- Added production-backed fulfilment timing, live queue state, inventory custody, delivery capacity, receivables, credit exposure, exception handling, order-state composition, trends, and recent audited transitions. The dashboard contains no demo-engine fallback.
+- Added the agency-scoped dashboard API, same-origin gateway allowlist, RBAC denial coverage, and migration `0012_operations_dashboard` for time-window scans.
+- Applied all 12 migrations to a clean disposable PostgreSQL 17 database; all SQL verification scripts and all 14 API tests passed. API/database/web type checking, targeted lint, Node 22 production builds, and rendered daily/weekly/monthly browser checks passed.
+
 ## 2026-10-21 — Dashboard expansion, production RBAC, and Super Admin release
 
 - Expanded the Platform Control dashboard with daily, weekly, and monthly reporting boundaries for Super Admin, Platform Admin, and tenant viewers. Added operational summaries, approval queues, onboarding progress, team/RBAC administration, role permission ceilings, session revocation, and immutable audit visibility.

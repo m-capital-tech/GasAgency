@@ -79,6 +79,28 @@ export interface OperationsPayment {
   allocations: Array<{ invoicePublicId: string; invoiceNumber: string; amount: string }>;
 }
 
+export type OperationsDashboardPeriod = "daily" | "weekly" | "monthly";
+
+export interface OperationsDashboard {
+  period: OperationsDashboardPeriod;
+  periodLabel: string;
+  timezone: "Asia/Kolkata";
+  window: { currentStart: string; previousStart: string; currentEnd: string };
+  agency: OperationsAgency & { city: string; creditEnabled: boolean };
+  performance: {
+    current: { orders: number; gmv: string; cylinders: number; delivered: number; deliveredValue: string; collections: string };
+    previous: { orders: number; gmv: string; cylinders: number; delivered: number; deliveredValue: string; collections: string };
+  };
+  fulfillment: { active: number; awaitingAcceptance: number; awaitingAssignment: number; deliveryFailures: number; medianAcceptanceMinutes: number | null; medianDeliveryMinutes: number | null };
+  accounts: { total: number; credit: number; approvedCreditLimit: string; outstanding: string; overdue: string; openInvoices: number };
+  staff: { total: number; active: number; withActiveDrops: number };
+  inventory: { fullOnHand: number; availableFull: number; reservedFull: number; emptyOnHand: number; withAccounts: number; lowStockItems: number; items: OperationsInventory[] };
+  orderStates: Array<{ status: string; count: number; value: string; cylinders: number }>;
+  trend: Array<{ bucketStart: string; orders: number; delivered: number; gmv: string }>;
+  exceptions: Array<{ kind: string; publicId: string; label: string; detail: string; severity: "critical" | "warning"; amount: string | null; occurredAt: string }>;
+  recentActivity: Array<{ publicId: string; orderPublicId: string; orderNumber: string; toStatus: string; actorName: string | null; reason: string | null; occurredAt: string }>;
+}
+
 export class OperationsApiError extends Error {
   constructor(public code: string, message: string, public status: number, public details?: unknown) { super(message); }
 }
@@ -107,6 +129,7 @@ export const operationsApi = {
   verifyMfa: (mfaTicket: string, code: string) => request<MfaAuthentication>("auth/mfa/verify", { method: "POST", body: { mfaTicket, code } }),
   session: () => request<OperationsSession>("auth/session"),
   logout: () => request<void>("auth/logout", { method: "POST" }),
+  dashboard: (agencyPublicId: string, period: OperationsDashboardPeriod) => request<OperationsDashboard>(`agencies/${agencyPublicId}/dashboard?period=${period}`),
   orders: (agencyPublicId: string, status?: string) => request<{ agency: OperationsAgency; orders: OperationsOrder[] }>(`agencies/${agencyPublicId}/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
   staff: (agencyPublicId: string) => request<{ staff: OperationsStaff[] }>(`agencies/${agencyPublicId}/delivery-staff`),
   inventory: (agencyPublicId: string) => request<{ inventory: OperationsInventory[] }>(`agencies/${agencyPublicId}/inventory`),

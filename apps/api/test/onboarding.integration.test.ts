@@ -421,6 +421,46 @@ integrationTest("delegated creator submits and a separate administrator activate
     const agencySessionBody = await agencySession.json() as { agencies: Array<{ publicId: string; displayName: string; roleTypes: string[] }> };
     assert.deepEqual(agencySessionBody.agencies, [{ publicId: agencyPublicId, displayName: "Integration Agency", roleTypes: ["agency_owner"] }]);
 
+    const tenantDashboardAccess = await fetch(`${origin}/agencies/${agencyPublicId}/dashboard?period=daily`, { headers: tenantAuthorization });
+    assert.equal(tenantDashboardAccess.status, 403);
+    const agencyDashboard = await fetch(`${origin}/agencies/${agencyPublicId}/dashboard?period=daily`, { headers: agencyAuthorization });
+    assert.equal(agencyDashboard.status, 200);
+    const agencyDashboardBody = await agencyDashboard.json() as {
+      period: string;
+      timezone: string;
+      agency: { publicId: string; displayName: string };
+      performance: { current: { orders: number; gmv: string; cylinders: number } };
+      fulfillment: { awaitingAcceptance: number };
+      inventory: { availableFull: number; lowStockItems: number };
+      orderStates: Array<{ status: string; count: number }>;
+    };
+    assert.deepEqual(
+      {
+        period: agencyDashboardBody.period,
+        timezone: agencyDashboardBody.timezone,
+        agency: { publicId: agencyDashboardBody.agency.publicId, displayName: agencyDashboardBody.agency.displayName },
+        performance: {
+          orders: agencyDashboardBody.performance.current.orders,
+          gmv: agencyDashboardBody.performance.current.gmv,
+          cylinders: agencyDashboardBody.performance.current.cylinders,
+        },
+        awaitingAcceptance: agencyDashboardBody.fulfillment.awaitingAcceptance,
+        availableFull: agencyDashboardBody.inventory.availableFull,
+        lowStockItems: agencyDashboardBody.inventory.lowStockItems,
+        orderStates: agencyDashboardBody.orderStates.map((item) => ({ status: item.status, count: item.count })),
+      },
+      {
+        period: "daily",
+        timezone: "Asia/Kolkata",
+        agency: { publicId: agencyPublicId, displayName: "Integration Agency" },
+        performance: { orders: 1, gmv: "10030.00", cylinders: 5 },
+        awaitingAcceptance: 1,
+        availableFull: 20,
+        lowStockItems: 0,
+        orderStates: [{ status: "placed", count: 1 }],
+      },
+    );
+
     const agencyOrdersEndpoint = `${origin}/agencies/${agencyPublicId}/orders`;
     const tenantAgencyAccess = await fetch(agencyOrdersEndpoint, { headers: tenantAuthorization });
     assert.equal(tenantAgencyAccess.status, 403);

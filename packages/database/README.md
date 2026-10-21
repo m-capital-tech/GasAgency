@@ -33,6 +33,8 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0011_push_delivery_ledger.sql` adds an idempotent event/device delivery ledger for provider-neutral push processing. It records only bounded provider references and safe error codes, keeps accepted, retryable-failure, exhausted, and stale outcomes inspectable, and prevents the same outbox event from creating more than one delivery identity for a device.
 
+`0012_operations_dashboard.sql` adds the agency-and-time reporting index used by the production Operations dashboard. The dashboard reads transactional facts directly and does not introduce an independently drifting aggregate store.
+
 Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules

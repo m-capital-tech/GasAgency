@@ -207,7 +207,8 @@ export default function OperationsAccountsPage() {
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white"><Flame className="size-5" /></span><div><h1 className="font-bold">Commercial Accounts & Collections</h1><p className="text-xs text-muted-foreground">Agency pricing, receivables, and credit availability</p></div></div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/operations/orders" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><ArrowLeft />Orders</Link>
+            <Link href="/operations/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><ArrowLeft />Dashboard</Link>
+            <Link href="/operations/orders" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Orders</Link>
             {session && session.agencies.length > 1 ? <NativeSelect className="w-56" value={agency?.publicId ?? ""} onChange={(event) => { const next = session.agencies.find((item) => item.publicId === event.target.value); if (next) void loadAgency(next); }}>{session.agencies.map((item) => <option key={item.publicId} value={item.publicId}>{item.displayName}</option>)}</NativeSelect> : <Badge tone="primary">{agency?.displayName ?? "Agency"}</Badge>}
             <Button size="sm" variant="outline" onClick={() => agency && void loadAgency(agency, true)} loading={refreshing}><RefreshCw />Refresh</Button>
             <Button size="sm" variant="ghost" onClick={() => void logout()}><LogOut />Sign out</Button>
