@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1154.0",
     "@platform/database": "workspace:*",
     "@platform/runtime": "workspace:*",
     "cors": "^2.8.5",

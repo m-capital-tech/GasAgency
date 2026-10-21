@@ -96,6 +96,20 @@ export interface PlatformSetting {
   updatedAt: string;
   updatedByName: string | null;
 }
+export interface BusinessDocument {
+  publicId: string;
+  documentType: string;
+  version: number;
+  status: "available" | "quarantined" | "archived" | "failed";
+  originalFileName: string;
+  mediaType: string;
+  byteSize: number;
+  retentionClass: string;
+  legalHold: boolean;
+  uploadedByName: string;
+  createdAt: string;
+  archivedAt: string | null;
+}
 
 async function request<T>(path: string, options: { method?: "GET" | "POST"; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const response = await fetch(`/operations/api/${path}`, {
@@ -106,6 +120,17 @@ async function request<T>(path: string, options: { method?: "GET" | "POST"; body
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new OperationsApiError(payload?.error?.code ?? "request_failed", payload?.error?.message ?? `Request failed (${response.status})`, response.status, payload?.error?.details);
   return payload as T;
+}
+
+async function uploadDocument(path: string, file: File, documentType: string, reason: string): Promise<{ document: BusinessDocument }> {
+  const response = await fetch(`/operations/api/${path}`, {
+    method: "POST",
+    headers: { "content-type": file.type, "x-document-type": documentType, "x-file-name": encodeURIComponent(file.name), "x-upload-reason": encodeURIComponent(reason) },
+    body: file,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new OperationsApiError(payload?.error?.code ?? "request_failed", payload?.error?.message ?? `Request failed (${response.status})`, response.status, payload?.error?.details);
+  return payload as { document: BusinessDocument };
 }
 
 export const controlApi = {
@@ -119,6 +144,12 @@ export const controlApi = {
   createAgency: (body: Record<string, unknown>, idempotencyKey = `web:agency:${crypto.randomUUID()}`) => request<{ agency: { publicId: string; status: string; displayName: string } }>("admin/agencies", { method: "POST", body, idempotencyKey }),
   reviewAgency: (publicId: string, body: { decision: "approved" | "rejected"; reason: string; override?: boolean }) => request<{ agency: { publicId: string; status: string } }>(`admin/agencies/${publicId}/reviews`, { method: "POST", body }),
   changeAgencyLifecycle: (publicId: string, body: { action: "suspend" | "reinstate"; reason: string }) => request<{ agency: { publicId: string; status: string; revokedSessions: number } }>(`admin/agencies/${publicId}/lifecycle`, { method: "POST", body }),
+  tenantDocuments: (publicId: string) => request<{ documents: BusinessDocument[] }>(`admin/tenants/${publicId}/documents`),
+  agencyDocuments: (publicId: string) => request<{ documents: BusinessDocument[] }>(`admin/agencies/${publicId}/documents`),
+  uploadTenantDocument: (publicId: string, file: File, documentType: string, reason: string) => uploadDocument(`admin/tenants/${publicId}/documents`, file, documentType, reason),
+  uploadAgencyDocument: (publicId: string, file: File, documentType: string, reason: string) => uploadDocument(`admin/agencies/${publicId}/documents`, file, documentType, reason),
+  archiveDocument: (publicId: string, reason: string) => request<{ document: BusinessDocument }>(`documents/${publicId}/archive`, { method: "POST", body: { reason } }),
+  documentContentUrl: (publicId: string, disposition: "inline" | "attachment" = "inline") => `/operations/api/documents/${publicId}/content?disposition=${disposition}`,
   tenants: (status?: string, cursor?: string) => request<{ tenants: TenantSummary[]; nextCursor: string | null }>(`admin/tenants?limit=50${status ? `&status=${encodeURIComponent(status)}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
   tenant: (publicId: string) => request<{ tenant: TenantDetail }>(`admin/tenants/${publicId}`),
   submitTenant: (publicId: string) => request<{ tenant: { status: string }; alreadySubmitted: boolean }>(`admin/tenants/${publicId}/submit`, { method: "POST" }),

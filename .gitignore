@@ -9,6 +9,7 @@ dist
 !.env.production.example
 !apps/mobile/.env.example
 .do/app.yaml
+.local-object-storage/
 *.log
 .DS_Store
 ios

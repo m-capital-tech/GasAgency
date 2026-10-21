@@ -8,6 +8,9 @@ const adminMutationPath = /^admin\/(roles(?:\/[0-9a-f-]{36})?|team-members(?:\/[
 const dashboardDataPath = /^admin\/(support-cases(?:\/[0-9a-f-]{36}\/transitions)?|revenue-entries)$/;
 const agencyAdminReadPath = /^admin\/agency-registry(?:\/[0-9a-f-]{36})?$/;
 const agencyAdminMutationPath = /^admin\/agencies(?:\/[0-9a-f-]{36}\/(?:reviews|lifecycle))?$/;
+const entityDocumentsPath = /^(?:admin\/)?(?:tenants|agencies)\/[0-9a-f-]{36}\/documents$/;
+const documentContentPath = /^documents\/[0-9a-f-]{36}\/content$/;
+const documentArchivePath = /^documents\/[0-9a-f-]{36}\/archive$/;
 
 function allowed(path: string, method: string) {
   if (path === "auth/otp/request" && method === "POST") return true;
@@ -22,6 +25,9 @@ function allowed(path: string, method: string) {
   if (dashboardDataPath.test(path) && ["GET", "POST"].includes(method)) return true;
   if (agencyAdminReadPath.test(path) && method === "GET") return true;
   if (agencyAdminMutationPath.test(path) && method === "POST") return true;
+  if (entityDocumentsPath.test(path) && ["GET", "POST"].includes(method)) return true;
+  if (documentContentPath.test(path) && method === "GET") return true;
+  if (documentArchivePath.test(path) && method === "POST") return true;
   return agencyPath.test(path) && ["GET", "POST"].includes(method);
 }
 
@@ -45,19 +51,34 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
   const target = new URL(`/v1/${path}`, platformApiUrl);
   request.nextUrl.searchParams.forEach((value, key) => target.searchParams.append(key, value));
-  const body = request.method === "GET" ? undefined : await request.text();
+  const body = request.method === "GET" ? undefined : await request.arrayBuffer();
+  const contentType = request.headers.get("content-type");
   const upstream = await fetch(target, {
     method: request.method,
     headers: {
       accept: "application/json",
-      ...(body ? { "content-type": "application/json" } : {}),
+      ...(contentType ? { "content-type": contentType } : {}),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(request.headers.get("idempotency-key") ? { "idempotency-key": request.headers.get("idempotency-key")! } : {}),
+      ...(request.headers.get("x-document-type") ? { "x-document-type": request.headers.get("x-document-type")! } : {}),
+      ...(request.headers.get("x-file-name") ? { "x-file-name": request.headers.get("x-file-name")! } : {}),
+      ...(request.headers.get("x-upload-reason") ? { "x-upload-reason": request.headers.get("x-upload-reason")! } : {}),
       "x-request-id": request.headers.get("x-request-id") ?? crypto.randomUUID(),
     },
-    body,
+    body: body?.byteLength ? body : undefined,
     cache: "no-store",
   });
+  if (documentContentPath.test(path) && upstream.ok) {
+    return new NextResponse(await upstream.arrayBuffer(), {
+      status: upstream.status,
+      headers: {
+        "content-type": upstream.headers.get("content-type") ?? "application/octet-stream",
+        "content-disposition": upstream.headers.get("content-disposition") ?? "inline",
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
   const payload = await upstream.json().catch(() => ({}));
 
   const completesAuthentication = ["auth/otp/verify", "auth/mfa/enroll/verify", "auth/mfa/verify"].includes(path);

@@ -15,6 +15,7 @@ import { agencyAccountsRouter } from "./routes/agency-accounts";
 import { agencyAdministrationRouter } from "./routes/agency-administration";
 import { agencyDashboardRouter } from "./routes/agency-dashboard";
 import { agencyOrdersRouter } from "./routes/agency-orders";
+import { businessDocumentsRouter } from "./routes/business-documents";
 import { adminReadRouter } from "./routes/admin-read";
 import { adminDashboardRouter } from "./routes/admin-dashboard";
 import { dashboardDataRouter } from "./routes/dashboard-data";
@@ -25,11 +26,13 @@ import { tenantAccountRouter } from "./routes/tenant-account";
 import { tenantAccountManagementRouter } from "./routes/tenant-account-management";
 import { tenantOrdersRouter } from "./routes/tenant-orders";
 import { tenantWorkflowRouter } from "./routes/tenant-workflow";
+import { createObjectStorage, type ObjectStorage } from "./storage/object-storage";
 
 const requestIdPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 
-export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: Logger }) {
+export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: Logger; objectStorage?: ObjectStorage }) {
   const { config, pool, logger } = options;
+  const objectStorage = options.objectStorage ?? createObjectStorage(config);
   const app = express();
 
   app.disable("x-powered-by");
@@ -84,6 +87,7 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   app.use("/v1", authMfaRouter({ pool, config }));
   app.use("/v1", authPushDevicesRouter({ pool, tokenPepper: config.sessionTokenPepper, encryptionKey: config.pushTokenEncryptionKey }));
   app.use("/v1", authSessionRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", businessDocumentsRouter({ pool, tokenPepper: config.sessionTokenPepper, storage: objectStorage, appEnv: config.appEnv, maxBytes: config.objectStorageMaxBytes }));
   app.use("/v1", agencyAdministrationRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminReadRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminDashboardRouter({ pool, tokenPepper: config.sessionTokenPepper }));

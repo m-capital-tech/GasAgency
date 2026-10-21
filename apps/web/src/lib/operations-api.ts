@@ -46,6 +46,7 @@ export interface OperationsOrder {
 
 export interface OperationsStaff { publicId: string; fullName: string; phoneE164: string; vehicleType: string; vehicleNumber: string; status: string; activeDrops: number; }
 export interface OperationsInventory { publicId: string; cylinderTypeCode: string; displayName: string; fullOnHand: number; reservedFull: number; availableFull: number; emptyOnHand: number; withAccounts: number; lowStockThreshold: number; }
+export interface OperationsDocument { publicId: string; documentType: string; version: number; status: "available" | "quarantined" | "archived" | "failed"; originalFileName: string; mediaType: string; byteSize: number; retentionClass: string; legalHold: boolean; uploadedByName: string; createdAt: string; archivedAt: string | null; }
 
 export interface OperationsAccountPrice {
   cylinderTypeCode: string;
@@ -122,6 +123,13 @@ async function request<T>(path: string, options: { method?: "GET" | "POST"; body
   return payload as T;
 }
 
+async function uploadDocument(path: string, file: File, documentType: string, reason: string): Promise<{ document: OperationsDocument }> {
+  const response = await fetch(`/operations/api/${path}`, { method: "POST", headers: { "content-type": file.type, "x-document-type": documentType, "x-file-name": encodeURIComponent(file.name), "x-upload-reason": encodeURIComponent(reason) }, body: file });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new OperationsApiError(payload?.error?.code ?? "request_failed", payload?.error?.message ?? `Request failed (${response.status})`, response.status, payload?.error?.details);
+  return payload as { document: OperationsDocument };
+}
+
 export const operationsApi = {
   requestOtp: (phoneE164: string) => request<{ accepted: true; challengePublicId: string; destination: string; localDebugCode?: string }>("auth/otp/request", { method: "POST", body: { phoneE164 } }),
   verifyOtp: (challengePublicId: string, code: string) => request<OtpVerification>("auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "Commercial LPG web" } }),
@@ -137,6 +145,9 @@ export const operationsApi = {
   changeStaffLifecycle: (agencyPublicId: string, staffPublicId: string, body: { action: "suspend" | "reinstate"; reason: string }) => request<{ staff: { publicId: string; status: string; revokedSessions: number } }>(`agencies/${agencyPublicId}/delivery-staff/${staffPublicId}/lifecycle`, { method: "POST", body }),
   inventory: (agencyPublicId: string) => request<{ inventory: OperationsInventory[] }>(`agencies/${agencyPublicId}/inventory`),
   adjustInventory: (agencyPublicId: string, body: { cylinderTypeCode: string; fullDelta: number; emptyDelta: number; lowStockThreshold?: number; reason: string }) => request<{ inventory: OperationsInventory }>(`agencies/${agencyPublicId}/inventory/adjustments`, { method: "POST", body }),
+  documents: (agencyPublicId: string) => request<{ documents: OperationsDocument[] }>(`agencies/${agencyPublicId}/documents`),
+  uploadDocument: (agencyPublicId: string, file: File, documentType: string, reason: string) => uploadDocument(`agencies/${agencyPublicId}/documents`, file, documentType, reason),
+  documentContentUrl: (publicId: string, disposition: "inline" | "attachment" = "inline") => `/operations/api/documents/${publicId}/content?disposition=${disposition}`,
   transition: (agencyPublicId: string, orderPublicId: string, body: Record<string, unknown>, idempotencyKey = `web:${orderPublicId}:${body.action}:${crypto.randomUUID()}`) => request<{ order: OperationsOrder }>(`agencies/${agencyPublicId}/orders/${orderPublicId}/transitions`, { method: "POST", body, idempotencyKey }),
   accounts: (agencyPublicId: string) => request<{ agency: OperationsAgency & { creditEnabled: boolean }; accounts: OperationsCommercialAccount[]; nextCursor: string | null }>(`agencies/${agencyPublicId}/accounts`),
   payments: (agencyPublicId: string) => request<{ payments: OperationsPayment[] }>(`agencies/${agencyPublicId}/payments`),

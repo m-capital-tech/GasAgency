@@ -2,6 +2,14 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Private business documents (22 Oct 2026)
+- **Object bytes stay outside PostgreSQL and behind the API.** PostgreSQL stores immutable content metadata, versions, ownership, retention class, archive/legal-hold state, and an append-only access ledger. Download and preview stream through permission checks; browsers never receive unrestricted object-storage credentials or public bucket URLs.
+- **The adapter is provider-neutral and fail-closed.** Local private storage exists only for development/test. DigitalOcean Spaces uses the S3-compatible adapter when credentials are connected. Production defaults to `disabled`, and local storage is configuration-invalid outside local/test.
+- **Uploads require two independent enables.** The Super Admin `features.document_uploads` control and a live object-storage provider must both be enabled. This prevents a configuration toggle from silently writing to an unapproved or unavailable service.
+- **Uploaded content is bounded and verified.** Only PDF, JPEG, PNG, and WebP are accepted, at a maximum of 10 MiB. The API checks file signatures, stores a SHA-256 digest, re-verifies size and digest before access, and quarantines mismatches.
+- **Archive is retention, not deletion.** Archiving requires fresh MFA and a reason, leaves the private object intact, and appends both document and platform audit events. Physical deletion and class-specific retention expiry remain disabled until legal policy and a tested backup/recovery process are approved.
+- **Spaces remains a connection checkpoint.** It is outside the current USD 45 ceiling, so no bucket or credential is provisioned by this workstream. Production upload activation waits for separate budget approval, a private-bucket smoke test, credential-scope review, and independent object recovery testing.
+
 ## Super Admin execution controls (21 Oct 2026)
 - **Configuration is a closed, versioned catalogue.** Super Admin can govern six transaction workflows, two operational thresholds, and two infrastructure-dependent feature gates. Unknown keys and invalid types/ranges are rejected; optimistic versions prevent one administrator from silently overwriting another.
 - **Workflow gates are enforced by APIs.** Tenant onboarding, ordering, COD, credit, agency fulfilment, collection recording, and push registration consult PostgreSQL before executing. The dashboard is an operating surface, not the security boundary.

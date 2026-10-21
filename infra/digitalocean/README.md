@@ -39,9 +39,12 @@ Values marked secret are configured through encrypted App Platform environment v
 | `PUBLIC_API_ORIGIN` | Dashboard/mobile builds | General | Public API base URL |
 | `PLATFORM_API_URL` | Dashboard server | General | Server-side production API origin used by the `/operations` gateway; never exposed to browser code |
 | `OBJECT_STORAGE_ENDPOINT` | API, worker | General | Spaces S3-compatible endpoint |
+| `OBJECT_STORAGE_PROVIDER` | API | General | `disabled` until a private bucket is connected; then `spaces` |
+| `OBJECT_STORAGE_REGION` | API | General | Spaces signing region; `blr1` for the approved primary region |
 | `OBJECT_STORAGE_BUCKET` | API, worker | General | Environment-specific private bucket |
 | `OBJECT_STORAGE_ACCESS_KEY` | API, worker | Secret | Dedicated application credential |
 | `OBJECT_STORAGE_SECRET_KEY` | API, worker | Secret | Dedicated application credential |
+| `OBJECT_STORAGE_MAX_BYTES` | API | General | Per-file limit; production schema and API currently cap uploads at 10 MiB |
 | `LOG_LEVEL` | API, worker | General | Structured-log verbosity |
 | `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned production integration |
 | `MESSAGEINDIA_SEND_URL` | Worker | General | Provider-issued HTTPS submission endpoint; plaintext HTTP is rejected |
@@ -58,6 +61,8 @@ Values marked secret are configured through encrypted App Platform environment v
 | `PUSH_MAX_DELIVERY_ATTEMPTS` | Worker | General | Per-event/device retry ceiling before a terminal ledger result |
 
 The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled production specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
+
+The business-document adapter is also provider-neutral. The production specification deliberately sets `OBJECT_STORAGE_PROVIDER=disabled` because Spaces is outside the approved USD 45 ceiling. After a private bucket and dedicated restricted credential are separately approved, add the endpoint, bucket, access key and secret as App Platform variables, change the provider to `spaces`, run the storage smoke test, and only then enable `features.document_uploads` in Super Admin controls. The local adapter is rejected in staging and production.
 
 ## Version-controlled production specification
 

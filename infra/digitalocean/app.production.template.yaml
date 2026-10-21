@@ -108,6 +108,18 @@ services:
         scope: RUN_TIME
         type: SECRET
         value: __PUSH_TOKEN_ENCRYPTION_KEY__
+      - key: OBJECT_STORAGE_PROVIDER
+        scope: RUN_TIME
+        type: GENERAL
+        value: disabled
+      - key: OBJECT_STORAGE_REGION
+        scope: RUN_TIME
+        type: GENERAL
+        value: blr1
+      - key: OBJECT_STORAGE_MAX_BYTES
+        scope: RUN_TIME
+        type: GENERAL
+        value: "10485760"
       - key: MFA_TICKET_PEPPER
         scope: RUN_TIME
         type: SECRET

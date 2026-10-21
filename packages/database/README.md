@@ -84,3 +84,5 @@ The migration is intentionally forward-only and records itself in `app.schema_mi
 Migration `0014_dashboard_data_coverage.sql` adds the append-only platform-revenue ledger and scoped support-case workflow used by executive reporting.
 
 Migration `0015_agency_administration.sql` adds the production agency profile, service-area pincodes, lifecycle review ledger, and maker–checker approval guard.
+
+Migration `0016_business_documents.sql` adds immutable private-object metadata, tenant/agency version histories, archive and legal-hold state, and an append-only access-event ledger. Object bytes remain outside PostgreSQL behind the API authorization boundary.
