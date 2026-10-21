@@ -37,6 +37,12 @@ export function sampleDashboard(period: DashboardPeriod): AdminDashboard {
       current: { orders: rounded(38 * current), gmv: String(184_600 * current), cylinders: rounded(62 * current), delivered: rounded(31 * current), collections: String(126_400 * current) },
       previous: { orders: rounded(38 * previous), gmv: String(184_600 * previous), cylinders: rounded(62 * previous), delivered: rounded(31 * previous), collections: String(126_400 * previous) },
     },
+    revenue: { current: String(18_460 * current), previous: String(18_460 * previous), currency: "INR", mix: [
+      { type: "commission", current: String(12_900 * current), previous: String(12_900 * previous) },
+      { type: "facilitation", current: String(5_560 * current), previous: String(5_560 * previous) },
+    ] },
+    support: { openCases: 9, criticalOpen: 1, responseSlaBreaches: 1, opened: rounded(4 * current), resolved: rounded(3 * current), medianResolutionMinutes: 86 },
+    projection: { method: "elapsed_run_rate", basisStart: "2026-10-21T00:00:00.000+05:30", periodEnd: "2026-10-22T00:00:00.000+05:30", elapsedPercent: 62, confidence: "medium", sufficientHistory: true, orders: rounded(61 * current), gmv: String(297_741 * current), revenue: String(29_774 * current) },
     footprint: { activeTenants: 172, activeAgencies: 11 },
     onboarding: { drafts: 7, pendingApprovals: 4, approvalSlaBreaches: 1, approvals: rounded(3 * current), rejections: rounded(0.4 * current), invitations: rounded(3 * current), firstLogins: rounded(2.5 * current), firstOrders: rounded(2.1 * current) },
     credit: { approvedLimit: "8450000", outstanding: "2715000", overdue: "318000", overdueAccounts: 6, aging: { current: "1820000", days_1_30: "576000", days_31_60: "214000", days_61_90: "72000", days_90_plus: "33000" } },
@@ -58,7 +64,12 @@ export function sampleDashboard(period: DashboardPeriod): AdminDashboard {
       { publicId: "sample-audit-3", action: "role.permissions_updated", entityType: "role", entityPublicId: "sample-role-1", actorName: "Super Admin", actorRole: "Super Admin", reason: "Separated reviewer and creator responsibilities", occurredAt: "2026-10-20T17:10:00.000+05:30" },
     ],
     systemHealth: { queuedJobs: 3, failedJobs: 0, activeSessions: 28, suspendedUsers: 2 },
-    dataCoverage: { platformRevenue: "pending_ledger", supportCases: "pending_integration", forecasts: "not_configured" },
+    dataCoverage: {
+      generatedAt: "2026-10-21T12:30:00.000+05:30",
+      platformRevenue: { status: "available", source: "append_only_revenue_ledger", actuals: true },
+      supportCases: { status: "available", source: "support_case_workflow", actuals: true },
+      projection: { status: "available", source: "elapsed_period_run_rate", actuals: false },
+    },
   };
 }
 

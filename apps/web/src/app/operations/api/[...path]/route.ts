@@ -5,6 +5,7 @@ const platformApiUrl = process.env.PLATFORM_API_URL ?? "http://127.0.0.1:8080";
 const agencyPath = /^agencies\/[0-9a-f-]{36}\/(dashboard|orders(?:\/[0-9a-f-]{36}(?:\/transitions)?)?|delivery-staff|inventory|accounts(?:\/[0-9a-f-]{36}\/(?:prices|payments))?|payments|credit-policy)$/;
 const adminReadPath = /^admin\/(overview|dashboard|agencies|permissions|roles|team-members|tenants(?:\/[0-9a-f-]{36})?)$/;
 const adminMutationPath = /^admin\/(roles(?:\/[0-9a-f-]{36})?|team-members(?:\/[0-9a-f-]{36}\/lifecycle)?|tenants|tenants\/[0-9a-f-]{36}\/(submit|reviews|lifecycle|credit-decisions))$/;
+const dashboardDataPath = /^admin\/(support-cases(?:\/[0-9a-f-]{36}\/transitions)?|revenue-entries)$/;
 
 function allowed(path: string, method: string) {
   if (path === "auth/otp/request" && method === "POST") return true;
@@ -16,6 +17,7 @@ function allowed(path: string, method: string) {
   if (path === "admin/configuration" && ["GET", "POST"].includes(method)) return true;
   if (adminReadPath.test(path) && method === "GET") return true;
   if (adminMutationPath.test(path) && method === "POST") return true;
+  if (dashboardDataPath.test(path) && ["GET", "POST"].includes(method)) return true;
   return agencyPath.test(path) && ["GET", "POST"].includes(method);
 }
 

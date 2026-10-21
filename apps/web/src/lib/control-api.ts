@@ -21,6 +21,9 @@ export interface AdminDashboard {
     current: { orders: number; gmv: string; cylinders: number; delivered: number; collections: string };
     previous: { orders: number; gmv: string; cylinders: number; delivered: number; collections: string };
   };
+  revenue: null | { current: string; previous: string; currency: "INR"; mix: Array<{ type: string; current: string; previous: string }> };
+  support: { openCases: number; criticalOpen: number; responseSlaBreaches: number; opened: number; resolved: number; medianResolutionMinutes: number | null };
+  projection: { method: "elapsed_run_rate"; basisStart: string; periodEnd: string; elapsedPercent: number; confidence: "low" | "medium" | "high"; sufficientHistory: boolean; orders: number | null; gmv: string | null; revenue: string | null };
   footprint: { activeTenants: number; activeAgencies: number };
   onboarding: { drafts: number; pendingApprovals: number; approvalSlaBreaches: number; approvals: number; rejections: number; invitations: number; firstLogins: number; firstOrders: number };
   credit: { approvedLimit: string; outstanding: string; overdue: string; overdueAccounts: number; aging: { current: string; days_1_30: string; days_31_60: string; days_61_90: string; days_90_plus: string } };
@@ -29,7 +32,12 @@ export interface AdminDashboard {
   agencies: Array<{ publicId: string; displayName: string; city: string; orders: number; gmv: string; delivered: number; backlog: number; failures: number; medianAcceptanceMinutes: number | null; lowStockItems: number }>;
   recentActivity: Array<{ publicId: string; action: string; entityType: string; entityPublicId: string | null; actorName: string | null; actorRole: string | null; reason: string | null; occurredAt: string }>;
   systemHealth: null | { queuedJobs: number; failedJobs: number; activeSessions: number; suspendedUsers: number };
-  dataCoverage: { platformRevenue: string; supportCases: string; forecasts: string };
+  dataCoverage: {
+    generatedAt: string;
+    platformRevenue: { status: "available" | "restricted"; source: string; actuals: true };
+    supportCases: { status: "available"; source: string; actuals: true };
+    projection: { status: "available" | "insufficient_history"; source: string; actuals: false };
+  };
 }
 
 export interface AdminAgency { publicId: string; displayName: string; legalName: string; gstin: string; phoneE164: string; city: string; stateCode: string; creditEnabled: boolean; status: string; }

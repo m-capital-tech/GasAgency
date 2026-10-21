@@ -80,3 +80,5 @@ DATABASE_URL='postgresql://...' DATABASE_SSL_MODE=disable \
 ```
 
 The migration is intentionally forward-only and records itself in `app.schema_migrations`. Do not run the same file twice and do not edit an applied migration; add a new numbered migration instead.
+
+Migration `0014_dashboard_data_coverage.sql` adds the append-only platform-revenue ledger and scoped support-case workflow used by executive reporting.

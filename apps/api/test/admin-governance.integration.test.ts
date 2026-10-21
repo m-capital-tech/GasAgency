@@ -4,6 +4,7 @@ import express from "express";
 import { createDatabasePool } from "@platform/database";
 import { encryptSecret, uuidV7 } from "@platform/runtime";
 import { adminDashboardRouter } from "../src/routes/admin-dashboard";
+import { dashboardDataRouter } from "../src/routes/dashboard-data";
 import { platformTeamRouter } from "../src/routes/platform-team";
 import { systemConfigurationRouter } from "../src/routes/system-configuration";
 import { authMfaRouter } from "../src/routes/auth-mfa";
@@ -67,6 +68,7 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
   app.use(express.json());
   app.use("/v1", authMfaRouter({ pool, config }));
   app.use("/v1", adminDashboardRouter({ pool, tokenPepper }));
+  app.use("/v1", dashboardDataRouter({ pool, tokenPepper }));
   app.use("/v1", platformTeamRouter({ pool, tokenPepper }));
   app.use("/v1", systemConfigurationRouter({ pool, tokenPepper }));
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
@@ -110,6 +112,37 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
     const step = Math.floor(Date.now() / 30_000);
     const stepUp = await fetch(`${base}/auth/mfa/step-up`, { method: "POST", headers, body: JSON.stringify({ code: totpCode(mfaSecret, step) }) });
     assert.equal(stepUp.status, 200);
+
+    const revenue = await fetch(`${base}/admin/revenue-entries`, { method: "POST", headers, body: JSON.stringify({
+      revenueType: "commission", amount: "1250.00", sourceType: "manual", externalReference: `integration-${suffix}`,
+      description: "Integration test posted commission", occurredAt: new Date().toISOString(),
+    }) });
+    assert.equal(revenue.status, 201);
+    const duplicateRevenue = await fetch(`${base}/admin/revenue-entries`, { method: "POST", headers, body: JSON.stringify({
+      revenueType: "commission", amount: "1250.00", sourceType: "manual", externalReference: `integration-${suffix}`,
+      description: "Integration test duplicate commission", occurredAt: new Date().toISOString(),
+    }) });
+    assert.equal(duplicateRevenue.status, 409);
+
+    const supportCreated = await fetch(`${base}/admin/support-cases`, { method: "POST", headers, body: JSON.stringify({
+      category: "technical", priority: "high", subject: "Integration support workflow", description: "Validate support lifecycle and SLA reporting",
+    }) });
+    assert.equal(supportCreated.status, 201);
+    const supportCase = (await supportCreated.json() as { case: { publicId: string } }).case;
+    const acknowledged = await fetch(`${base}/admin/support-cases/${supportCase.publicId}/transitions`, { method: "POST", headers, body: JSON.stringify({ action: "acknowledge", note: "Integration test acknowledgement" }) });
+    assert.equal(acknowledged.status, 200);
+    const resolved = await fetch(`${base}/admin/support-cases/${supportCase.publicId}/transitions`, { method: "POST", headers, body: JSON.stringify({ action: "resolve", note: "Integration test case resolved" }) });
+    assert.equal(resolved.status, 200);
+    const supportList = await fetch(`${base}/admin/support-cases?status=resolved`, { headers });
+    assert.equal(supportList.status, 200);
+    assert.equal((await supportList.json() as { cases: Array<{ publicId: string }> }).cases.some((item) => item.publicId === supportCase.publicId), true);
+
+    const coveredDashboard = await fetch(`${base}/admin/dashboard?period=daily`, { headers });
+    assert.equal(coveredDashboard.status, 200);
+    const covered = await coveredDashboard.json() as { revenue: { current: string } | null; support: { resolved: number }; projection: { method: string }; dataCoverage: { platformRevenue: { status: string }; supportCases: { status: string } } };
+    assert.equal(Number(covered.revenue?.current) >= 1250, true);
+    assert.equal(covered.support.resolved >= 1, true);
+    assert.deepEqual({ method: covered.projection.method, revenue: covered.dataCoverage.platformRevenue.status, support: covered.dataCoverage.supportCases.status }, { method: "elapsed_run_rate", revenue: "available", support: "available" });
 
     const pausedConfiguration = await fetch(`${base}/admin/configuration`, { method: "POST", headers, body: JSON.stringify(configurationUpdate) });
     assert.equal(pausedConfiguration.status, 200);

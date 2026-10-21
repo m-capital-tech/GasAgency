@@ -97,7 +97,9 @@ export function adminDashboardRouter(options: { pool: pg.Pool; tokenPepper: stri
                   (select count(*) from app.agencies agency join scoped_agencies scoped on scoped.id = agency.id where agency.status = 'approved')::text as active_agencies,
                   (select count(*) from app.tenants tenant join scoped_tenants scoped on scoped.id = tenant.id where tenant.status in ('draft', 'changes_requested'))::text as tenant_drafts,
                   (select count(*) from app.tenants tenant join scoped_tenants scoped on scoped.id = tenant.id where tenant.status = 'pending_approval')::text as pending_approvals,
-                  (select count(*) from app.tenants tenant join scoped_tenants scoped on scoped.id = tenant.id where tenant.status = 'pending_approval' and tenant.submitted_at < now() - interval '24 hours')::text as sla_breaches,
+                  (select count(*) from app.tenants tenant join scoped_tenants scoped on scoped.id = tenant.id
+                    where tenant.status = 'pending_approval'
+                      and tenant.submitted_at < now() - make_interval(hours => coalesce((select (value #>> '{}')::int from app.platform_settings where setting_key = 'operations.approval_sla_hours'), 24)))::text as sla_breaches,
                   (select count(*) from app.tenants tenant join scoped_tenants scoped on scoped.id = tenant.id where tenant.approved_at >= boundaries.current_start)::text as approvals_current,
                   (select count(*) from app.tenant_reviews review join scoped_tenants scoped on scoped.id = review.tenant_id where review.created_at >= boundaries.current_start and review.decision = 'rejected')::text as rejections_current,
                   (select count(*) from app.invitations invitation join scoped_tenants scoped on scoped.id = invitation.tenant_id where invitation.created_at >= boundaries.current_start)::text as invitations_current,
@@ -171,7 +173,8 @@ export function adminDashboardRouter(options: { pool: pg.Pool; tokenPepper: stri
       const summary = summaryResult.rows[0]!;
       const superAdmin = hasRoleType(principal, "super_admin");
       const canSeeAudit = hasPermission(principal, "audit.view");
-      const [activityResult, systemResult] = await Promise.all([
+      const canSeeRevenue = superAdmin && hasPermission(principal, "configuration.view");
+      const [activityResult, systemResult, revenueResult, supportResult] = await Promise.all([
         canSeeAudit
           ? options.pool.query<{ public_id: string; action: string; entity_type: string; entity_public_id: string | null; actor_name: string | null; actor_role: string | null; reason: string | null; occurred_at: Date }>(
               `with ${scopedTenantsSql}
@@ -197,7 +200,56 @@ export function adminDashboardRouter(options: { pool: pg.Pool; tokenPepper: stri
                  (select count(*) from app.users where status = 'suspended')::text as suspended_users`,
             )
           : Promise.resolve({ rows: [] }),
+        canSeeRevenue
+          ? options.pool.query<{ revenue_type: string; current_amount: string; previous_amount: string }>(
+              `with ${boundariesSql}
+               select revenue.revenue_type,
+                      coalesce(sum(revenue.amount) filter (where revenue.occurred_at >= boundaries.current_start), 0)::text as current_amount,
+                      coalesce(sum(revenue.amount) filter (where revenue.occurred_at >= boundaries.previous_start and revenue.occurred_at < boundaries.current_start), 0)::text as previous_amount
+                 from app.platform_revenue_entries revenue cross join boundaries
+                where revenue.occurred_at >= boundaries.previous_start
+                group by revenue.revenue_type order by revenue.revenue_type`,
+            )
+          : Promise.resolve({ rows: [] }),
+        options.pool.query<{
+          open_cases: string; critical_open: string; response_breaches: string; opened_current: string;
+          resolved_current: string; median_resolution_minutes: string | null;
+        }>(
+          `with ${scopedTenantsSql}, ${boundariesSql}, scoped_support as materialized (
+             select support.* from app.support_cases support
+              where $1::boolean
+                 or support.tenant_id in (select id from scoped_tenants)
+                 or support.agency_id in (
+                   select assignment.agency_id from app.agency_assignments assignment
+                   join scoped_tenants scoped on scoped.id = assignment.tenant_id
+                    where assignment.ends_at is null
+                 )
+           )
+           select count(*) filter (where support.status not in ('resolved', 'closed'))::text as open_cases,
+                  count(*) filter (where support.status not in ('resolved', 'closed') and support.priority = 'critical')::text as critical_open,
+                  count(*) filter (where support.status not in ('resolved', 'closed') and support.first_response_at is null and support.response_due_at < now())::text as response_breaches,
+                  count(*) filter (where support.created_at >= boundaries.current_start)::text as opened_current,
+                  count(*) filter (where support.resolved_at >= boundaries.current_start)::text as resolved_current,
+                  (percentile_cont(0.5) within group (order by extract(epoch from (support.resolved_at - support.created_at)) / 60.0)
+                    filter (where support.resolved_at >= boundaries.current_start))::text as median_resolution_minutes
+             from scoped_support support cross join boundaries`,
+          params,
+        ),
       ]);
+
+      const revenueCurrent = revenueResult.rows.reduce((total, row) => total + Number(row.current_amount), 0);
+      const revenuePrevious = revenueResult.rows.reduce((total, row) => total + Number(row.previous_amount), 0);
+      const support = supportResult.rows[0] ?? { open_cases: "0", critical_open: "0", response_breaches: "0", opened_current: "0", resolved_current: "0", median_resolution_minutes: null };
+      const periodStart = summary.period_start.getTime();
+      const periodEnd = new Date(summary.period_start);
+      if (parsed.period === "daily") periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);
+      else if (parsed.period === "weekly") periodEnd.setUTCDate(periodEnd.getUTCDate() + 7);
+      else periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
+      const elapsedFraction = Math.max(0, Math.min(1, (Date.now() - periodStart) / (periodEnd.getTime() - periodStart)));
+      const sufficientHistory = elapsedFraction >= 0.1;
+      const projectedNumber = (value: number) => sufficientHistory ? Math.round(value / elapsedFraction) : null;
+      const projectedMoney = (value: number) => sufficientHistory ? (value / elapsedFraction).toFixed(2) : null;
+      const confidence = elapsedFraction < 0.33 ? "low" : elapsedFraction < 0.67 ? "medium" : "high";
 
       response.status(200).json({
         period: parsed.period,
@@ -210,6 +262,21 @@ export function adminDashboardRouter(options: { pool: pg.Pool; tokenPepper: stri
           current: { orders: number(summary.orders_current), gmv: summary.gmv_current, cylinders: number(summary.cylinders_current), delivered: number(summary.delivered_current), collections: summary.collections_current },
           previous: { orders: number(summary.orders_previous), gmv: summary.gmv_previous, cylinders: number(summary.cylinders_previous), delivered: number(summary.delivered_previous), collections: summary.collections_previous },
         },
+        revenue: canSeeRevenue ? {
+          current: revenueCurrent.toFixed(2), previous: revenuePrevious.toFixed(2), currency: "INR",
+          mix: revenueResult.rows.map((row) => ({ type: row.revenue_type, current: row.current_amount, previous: row.previous_amount })),
+        } : null,
+        support: {
+          openCases: number(support.open_cases), criticalOpen: number(support.critical_open), responseSlaBreaches: number(support.response_breaches),
+          opened: number(support.opened_current), resolved: number(support.resolved_current),
+          medianResolutionMinutes: support.median_resolution_minutes === null ? null : number(support.median_resolution_minutes),
+        },
+        projection: {
+          method: "elapsed_run_rate", basisStart: summary.period_start.toISOString(), periodEnd: periodEnd.toISOString(),
+          elapsedPercent: Number((elapsedFraction * 100).toFixed(1)), confidence, sufficientHistory,
+          orders: projectedNumber(number(summary.orders_current)), gmv: projectedMoney(number(summary.gmv_current)),
+          revenue: canSeeRevenue ? projectedMoney(revenueCurrent) : null,
+        },
         footprint: { activeTenants: number(summary.active_tenants), activeAgencies: number(summary.active_agencies) },
         onboarding: { drafts: number(summary.tenant_drafts), pendingApprovals: number(summary.pending_approvals), approvalSlaBreaches: number(summary.sla_breaches), approvals: number(summary.approvals_current), rejections: number(summary.rejections_current), invitations: number(summary.invitations_current), firstLogins: number(summary.first_logins_current), firstOrders: number(summary.first_orders_current) },
         credit: { approvedLimit: summary.credit_limit, outstanding: summary.credit_outstanding, overdue: summary.credit_overdue, overdueAccounts: number(summary.overdue_accounts), aging: agingResult.rows[0] ?? { current: "0", days_1_30: "0", days_31_60: "0", days_61_90: "0", days_90_plus: "0" } },
@@ -218,7 +285,12 @@ export function adminDashboardRouter(options: { pool: pg.Pool; tokenPepper: stri
         agencies: agencyResult.rows.map((row) => ({ publicId: row.public_id, displayName: row.display_name, city: row.city, orders: number(row.orders), gmv: row.gmv, delivered: number(row.delivered), backlog: number(row.backlog), failures: number(row.failures), medianAcceptanceMinutes: row.median_acceptance_minutes === null ? null : number(row.median_acceptance_minutes), lowStockItems: number(row.low_stock_items) })),
         recentActivity: activityResult.rows.map((row) => ({ publicId: row.public_id, action: row.action, entityType: row.entity_type, entityPublicId: row.entity_public_id, actorName: row.actor_name, actorRole: row.actor_role, reason: row.reason, occurredAt: row.occurred_at.toISOString() })),
         systemHealth: systemResult.rows[0] ? { queuedJobs: number(systemResult.rows[0].queued_jobs), failedJobs: number(systemResult.rows[0].failed_jobs), activeSessions: number(systemResult.rows[0].active_sessions), suspendedUsers: number(systemResult.rows[0].suspended_users) } : null,
-        dataCoverage: { platformRevenue: "not_configured", supportCases: "not_configured", forecasts: "not_configured" },
+        dataCoverage: {
+          generatedAt: new Date().toISOString(),
+          platformRevenue: { status: canSeeRevenue ? "available" : "restricted", source: "append_only_revenue_ledger", actuals: true },
+          supportCases: { status: "available", source: "support_case_workflow", actuals: true },
+          projection: { status: sufficientHistory ? "available" : "insufficient_history", source: "elapsed_period_run_rate", actuals: false },
+        },
       });
     } catch (error) { next(error); }
   });
