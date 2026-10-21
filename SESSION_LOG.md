@@ -1,5 +1,15 @@
 # SESSION_LOG.md
 
+## 2026-10-21 — Dashboard expansion, production RBAC, and Super Admin release
+
+- Expanded the Platform Control dashboard with daily, weekly, and monthly reporting boundaries for Super Admin, Platform Admin, and tenant viewers. Added operational summaries, approval queues, onboarding progress, team/RBAC administration, role permission ceilings, session revocation, and immutable audit visibility.
+- Completed the mandatory tenant-onboarding contract for GSTIN, address, requirement, and explicitly selected serving agency. Platform team members can create drafts; approval remains a Platform Admin or Super Admin action.
+- Added production Super Admin bootstrap support, MFA step-up, custom-role editing, assignment suspension/reinstatement/revocation, and database-tested least-privilege permission replacement. Runtime `DELETE` remains denied for users and audit events and is allowed only for `role_permissions` and auth-rate cleanup.
+- Repository-wide API/web/database tests, production builds, SQL integration checks, and all 11 TypeScript targets passed before release. Commits `c87dc79` and corrective runtime-grant commit `b7999cc` were pushed to organization `main`.
+- Deployed commit `b7999cc` manually to DigitalOcean as deployment `e343f04d-185e-49a7-a38a-63a26800c42d`. The release job completed `pnpm migrate && pnpm grant:runtime`, logged `runtime_privileges_applied` for `platform_runtime`, and the release reached `Success`, `Live Deployment`, and `Healthy` after API and web readiness passed.
+- Confirmed the production Super Admin identity for Pranav Aditya with the approved email and mobile number. Two consecutive bootstrap executions returned `changed: false` with the same user and role IDs, proving the stored identity already matched and the command is idempotent.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, and `/operations/login`; unauthenticated dashboard, session, team, role, and tenant-draft APIs returned HTTP 401.
+
 ## 2026-10-16 — DigitalOcean production promotion and mobile release foundation
 
 - Promoted the existing DigitalOcean environment in place: the project environment is now Production, the app is named `commercial-lpg-production`, and API/web `APP_ENV` values are `production`. The existing provider hostname and legacy database identifiers remain unchanged.

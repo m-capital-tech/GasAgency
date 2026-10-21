@@ -145,13 +145,22 @@ The environment was provisioned on 9 October 2026 and promoted in place to produ
 - app: `commercial-lpg-production` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`; these legacy internal identifiers are retained to avoid a risky data migration and do not define the runtime environment;
-- active deployment: `f8f888b5-3af4-40c2-abbf-5f64117d3e3d`, a successful manual release sourced from commit `5a0f1bc`;
+- active deployment: `e343f04d-185e-49a7-a38a-63a26800c42d`, a successful manual release sourced from commit `b7999cc`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
 The DigitalOcean project environment, API `APP_ENV`, and dashboard `APP_ENV` are all set to `production`. Renaming the app does not rename the stable provider-generated hostname.
 
-The active release reached `ACTIVE` after the pre-deploy migration job and both service health checks passed. The public `/v1`, `/control/login`, `/operations/login`, and `/operations/accounts` routes passed HTTPS smoke tests; protected admin, session, agency-account, and tenant-billing routes rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `5a0f1bc`, and automatic deployment remains disabled.
+The active release reached `Success`, `Live Deployment`, and `Healthy` after the pre-deploy database job and both service health checks passed. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests; protected dashboard, session, team, role, and tenant-draft APIs rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `b7999cc`, and automatic deployment remains disabled.
+
+### 21 October 2026 dashboard, RBAC, and Super Admin release
+
+- GitHub `main` commits `c87dc79` and `b7999cc` expanded production reporting, completed Super Admin and Platform Admin team controls, enforced role permission ceilings and session revocation, and completed the mandatory GSTIN/address/requirement/serving-agency onboarding contract.
+- Corrective commit `b7999cc` grants `platform_runtime` the narrowly scoped `DELETE` privilege required to replace custom-role permission rows. Runtime deletion of users and audit events remains denied.
+- Manual deployment `e343f04d-185e-49a7-a38a-63a26800c42d` checked out full source hash `b7999ccf8d25056ee7f1162503f7a366bd1c60d1`.
+- The pre-deploy job completed `pnpm migrate && pnpm grant:runtime` and emitted `runtime_privileges_applied` for `platform_runtime`. API `/health/ready` and `/health/live` returned HTTP 200, the Next.js web service became ready, and DigitalOcean marked the release `Success`, `Live Deployment`, and `Healthy`.
+- The production Super Admin bootstrap for the approved Pranav Aditya identity returned `changed: false` twice with the same user and role IDs, confirming the existing record exactly matched and the operation is idempotent.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, and `/operations/login`. Unauthenticated `/v1/admin/dashboard`, `/v1/auth/session`, `/v1/admin/team`, `/v1/admin/roles`, and `/v1/admin/tenant-drafts` returned HTTP 401.
 
 ### 16 October 2026 notification-foundation release
 
