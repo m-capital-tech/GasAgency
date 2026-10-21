@@ -41,7 +41,7 @@ export default function TenantHomeScreen() {
   if (!activeTenant) return <Redirect href="/(auth)/select-tenant" />;
 
   return (
-    <Screen refreshing={loading && !!home} onRefresh={() => { void refresh(); }}>
+    <Screen tabBar refreshing={loading && !!home} onRefresh={() => { void refresh(); }}>
       <Row between style={{ marginTop: 8 }}>
         <View style={{ flex: 1 }}>
           <Text variant="small" tone="muted">Signed in as {tenantUser.fullName}</Text>

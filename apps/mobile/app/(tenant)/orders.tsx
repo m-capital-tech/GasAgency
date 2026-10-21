@@ -72,7 +72,7 @@ export default function TenantOrdersScreen() {
   if (!tenantPublicId) return <Redirect href="/(auth)/select-tenant" />;
 
   return (
-    <Screen title="Orders" subtitle="Live status from your serving agency" back refreshing={loading} onRefresh={() => { void refresh(); }}>
+    <Screen title="Orders" subtitle="Live status from your serving agency" tabBar refreshing={loading} onRefresh={() => { void refresh(); }}>
       <Row gap={8} style={{ flexWrap: "wrap", marginBottom: 14 }}>
         <Chip label="All" active={filter === "all"} onPress={() => setFilter("all")} />
         <Chip label="Active" active={filter === "active"} onPress={() => setFilter("active")} />

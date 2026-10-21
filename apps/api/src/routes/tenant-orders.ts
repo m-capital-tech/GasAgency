@@ -401,8 +401,8 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
       if (!base) throw new HttpError(404, "tenant_not_found", "The tenant or its serving account is unavailable.");
 
       const [outlets, catalog, slots, orderingEnabled, codEnabled, creditEnabled] = await Promise.all([
-        options.pool.query<{ public_id: string; label: string; address_line_1: string; city: string; pincode: string; in_use_count: number; spare_full_count: number; empty_count: number }>(
-          `select public_id::text, label, address_line_1, city, pincode, in_use_count, spare_full_count, empty_count
+        options.pool.query<{ public_id: string; label: string; address_line_1: string; city: string; pincode: string; delivery_instructions: string | null; in_use_count: number; spare_full_count: number; empty_count: number }>(
+          `select public_id::text, label, address_line_1, city, pincode, delivery_instructions, in_use_count, spare_full_count, empty_count
              from app.outlets where tenant_id = $1 and status = 'active' order by id`,
           [base.tenant_id],
         ),
@@ -443,6 +443,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
         agency: { publicId: base.agency_public_id, displayName: base.agency_name },
         outlets: outlets.rows.map((outlet) => ({
           publicId: outlet.public_id, label: outlet.label, address: `${outlet.address_line_1}, ${outlet.city} ${outlet.pincode}`,
+          deliveryInstructions: outlet.delivery_instructions,
           stock: { inUse: outlet.in_use_count, spareFull: outlet.spare_full_count, empty: outlet.empty_count },
         })),
         catalog: catalog.rows.map((item) => ({

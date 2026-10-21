@@ -6,7 +6,9 @@ The production client never falls back to the bundled demo engine. The demo pers
 
 Copy `.env.example` to a local uncommitted environment file and set `EXPO_PUBLIC_PLATFORM_API_URL`. On a physical device this must be a LAN-reachable API address rather than `localhost`. Local API configuration may expose its configured test OTP in the request response; staging and production reject that server setting.
 
-The production tenant path now includes serving-agency details, outlet stock, account-specific commercial-cylinder pricing, credit availability, delivery slots, server quotations, idempotent COD or approved-credit order placement, order history and timelines, billing summaries, GST invoice detail, and agency-recorded payment allocations. Quote totals are never calculated authoritatively on the device. Production support workflows and payment-provider checkout remain future milestones; their richer demo screens still run only under the explicit demo build flag.
+The production tenant path includes a first-login registration summary, serving-agency details, outlet stock and requirement maintenance, account-specific commercial-cylinder pricing, credit availability, delivery slots, server quotations, empty-cylinder handover and delivery instructions, idempotent COD or approved-credit order placement, live order timelines, billing summaries, GST invoice detail, agency-recorded payment allocations, daily/weekly/monthly tenant analytics, private-document metadata, and audited support or controlled-field change requests. Quote totals are never calculated authoritatively on the device. Payment-provider checkout remains a future integration and stays unavailable outside the explicit demo build flag.
+
+The five production tabs are Home, Orders, Insights, Billing, and Account. Owners and managers can edit only operational outlet contact, handover, stock, and requirement fields. Staff have read-only access. Legal identity, GSTIN/FSSAI, registered phone, outlet address, and serving-agency changes are submitted as support requests for platform review rather than directly changing the approved record.
 
 ## Notifications and OTA updates
 

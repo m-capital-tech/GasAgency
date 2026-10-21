@@ -180,7 +180,7 @@ export interface TenantInvoiceDetail extends TenantInvoiceSummary {
 export interface TenantHomeResponse {
   tenant: { publicId: string; displayName: string; gstin: string };
   agency: { publicId: string; displayName: string };
-  outlets: Array<{ publicId: string; label: string; address: string; stock: { inUse: number; spareFull: number; empty: number } }>;
+  outlets: Array<{ publicId: string; label: string; address: string; deliveryInstructions: string | null; stock: { inUse: number; spareFull: number; empty: number } }>;
   catalog: Array<{
     cylinderTypeCode: string;
     displayName: string;
@@ -201,6 +201,102 @@ export interface TenantHomeResponse {
     eligible: boolean;
   };
   currency: "INR";
+}
+
+export interface TenantRequirement {
+  period: "week" | "month";
+  preferredDeliveryDays: number[];
+  preferredSlot: TenantDeliverySlot | null;
+  items: Array<{ cylinderTypeCode: string; displayName: string; expectedQuantity: number }>;
+}
+
+export interface TenantProfileResponse {
+  tenant: {
+    publicId: string;
+    legalName: string;
+    displayName: string;
+    businessType: string;
+    gstin: string;
+    fssaiNumber: string | null;
+    alternatePhoneE164: string | null;
+    status: string;
+  };
+  user: TenantSessionUser & {
+    preferredLanguage: "en" | "hi" | "te";
+    membershipType: "owner" | "manager" | "staff";
+    canManage: boolean;
+  };
+  agency: { publicId: string; displayName: string; phoneE164: string };
+  account: { paymentMode: "prepaid" | "credit"; creditStatus: string | null; creditLimit: string | null; netTermDays: number | null };
+  cylinderTypes: Array<{ code: string; displayName: string; weightKg: number }>;
+  outlets: Array<{
+    publicId: string;
+    label: string;
+    address: { line1: string; line2: string | null; city: string; stateCode: string; pincode: string };
+    contact: { name: string | null; phoneE164: string | null };
+    deliveryInstructions: string | null;
+    stock: { inUse: number; spareFull: number; empty: number };
+    requirement: TenantRequirement | null;
+  }>;
+}
+
+export interface TenantDashboardResponse {
+  tenant: { publicId: string; displayName: string };
+  period: "daily" | "weekly" | "monthly";
+  timezone: "Asia/Kolkata";
+  range: { startAt: string; endAt: string; previousStartAt: string };
+  current: {
+    orders: number; cylinders: number; bookedValue: string; deliveredOrders: number; deliveredValue: string;
+    emptiesExpected: number; emptiesCollected: number; averageDeliveryMinutes: number | null;
+    taxableValue: string; gst: string; invoicedValue: string; collected: string;
+  };
+  previous: { orders: number; cylinders: number; bookedValue: string; deliveredOrders: number; deliveredValue: string };
+  account: {
+    paymentMode: "prepaid" | "credit"; creditStatus: string | null; creditLimit: string | null;
+    netTermDays: number | null; outstanding: string; overdue: string; dueNext7Days: string;
+  };
+  activeOrders: Record<string, number>;
+  outlets: Array<{
+    publicId: string; label: string; stock: { inUse: number; spareFull: number; empty: number };
+    requirementPeriod: "week" | "month" | null; expectedQuantity: number; estimatedDaysRemaining: number | null;
+  }>;
+  breakdown: {
+    outlets: Array<{ publicId: string; label: string; orders: number; cylinders: number; spend: string }>;
+    cylinderTypes: Array<{ code: string; displayName: string; cylinders: number; spend: string }>;
+  };
+  openSupportCases: number;
+  definitions: { bookedValue: string; deliveredValue: string; stockEstimate: string };
+}
+
+export type TenantSupportStatus = "open" | "acknowledged" | "in_progress" | "resolved" | "closed";
+
+export interface TenantSupportCase {
+  publicId: string;
+  caseNumber: string;
+  category: string;
+  priority: "low" | "normal" | "high";
+  status: TenantSupportStatus;
+  subject: string;
+  description: string;
+  responseDueAt: string;
+  firstResponseAt: string | null;
+  resolvedAt: string | null;
+  resolution: string | null;
+  createdAt: string;
+  updatedAt: string;
+  events: Array<{ publicId: string; type: string; note: string; occurredAt: string }>;
+}
+
+export interface TenantBusinessDocument {
+  publicId: string;
+  documentType: string;
+  originalFileName: string;
+  mediaType: string;
+  byteSize: number;
+  version: number;
+  status: "available" | "quarantined" | "archived" | "failed";
+  retentionClass: string;
+  createdAt: string;
 }
 
 export interface TenantQuote {
@@ -246,6 +342,7 @@ export type OtpVerificationResponse =
       accessToken: string;
       tokenType: "Bearer";
       expiresInSeconds: number;
+      firstLogin: boolean;
       user: TenantSessionUser;
       tenants: TenantAccess[];
     }
@@ -350,10 +447,10 @@ export function requestTenantQuote(tenantPublicId: string, body: {
   return request(`/tenants/${encodeURIComponent(tenantPublicId)}/quotes`, { method: "POST", body, authenticated: true });
 }
 
-export function placeTenantOrder(tenantPublicId: string, quotePublicId: string, idempotencyKey: string): Promise<TenantOrderResponse> {
+export function placeTenantOrder(tenantPublicId: string, quotePublicId: string, idempotencyKey: string, options: { emptiesExpected?: number; deliveryInstructions?: string } = {}): Promise<TenantOrderResponse> {
   return request(`/tenants/${encodeURIComponent(tenantPublicId)}/orders`, {
     method: "POST",
-    body: { quotePublicId, emptiesExpected: 0 },
+    body: { quotePublicId, emptiesExpected: options.emptiesExpected ?? 0, ...(options.deliveryInstructions ? { deliveryInstructions: options.deliveryInstructions } : {}) },
     authenticated: true,
     headers: { "idempotency-key": idempotencyKey },
   });
@@ -387,4 +484,47 @@ export function loadTenantBilling(
 
 export function loadTenantInvoice(tenantPublicId: string, invoicePublicId: string): Promise<{ invoice: TenantInvoiceDetail }> {
   return request(`/tenants/${encodeURIComponent(tenantPublicId)}/invoices/${encodeURIComponent(invoicePublicId)}`, { authenticated: true });
+}
+
+export function loadTenantProfile(tenantPublicId: string): Promise<TenantProfileResponse> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/profile`, { authenticated: true });
+}
+
+export function updateTenantOutlet(tenantPublicId: string, outletPublicId: string, body: {
+  contactName?: string | null;
+  contactPhoneE164?: string | null;
+  deliveryInstructions?: string | null;
+  stock?: { inUse: number; spareFull: number; empty: number };
+  requirement?: {
+    period: "week" | "month";
+    preferredDeliveryDays: number[];
+    preferredSlot: TenantDeliverySlot | null;
+    items: Array<{ cylinderTypeCode: string; expectedQuantity: number }>;
+  };
+}): Promise<{ outlet: { publicId: string } }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/outlets/${encodeURIComponent(outletPublicId)}`, { method: "POST", body, authenticated: true });
+}
+
+export function loadTenantDashboard(tenantPublicId: string, period: TenantDashboardResponse["period"]): Promise<TenantDashboardResponse> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/dashboard?period=${period}`, { authenticated: true });
+}
+
+export function loadTenantSupportCases(tenantPublicId: string): Promise<{ cases: TenantSupportCase[] }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/support-cases`, { authenticated: true });
+}
+
+export function createTenantSupportCase(tenantPublicId: string, body: {
+  kind: "support" | "change_request";
+  category?: "onboarding" | "ordering" | "delivery" | "billing" | "credit" | "agency" | "technical" | "other";
+  priority?: "low" | "normal" | "high";
+  subject: string;
+  description: string;
+  orderPublicId?: string;
+  changeField?: "business_name" | "gstin_fssai" | "registered_phone" | "outlet_address" | "serving_agency";
+}): Promise<{ case: { publicId: string; caseNumber: string; status: TenantSupportStatus; responseDueAt: string; createdAt: string } }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/support-cases`, { method: "POST", body, authenticated: true });
+}
+
+export function loadTenantDocuments(tenantPublicId: string): Promise<{ documents: TenantBusinessDocument[] }> {
+  return request(`/tenants/${encodeURIComponent(tenantPublicId)}/documents`, { authenticated: true });
 }

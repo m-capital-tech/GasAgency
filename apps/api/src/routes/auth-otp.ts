@@ -25,6 +25,7 @@ interface EligibleUserRow {
   status: string;
   full_name: string;
   phone_e164: string;
+  last_login_at: Date | null;
   mfa_required: boolean;
   has_tenant_access: boolean;
   has_platform_access: boolean;
@@ -52,6 +53,7 @@ async function eligibleUser(client: pg.PoolClient, phoneE164: string, lock = fal
             user_row.status,
             user_row.full_name,
             user_row.phone_e164,
+            user_row.last_login_at,
             user_row.mfa_required,
             exists (
               select 1 from app.tenant_memberships membership
@@ -304,6 +306,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
           accessToken: sessionToken,
           expiresInSeconds: config.sessionTtlSeconds,
           user: { publicId: user.public_id, fullName: user.full_name, phoneE164: user.phone_e164 },
+          firstLogin: user.last_login_at === null,
           tenants: memberships.rows.map((membership) => ({ publicId: membership.tenant_public_id, displayName: membership.display_name, membershipType: membership.membership_type })),
           agencies,
         };
@@ -316,7 +319,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
         response.status(200).json({ status: outcome.status, mfaTicket: outcome.mfaTicket, expiresInSeconds: outcome.expiresInSeconds, user: outcome.user });
         return;
       }
-      response.status(200).json({ status: "authenticated", accessToken: outcome.accessToken, tokenType: "Bearer", expiresInSeconds: outcome.expiresInSeconds, user: outcome.user, tenants: outcome.tenants, agencies: outcome.agencies });
+      response.status(200).json({ status: "authenticated", accessToken: outcome.accessToken, tokenType: "Bearer", expiresInSeconds: outcome.expiresInSeconds, firstLogin: outcome.firstLogin, user: outcome.user, tenants: outcome.tenants, agencies: outcome.agencies });
     } catch (error) {
       next(error);
     }

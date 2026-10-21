@@ -17,11 +17,12 @@ const LANGS: { key: "en" | "hi" | "te"; label: string; native: string }[] = [
 export default function SplashScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, sessionKind, tenants, activeTenantPublicId, onboarding, mode, language, setLanguage } = useSession();
+  const { user, sessionKind, tenants, activeTenantPublicId, showRegistrationSummary, onboarding, mode, language, setLanguage } = useSession();
 
   if (user) {
     if (sessionKind === "tenant") {
       if (tenants.length > 1 && !activeTenantPublicId) return <Redirect href="/(auth)/select-tenant" />;
+      if (showRegistrationSummary) return <Redirect href="/(tenant)/registration-summary" />;
       return <Redirect href="/(tenant)/home" />;
     }
     if (user.role === "delivery" || mode === "delivery") return <Redirect href="/(delivery)/home" />;

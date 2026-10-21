@@ -10,13 +10,14 @@ export default function SelectTenantScreen() {
   const tenantUser = useSession((state) => state.tenantUser);
   const tenants = useSession((state) => state.tenants);
   const selectTenant = useSession((state) => state.selectTenant);
+  const showRegistrationSummary = useSession((state) => state.showRegistrationSummary);
   const logout = useSession((state) => state.logout);
 
   if (sessionKind !== "tenant" || !tenantUser) return <Redirect href="/" />;
 
   const choose = (tenantPublicId: string) => {
     selectTenant(tenantPublicId);
-    router.replace("/(tenant)/home");
+    router.replace(showRegistrationSummary ? "/(tenant)/registration-summary" : "/(tenant)/home");
   };
 
   return (

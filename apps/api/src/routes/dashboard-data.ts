@@ -204,7 +204,7 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
         assertAuthorized(principal, "support_case.create", target(context));
         const slaHours = { critical: 1, high: 4, normal: 8, low: 24 }[parsed.data.priority];
         const casePublicId = uuidV7();
-        const caseNumber = `CASE-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${casePublicId.slice(0, 8).toUpperCase()}`;
+        const caseNumber = `CASE-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${casePublicId.replaceAll("-", "").slice(-8).toUpperCase()}`;
         const inserted = await client.query<{ public_id: string; case_number: string; status: string; response_due_at: Date; created_at: Date }>(
           `insert into app.support_cases (
              public_id, case_number, tenant_id, agency_id, opened_by_user_id, category, priority,

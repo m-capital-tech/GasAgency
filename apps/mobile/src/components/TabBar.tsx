@@ -8,18 +8,23 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
   orders: ["cube", "cube-outline"],
   notifications: ["notifications", "notifications-outline"],
   billing: ["receipt", "receipt-outline"],
+  analytics: ["stats-chart", "stats-chart-outline"],
   profile: ["person", "person-outline"],
   drops: ["list", "list-outline"],
   summary: ["stats-chart", "stats-chart-outline"],
 };
+const VISIBLE_TABS = new Set(["home", "orders", "analytics", "billing", "profile", "notifications", "drops", "summary"]);
 
 /** Static bottom tab bar with labels (sits in the layout flow, not floating). */
 export function TabBar({ state, navigation, descriptors }: any) {
   const insets = useSafeAreaInsets();
+  const activeRoute = state.routes[state.index];
+  if (!activeRoute || !VISIBLE_TABS.has(activeRoute.name)) return null;
+  const visibleRoutes = state.routes.filter((route: any) => VISIBLE_TABS.has(route.name));
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      {state.routes.map((route: any, i: number) => {
-        const focused = state.index === i;
+      {visibleRoutes.map((route: any) => {
+        const focused = activeRoute?.key === route.key;
         const [on, off] = ICONS[route.name] ?? ["ellipse", "ellipse-outline"];
         const label = descriptors[route.key]?.options.title ?? route.name;
         const badge = (descriptors[route.key]?.options as any).tabBarBadge;

@@ -62,8 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)/login" />
             <Stack.Screen name="(auth)/select-tenant" />
-            <Stack.Screen name="(tenant)/home" />
-            <Stack.Screen name="(tenant)/order" />
+            <Stack.Screen name="(tenant)" />
             <Stack.Screen name="(onboarding)/profile" />
             <Stack.Screen name="(onboarding)/connection" />
             <Stack.Screen name="(business)" />

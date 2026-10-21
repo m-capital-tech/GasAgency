@@ -32,6 +32,9 @@ This service is separate from the investor-demo API. Its current protected produ
 - `GET /v1/admin/tenants` and `GET /v1/admin/tenants/:tenantPublicId` for a keyset-paginated queue and complete review record;
 - `GET /v1/admin/permissions`, `GET /v1/admin/roles`, and `GET /v1/admin/team-members` for permission-ceiling-aware team administration;
 - `GET /v1/tenants/:tenantPublicId/home` for the tenant's outlets, stock, serving agency, account prices, slots, and payment eligibility;
+- `GET /v1/tenants/:tenantPublicId/profile` and `POST /v1/tenants/:tenantPublicId/outlets/:outletPublicId` for the approved registration record and role-gated contact, handover, stock, and requirement maintenance;
+- `GET /v1/tenants/:tenantPublicId/dashboard?period=daily|weekly|monthly` for tenant-only orders, consumption, delivery, GST, receivables, cylinder mix, outlet activity, and labelled stock-runway estimates;
+- `GET|POST /v1/tenants/:tenantPublicId/support-cases` for audited tenant support and controlled-field change requests, including optional tenant-owned order linkage;
 - `POST /v1/tenants/:tenantPublicId/quotes` for an expiring server-authoritative order quotation;
 - `POST /v1/tenants/:tenantPublicId/orders` for idempotent COD or approved-credit order placement;
 - `GET /v1/tenants/:tenantPublicId/orders` and `GET /v1/tenants/:tenantPublicId/orders/:orderPublicId` for tenant-scoped history, detail, and fulfillment timeline;
@@ -49,6 +52,8 @@ This service is separate from the investor-demo API. Its current protected produ
 Draft creation, submission, and review are separate authorized transitions. Approval atomically activates the tenant and agency assignment, opens the commercial account, optionally approves credit, and queues the SMS-first tenant invitation. Tenant OTP verification activates invited memberships and issues an opaque, hashed, revocable session.
 
 Tenant ordering is scoped through active membership, tenant, outlet, agency assignment, and commercial account records. The server selects base, slab, or lower negotiated pricing, calculates GST and delivery charges, stores an immutable quote snapshot, then recomputes policy and price inside the order transaction. Credit orders lock the commercial account before exposure is recalculated, preventing concurrent orders from overspending one limit. Online payment methods remain unavailable until a production payment adapter and webhook flow are connected.
+
+Tenant self-service uses the same closed scope. Owners and managers can maintain operational outlet fields and LPG requirements; staff remain read-only. Legal identity, GSTIN/FSSAI, registered phone, outlet address, and serving-agency changes create auditable requests instead of mutating approved onboarding data. Tenant dashboards expose only the signed-in business, distinguish source-backed financial values from operational stock estimates, and use `Asia/Kolkata` reporting boundaries.
 
 Agency fulfillment is scoped through active RBAC assignments and separates `order.view`, `order.edit`, and reserved `order.execute` authority. Acceptance reserves inventory, dispatch removes physical stock, failed delivery returns it, and completion records typed empties, outlet stock, account custody, payment state, and an invoice. Status, audit, outbox, inventory, and invoice effects commit atomically. The production web console is available at `/operations`; its Next.js gateway keeps the opaque API token in an HttpOnly cookie and requires the server-side `PLATFORM_API_URL` setting.
 

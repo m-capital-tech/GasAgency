@@ -13,7 +13,7 @@ import {
   type TenantQuote,
 } from "@/lib/platform-api";
 import { useSession } from "@/lib/session";
-import { Button, Card, Chip, Divider, ErrorState, KeyValue, Row, Screen, SkeletonList, Text, t } from "@/ui";
+import { Button, Card, Chip, Divider, ErrorState, Input, KeyValue, Row, Screen, SkeletonList, Text, t } from "@/ui";
 
 function rupees(value: string) {
   return `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -28,6 +28,8 @@ export default function TenantOrderScreen() {
   const [outletPublicId, setOutletPublicId] = useState<string | null>(null);
   const [deliverySlot, setDeliverySlot] = useState<TenantDeliverySlot | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<TenantPaymentMethod | null>(null);
+  const [emptiesExpected, setEmptiesExpected] = useState("0");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
   const [quote, setQuote] = useState<TenantQuote | null>(null);
   const [order, setOrder] = useState<TenantOrderResponse["order"] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,8 @@ export default function TenantOrderScreen() {
       const result = await loadTenantHome(activeTenantPublicId);
       setHome(result);
       setOutletPublicId(result.outlets[0]?.publicId ?? null);
+      setEmptiesExpected(String(Math.min(result.outlets[0]?.stock.empty ?? 0, 1)));
+      setDeliveryInstructions(result.outlets[0]?.deliveryInstructions ?? "");
       setDeliverySlot(result.deliverySlots.find((slot) => slot.code === "standard")?.code ?? result.deliverySlots[0]?.code ?? null);
       setPaymentMethod(result.paymentMethods[0] ?? null);
       setQuantities(Object.fromEntries(result.catalog.map((item, index) => [item.cylinderTypeCode, index === 0 ? 1 : 0])));
@@ -78,7 +82,7 @@ export default function TenantOrderScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      setOrder((await placeTenantOrder(activeTenantPublicId, quote.publicId, `mobile-order:${quote.publicId}`)).order);
+      setOrder((await placeTenantOrder(activeTenantPublicId, quote.publicId, `mobile-order:${quote.publicId}`, { emptiesExpected: Number(emptiesExpected), deliveryInstructions: deliveryInstructions.trim() || undefined })).order);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The order could not be placed.");
     } finally {
@@ -118,7 +122,7 @@ export default function TenantOrderScreen() {
         <>
           <Text variant="h3">Delivery outlet</Text>
           <View style={{ gap: 8, marginTop: 10 }}>
-            {home.outlets.map((outlet) => <Chip key={outlet.publicId} label={outlet.label} active={outletPublicId === outlet.publicId} onPress={() => { clearQuote(); setOutletPublicId(outlet.publicId); }} />)}
+            {home.outlets.map((outlet) => <Chip key={outlet.publicId} label={outlet.label} active={outletPublicId === outlet.publicId} onPress={() => { clearQuote(); setOutletPublicId(outlet.publicId); setEmptiesExpected(String(Math.min(outlet.stock.empty, 1))); setDeliveryInstructions(outlet.deliveryInstructions ?? ""); }} />)}
           </View>
 
           <Text variant="h3" style={{ marginTop: 24 }}>Cylinders</Text>
@@ -150,6 +154,12 @@ export default function TenantOrderScreen() {
             {home.paymentMethods.map((method) => <Chip key={method} label={method === "credit" ? `Account credit · ${rupees(home.credit?.available ?? "0")}` : "Cash on delivery"} active={paymentMethod === method} onPress={() => { clearQuote(); setPaymentMethod(method); }} />)}
           </View>
 
+          <Text variant="h3" style={{ marginTop: 24 }}>Delivery handover</Text>
+          <View style={{ marginTop: 10, gap: 10 }}>
+            <Input label="Empty cylinders to return" value={emptiesExpected} onChangeText={(value) => setEmptiesExpected(value.replace(/\D/g, "").slice(0, 5))} keyboardType="number-pad" hint={`Recorded empty stock: ${home.outlets.find((outlet) => outlet.publicId === outletPublicId)?.stock.empty ?? 0}`} />
+            <Input label="Delivery instructions (optional)" value={deliveryInstructions} onChangeText={setDeliveryInstructions} placeholder="Entrance, landmark, or service hours" multiline numberOfLines={2} style={{ minHeight: 64, textAlignVertical: "top" }} />
+          </View>
+
           {error ? <Text variant="small" tone="danger" style={{ marginTop: 18 }}>{error}</Text> : null}
           {quote ? (
             <Card tone="alt" style={{ marginTop: 22 }}>
@@ -165,7 +175,7 @@ export default function TenantOrderScreen() {
             </Card>
           ) : null}
 
-          <Button title={quote ? "Confirm order" : "Review price"} icon={quote ? "checkmark-circle" : "receipt-outline"} loading={submitting} disabled={!items.length || !outletPublicId || !deliverySlot || !paymentMethod} style={{ marginTop: 22 }} onPress={() => { void (quote ? place() : createQuote()); }} />
+          <Button title={quote ? "Confirm order" : "Review price"} icon={quote ? "checkmark-circle" : "receipt-outline"} loading={submitting} disabled={!items.length || !outletPublicId || !deliverySlot || !paymentMethod || !Number.isInteger(Number(emptiesExpected)) || Number(emptiesExpected) < 0 || Number(emptiesExpected) > (home.outlets.find((outlet) => outlet.publicId === outletPublicId)?.stock.empty ?? 0)} style={{ marginTop: 22 }} onPress={() => { void (quote ? place() : createQuote()); }} />
         </>
       ) : null}
     </Screen>

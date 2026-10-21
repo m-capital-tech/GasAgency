@@ -25,6 +25,7 @@ import { tenantDraftRouter } from "./routes/tenant-drafts";
 import { tenantAccountRouter } from "./routes/tenant-account";
 import { tenantAccountManagementRouter } from "./routes/tenant-account-management";
 import { tenantOrdersRouter } from "./routes/tenant-orders";
+import { tenantSelfServiceRouter } from "./routes/tenant-self-service";
 import { tenantWorkflowRouter } from "./routes/tenant-workflow";
 import { createObjectStorage, type ObjectStorage } from "./storage/object-storage";
 
@@ -98,6 +99,7 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   app.use("/v1", tenantWorkflowRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantOrdersRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantAccountRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", tenantSelfServiceRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", tenantAccountManagementRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", agencyDashboardRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", agencyAccountsRouter({ pool, tokenPepper: config.sessionTokenPepper }));

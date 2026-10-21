@@ -21,6 +21,7 @@ export default function TenantOrderDetailScreen() {
   const sessionKind = useSession((state) => state.sessionKind);
   const tenantPublicId = useSession((state) => state.activeTenantPublicId);
   const [order, setOrder] = useState<TenantOrderDetail | null>(null);
+  const orderStatus = order?.status;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +39,11 @@ export default function TenantOrderDetailScreen() {
   }, [id, tenantPublicId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    if (!orderStatus || ["delivered", "rejected", "cancelled"].includes(orderStatus)) return;
+    const timer = setInterval(() => { void refresh(); }, 30_000);
+    return () => clearInterval(timer);
+  }, [orderStatus, refresh]);
 
   if (sessionKind !== "tenant") return <Redirect href="/" />;
   if (!tenantPublicId) return <Redirect href="/(auth)/select-tenant" />;
@@ -106,6 +112,7 @@ export default function TenantOrderDetailScreen() {
           </Card>
 
           {order.invoice ? <Button title={`View invoice ${order.invoice.invoiceNumber}`} icon="document-text-outline" variant="secondary" onPress={() => router.push({ pathname: "/(tenant)/invoice-detail", params: { id: order.invoice!.publicId } })} /> : null}
+          <Button title="Report an issue with this order" icon="help-circle-outline" variant="secondary" onPress={() => router.push({ pathname: "/(tenant)/support", params: { orderPublicId: order.publicId } })} />
           <Button title={`Call ${order.agency.displayName}`} icon="call-outline" variant="ghost" onPress={() => { void Linking.openURL(`tel:${order.agency.phoneE164}`); }} />
         </View>
       ) : null}

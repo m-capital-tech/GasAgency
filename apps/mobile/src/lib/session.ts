@@ -39,12 +39,14 @@ interface SessionState {
   tenantUser: TenantSessionUser | null;
   tenants: TenantAccess[];
   activeTenantPublicId: string | null;
+  showRegistrationSummary: boolean;
   /** onboarding checkpoints for a new business */
   onboarding: "profile" | "connection" | "done";
   setLanguage: (l: SessionState["language"]) => void;
   login: (token: string, user: User, opts?: { isNew?: boolean; hasProfile?: boolean; hasAgency?: boolean }) => void;
-  loginTenant: (token: string, user: TenantSessionUser, tenants: TenantAccess[]) => Promise<void>;
+  loginTenant: (token: string, user: TenantSessionUser, tenants: TenantAccess[], firstLogin: boolean) => Promise<void>;
   selectTenant: (tenantPublicId: string) => void;
+  completeRegistrationSummary: () => void;
   setOnboarding: (s: SessionState["onboarding"]) => void;
   setMode: (m: Mode) => void;
   updateUser: (u: Partial<User>) => void;
@@ -63,15 +65,16 @@ export const useSession = create<SessionState>()(
       tenantUser: null,
       tenants: [],
       activeTenantPublicId: null,
+      showRegistrationSummary: false,
       onboarding: "done",
       setLanguage: (language) => set({ language }),
       login: (token, user, opts) => {
         setToken(token);
         setPlatformAccessToken(null);
         const onboarding = user.role === "business" ? (opts?.hasProfile ? (opts?.hasAgency ? "done" : "connection") : "profile") : "done";
-        set({ sessionKind: "demo", token, user, tenantUser: null, tenants: [], activeTenantPublicId: null, onboarding, mode: user.role === "delivery" ? "delivery" : "business" });
+        set({ sessionKind: "demo", token, user, tenantUser: null, tenants: [], activeTenantPublicId: null, showRegistrationSummary: false, onboarding, mode: user.role === "delivery" ? "delivery" : "business" });
       },
-      loginTenant: async (token, tenantUser, tenants) => {
+      loginTenant: async (token, tenantUser, tenants, firstLogin) => {
         await saveSecureSessionToken(token);
         setToken(null);
         setPlatformAccessToken(token);
@@ -82,6 +85,7 @@ export const useSession = create<SessionState>()(
           tenantUser,
           tenants,
           activeTenantPublicId: tenants.length === 1 ? tenants[0]!.publicId : null,
+          showRegistrationSummary: firstLogin,
           onboarding: "done",
           mode: "business",
         });
@@ -89,13 +93,14 @@ export const useSession = create<SessionState>()(
       selectTenant: (tenantPublicId) => {
         if (get().tenants.some((tenant) => tenant.publicId === tenantPublicId)) set({ activeTenantPublicId: tenantPublicId });
       },
+      completeRegistrationSummary: () => set({ showRegistrationSummary: false }),
       setOnboarding: (onboarding) => set({ onboarding }),
       setMode: (mode) => set({ mode }),
       updateUser: (u) => set((s) => ({ user: s.user ? { ...s.user, ...u } : s.user })),
       logout: async () => {
         const tenantSession = get().sessionKind === "tenant";
         setToken(null);
-        set({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null, onboarding: "done", mode: "business" });
+        set({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null, showRegistrationSummary: false, onboarding: "done", mode: "business" });
         try {
           if (tenantSession) {
             const revocations: Array<Promise<void>> = [revokeTenantSession()];
@@ -123,6 +128,7 @@ export const useSession = create<SessionState>()(
         tenantUser: s.tenantUser,
         tenants: s.tenants,
         activeTenantPublicId: s.activeTenantPublicId,
+        showRegistrationSummary: s.showRegistrationSummary,
         onboarding: s.onboarding,
       }),
       onRehydrateStorage: () => (state) => {
@@ -146,7 +152,7 @@ export const useSession = create<SessionState>()(
                   activeTenantPublicId,
                 });
               } else {
-                useSession.setState({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null });
+                useSession.setState({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null, showRegistrationSummary: false });
               }
             } else if (state?.sessionKind === "demo" && state.token) {
               setToken(state.token);
@@ -154,7 +160,7 @@ export const useSession = create<SessionState>()(
           } catch {
             setPlatformAccessToken(null);
             await clearSecureSessionToken().catch(() => undefined);
-            useSession.setState({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null });
+            useSession.setState({ sessionKind: null, token: null, user: null, tenantUser: null, tenants: [], activeTenantPublicId: null, showRegistrationSummary: false });
           } finally {
             useSession.setState({ hydrated: true });
           }

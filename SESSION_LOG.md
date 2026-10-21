@@ -1,5 +1,12 @@
 # SESSION_LOG.md
 
+## 2026-10-22 — Production tenant app completion
+
+- Added tenant-scoped profile, daily/weekly/monthly analytics, outlet/stock/requirement maintenance, support cases, and controlled-field change-request APIs with active-membership, active-agency, and open-account guards.
+- Replaced the production tenant shell with Home, Orders, Insights, Billing, and Account tabs; added first-login registration confirmation, owner/manager edit controls, read-only staff boundaries, tenant analytics, support and LPG emergency guidance, document metadata, and language/account controls.
+- Extended production ordering with empty-cylinder handover, persisted delivery instructions, 30-second active-order refresh, and order-linked support. Fixed support-case identifier collisions by using random UUID entropy rather than timestamp-leading UUID bytes.
+- Passed the live local journey from OTP through registration summary, server quotation, order placement, tracking, and order-linked support with no application errors. On a clean disposable database, all 16 migrations, 16 SQL verification suites, 17 API tests, 12 worker tests, and 3 database concurrency/TLS-policy tests passed; all 11 TypeScript targets, repository engine/release tests, and production builds also passed.
+
 ## 2026-10-21 — Super Admin execution controls
 
 - Added a PostgreSQL-backed, versioned platform configuration catalogue for commercial workflow gates, approval/stock thresholds, and infrastructure-dependent feature rollout.

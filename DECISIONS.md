@@ -2,6 +2,13 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Production tenant app completion (22 Oct 2026)
+- **First login confirms the admin-approved record.** The first successful OTP session routes a single-tenant user to a read-only registration summary showing legal identity, GSTIN/FSSAI, serving agency, commercial terms, outlets, and stated LPG requirements. It is an acknowledgement step, not a second onboarding wizard.
+- **Tenant edits stop at the operational boundary.** Owners and managers can update outlet contact, delivery instructions, cylinder stock, and requirements. Tenant staff remain read-only. Legal identity, GSTIN/FSSAI, registered phone, outlet address, and serving agency require an auditable platform change request.
+- **Tenant analytics never expose platform or peer data.** Daily, weekly, and monthly views contain only the active tenant's orders, fulfillment, invoices, collections, account position, cylinder mix, and outlets. Stock runway is explicitly an operational estimate based on tenant-maintained stock and requirement quantities.
+- **Support is a governed workflow.** A tenant can create a categorized case, optionally linked to its own order, or request a controlled-field change. The API validates ownership, applies SLA deadlines, and appends both case and immutable platform audit events.
+- **Ordering captures the physical handover.** The quote remains server-authoritative; the order additionally records expected empty-cylinder returns and outlet delivery instructions. Active order detail refreshes automatically and links directly to an order-scoped support case.
+
 ## Private business documents (22 Oct 2026)
 - **Object bytes stay outside PostgreSQL and behind the API.** PostgreSQL stores immutable content metadata, versions, ownership, retention class, archive/legal-hold state, and an append-only access ledger. Download and preview stream through permission checks; browsers never receive unrestricted object-storage credentials or public bucket URLs.
 - **The adapter is provider-neutral and fail-closed.** Local private storage exists only for development/test. DigitalOcean Spaces uses the S3-compatible adapter when credentials are connected. Production defaults to `disabled`, and local storage is configuration-invalid outside local/test.

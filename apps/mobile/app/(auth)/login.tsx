@@ -87,8 +87,8 @@ export default function LoginScreen() {
       if (response.status !== "authenticated") {
         throw new PlatformApiError("privileged_login_not_supported", "This account requires the admin sign-in flow.", 403);
       }
-      await loginTenant(response.accessToken, response.user, response.tenants);
-      router.replace(response.tenants.length > 1 ? "/(auth)/select-tenant" : "/(tenant)/home");
+      await loginTenant(response.accessToken, response.user, response.tenants, response.firstLogin);
+      router.replace(response.tenants.length > 1 ? "/(auth)/select-tenant" : response.firstLogin ? "/(tenant)/registration-summary" : "/(tenant)/home");
     } catch (caught) {
       setError(caught instanceof PlatformApiError || caught instanceof ApiError ? caught.message : "Could not verify the OTP. Try again.");
     } finally {

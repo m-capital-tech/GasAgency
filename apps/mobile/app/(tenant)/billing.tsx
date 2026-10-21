@@ -61,7 +61,7 @@ export default function TenantBillingScreen() {
   if (!tenantPublicId) return <Redirect href="/(auth)/select-tenant" />;
 
   return (
-    <Screen title="Billing" subtitle={billing ? `GSTIN ${billing.tenant.gstin}` : "Invoices and account position"} back refreshing={loading} onRefresh={() => { void refresh(); }}>
+    <Screen title="Billing" subtitle={billing ? `GSTIN ${billing.tenant.gstin}` : "Invoices and account position"} tabBar refreshing={loading} onRefresh={() => { void refresh(); }}>
       {loading && !billing ? <SkeletonList count={4} /> : null}
       {error && !billing ? <ErrorState message={error} onRetry={() => { void refresh(); }} /> : null}
       {billing ? (

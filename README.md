@@ -12,7 +12,7 @@ The active product is a **B2B commercial LPG platform** for restaurants, cloud k
 | **Demo Admin / Agency** | Seeded investor walkthrough only | `http://localhost:3000/admin` / `http://localhost:3000/agency` |
 | **Mock API** | Demo-only in-memory store + WebSocket events | `http://localhost:4000` |
 
-The production path consists of `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, tenant authentication/ordering/tracking/billing under `/(tenant)`, agency fulfilment, operational analytics and account operations under `/operations`, and Platform Control onboarding, lifecycle, credit, RBAC, and analytics at `/control`. These do not read from or fall back to the demo engine.
+The production path consists of `apps/api`, `apps/worker`, forward-only PostgreSQL migrations in `packages/database`, tenant authentication, first-login registration review, ordering, tracking, billing, analytics, account maintenance, documents, and support under `/(tenant)`, agency fulfilment, operational analytics and account operations under `/operations`, and Platform Control onboarding, lifecycle, credit, RBAC, and analytics at `/control`. These do not read from or fall back to the demo engine.
 
 The explicit demo mode runs locally with **no API keys, no real payments, and no SMS**. It is isolated from the PostgreSQL-backed production routes and is never linked from the production landing page.
 
