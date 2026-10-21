@@ -13,6 +13,7 @@ function allowed(path: string, method: string) {
   if (path === "auth/mfa/step-up" && method === "POST") return true;
   if (path === "auth/session" && method === "GET") return true;
   if (path === "auth/logout" && method === "POST") return true;
+  if (path === "admin/configuration" && ["GET", "POST"].includes(method)) return true;
   if (adminReadPath.test(path) && method === "GET") return true;
   if (adminMutationPath.test(path) && method === "POST") return true;
   return agencyPath.test(path) && ["GET", "POST"].includes(method);

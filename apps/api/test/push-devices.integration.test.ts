@@ -112,6 +112,11 @@ integrationTest("tenant push-device registration is encrypted, scoped, idempoten
     const unauthenticated = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     assert.equal(unauthenticated.status, 401);
 
+    const rolloutBlocked = await fetch(endpoint, { method: "POST", headers: headers(tenantToken), body: JSON.stringify(body) });
+    assert.equal(rolloutBlocked.status, 503);
+    assert.equal((await rolloutBlocked.json() as { error: { code: string } }).error.code, "workflow_paused");
+    await pool.query("update app.platform_settings set value = 'true'::jsonb where setting_key = 'features.push_registration'");
+
     const nonTenant = await fetch(endpoint, { method: "POST", headers: headers(platformToken), body: JSON.stringify(body) });
     assert.equal(nonTenant.status, 403);
     assert.equal((await nonTenant.json() as { error: { code: string } }).error.code, "tenant_access_required");
@@ -195,6 +200,7 @@ integrationTest("tenant push-device registration is encrypted, scoped, idempoten
     assert.equal(revokedRow.status, "revoked");
     assert.ok(revokedRow.revoked_at);
   } finally {
+    await pool.query("update app.platform_settings set value = 'false'::jsonb where setting_key = 'features.push_registration'");
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await pool.end();
   }

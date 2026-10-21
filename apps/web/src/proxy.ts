@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
   // production API, contain fictional data, and expose no write operations.
   // Remove these two redirects when the audit closes to restore the authenticated
   // dashboards as the default entry points; OTP/MFA remains implemented below.
-  if (request.nextUrl.pathname === "/control" || request.nextUrl.pathname === "/operations") {
+  if (process.env.INTERNAL_AUDIT_MODE !== "false" && (request.nextUrl.pathname === "/control" || request.nextUrl.pathname === "/operations")) {
     const destination = request.nextUrl.clone();
     destination.search = "";
     destination.pathname = request.nextUrl.pathname === "/control" ? "/review/control" : "/review/operations";

@@ -1,6 +1,7 @@
 export interface OperationsAgency { publicId: string; displayName: string; roleTypes: string[]; }
 export interface OperationsSession {
   user: { publicId: string; fullName: string; phoneE164: string };
+  session: { publicId: string; authMethod: string; mfaVerifiedAt: string | null };
   agencies: OperationsAgency[];
   platformAccess?: null | { roleTypes: string[]; permissions: string[]; scopes: Array<{ roleType: string; roleName: string; kind: string; value: string | null; agencyPublicIds: string[] }> };
 }

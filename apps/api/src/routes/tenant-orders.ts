@@ -4,6 +4,7 @@ import { Router } from "express";
 import { withTransaction } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { assertPlatformWorkflowEnabled, platformSettingValue } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 
@@ -399,7 +400,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
       ).rows[0];
       if (!base) throw new HttpError(404, "tenant_not_found", "The tenant or its serving account is unavailable.");
 
-      const [outlets, catalog, slots] = await Promise.all([
+      const [outlets, catalog, slots, orderingEnabled, codEnabled, creditEnabled] = await Promise.all([
         options.pool.query<{ public_id: string; label: string; address_line_1: string; city: string; pincode: string; in_use_count: number; spare_full_count: number; empty_count: number }>(
           `select public_id::text, label, address_line_1, city, pincode, in_use_count, spare_full_count, empty_count
              from app.outlets where tenant_id = $1 and status = 'active' order by id`,
@@ -426,14 +427,17 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
              from app.agency_delivery_slots where agency_id = $1 and active order by id`,
           [base.agency_id],
         ),
+        platformSettingValue(options.pool, "workflows.ordering"),
+        platformSettingValue(options.pool, "workflows.cod_orders"),
+        platformSettingValue(options.pool, "workflows.credit_orders"),
       ]);
 
       const firstOutlet = outlets.rows[0];
       const context = firstOutlet ? await tenantContext(options.pool, principal.userId, parsedTenant.data, firstOutlet.public_id) : null;
       const credit = context ? await creditSnapshot(options.pool, context) : null;
       const paymentMethods: PaymentMethod[] = [];
-      if (base.cod_enabled) paymentMethods.push("cod");
-      if (credit?.eligible) paymentMethods.push("credit");
+      if (orderingEnabled === true && codEnabled === true && base.cod_enabled) paymentMethods.push("cod");
+      if (orderingEnabled === true && creditEnabled === true && credit?.eligible) paymentMethods.push("credit");
       response.status(200).json({
         tenant: { publicId: base.tenant_public_id, displayName: base.display_name, gstin: base.gstin },
         agency: { publicId: base.agency_public_id, displayName: base.agency_name },
@@ -464,6 +468,8 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
       if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The quotation request is invalid.", parsed.error.flatten());
       const principal = authenticatedPrincipal(response);
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.ordering", "Order placement is temporarily paused by a Super Admin.");
+      await assertPlatformWorkflowEnabled(options.pool, parsed.data.paymentMethod === "cod" ? "workflows.cod_orders" : "workflows.credit_orders", `${parsed.data.paymentMethod === "cod" ? "Cash-on-delivery" : "Credit"} orders are temporarily paused by a Super Admin.`);
       const result = await withTransaction(options.pool, async (client) => {
         const context = await tenantContext(client, principal.userId, parsedTenant.data, parsed.data.outletPublicId);
         const calculated = await calculateQuote(client, context, parsed.data);
@@ -553,6 +559,8 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
           )
         ).rows[0];
         if (!stored) throw new HttpError(404, "quote_not_found", "The quotation was not found.");
+        await assertPlatformWorkflowEnabled(client, "workflows.ordering", "Order placement is temporarily paused by a Super Admin.");
+        await assertPlatformWorkflowEnabled(client, stored.payment_method === "cod" ? "workflows.cod_orders" : "workflows.credit_orders", `${stored.payment_method === "cod" ? "Cash-on-delivery" : "Credit"} orders are temporarily paused by a Super Admin.`);
         if (stored.consumed_at) throw new HttpError(409, "quote_consumed", "This quotation has already been used.");
         if (stored.expires_at.getTime() <= Date.now()) throw new HttpError(409, "quote_expired", "This quotation has expired. Please request a new price.");
 

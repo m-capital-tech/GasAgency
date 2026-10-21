@@ -4,6 +4,7 @@ import { Router, type Request } from "express";
 import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized } from "../security/rbac";
@@ -510,6 +511,7 @@ export function agencyAccountsRouter(options: { pool: pg.Pool; tokenPepper: stri
       if (!agencyId.success || !accountId.success || !parsed.success) throw new HttpError(400, "invalid_request", "The payment collection request is invalid.", parsed.success ? undefined : parsed.error.flatten());
       const key = idempotencyKey(request);
       const principal = authenticatedPrincipal(response);
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.collection_recording", "Payment collection recording is temporarily paused by a Super Admin.");
       const scope = `agency.payment:${principal.userPublicId}:${agencyId.data}:${accountId.data}`;
       const hash = requestHash(parsed.data);
       const result = await withTransaction(options.pool, async (client): Promise<IdempotencyReplay> => {

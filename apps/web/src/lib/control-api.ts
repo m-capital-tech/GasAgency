@@ -63,6 +63,17 @@ export interface TenantDetail extends TenantSummary {
 export interface AdminRole { publicId: string; name: string; roleType: string; status: string; managedByName: string | null; permissionKeys: string[]; }
 export interface AdminPermission { key: string; resource: string; action: string; description: string; reserved: boolean; }
 export interface TeamMember { assignmentPublicId: string; publicId: string; fullName: string; phoneE164: string; email: string | null; status: string; mfaRequired: boolean; rolePublicId: string; roleName: string; roleType: string; scope: { kind: string; value: string | null; agencies: Array<{ publicId: string; displayName: string }> }; assignmentStatus: string; assignedAt: string; }
+export interface PlatformSetting {
+  key: string;
+  category: "workflow" | "operations" | "feature";
+  displayName: string;
+  description: string;
+  value: boolean | number;
+  valueType: "boolean" | "number";
+  version: number;
+  updatedAt: string;
+  updatedByName: string | null;
+}
 
 async function request<T>(path: string, options: { method?: "GET" | "POST"; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const response = await fetch(`/operations/api/${path}`, {
@@ -91,6 +102,8 @@ export const controlApi = {
   permissions: () => request<{ permissions: AdminPermission[] }>("admin/permissions"),
   roles: () => request<{ roles: AdminRole[] }>("admin/roles"),
   teamMembers: () => request<{ teamMembers: TeamMember[] }>("admin/team-members"),
+  configuration: () => request<{ settings: PlatformSetting[] }>("admin/configuration"),
+  updateConfiguration: (body: { changes: Array<{ key: string; value: boolean | number; expectedVersion: number }>; reason: string }) => request<{ settings: Array<{ key: string; value: boolean | number; version: number; updatedAt: string }> }>("admin/configuration", { method: "POST", body }),
   createRole: (body: Record<string, unknown>) => request<{ role: AdminRole }>("admin/roles", { method: "POST", body }),
   updateRole: (publicId: string, body: Record<string, unknown>) => request<{ role: AdminRole & { revokedSessions: number } }>(`admin/roles/${publicId}`, { method: "POST", body }),
   createTeamMember: (body: Record<string, unknown>) => request<{ user: { publicId: string }; invitation: { status: string } }>("admin/team-members", { method: "POST", body }),

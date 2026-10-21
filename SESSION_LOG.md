@@ -1,5 +1,12 @@
 # SESSION_LOG.md
 
+## 2026-10-21 — Super Admin execution controls
+
+- Added a PostgreSQL-backed, versioned platform configuration catalogue for commercial workflow gates, approval/stock thresholds, and infrastructure-dependent feature rollout.
+- Added Super Admin-only configuration APIs with fresh-MFA enforcement, optimistic concurrency, mandatory reasons, and immutable before/after audit events. Tenant onboarding, quote/order creation, agency fulfilment, payment collection, and push registration now enforce the governed state server-side.
+- Expanded the Super Admin dashboard with workflow controls, operational thresholds, feature gates, and current privileged-session status. Added an explicit `INTERNAL_AUDIT_MODE` switch so temporary fictional review redirects can be removed without changing protected routes.
+- Applied all 13 migrations to a clean disposable PostgreSQL 17 database; all 13 SQL verification scripts and all 14 API tests passed. API/database/web type checks, targeted lint, production builds, and rendered Super Admin configuration QA passed.
+
 ## 2026-10-21 — Production Operations dashboard expansion
 
 - Added the secured `/operations/dashboard` command centre with daily, weekly, and monthly comparisons for booked orders/value, cylinders, deliveries, and agency-recorded collections.

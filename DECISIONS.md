@@ -2,6 +2,13 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Super Admin execution controls (21 Oct 2026)
+- **Configuration is a closed, versioned catalogue.** Super Admin can govern six transaction workflows, two operational thresholds, and two infrastructure-dependent feature gates. Unknown keys and invalid types/ranges are rejected; optimistic versions prevent one administrator from silently overwriting another.
+- **Workflow gates are enforced by APIs.** Tenant onboarding, ordering, COD, credit, agency fulfilment, collection recording, and push registration consult PostgreSQL before executing. The dashboard is an operating surface, not the security boundary.
+- **Every configuration change requires fresh MFA, a reason, and before/after audit values.** Ordinary Platform Admin roles cannot obtain reserved `configuration.manage` authority through delegation ceilings.
+- **Infrastructure-dependent features default off.** Push registration and document uploads remain disabled until their production services are connected and acceptance-tested. Disabling push registration never prevents a user from revoking an existing device.
+- **Internal audit routing is explicit configuration.** `INTERNAL_AUDIT_MODE=true` preserves fictional read-only client review entry points; setting it to `false` restores authenticated `/control` and `/operations` dashboards without deleting the review pages.
+
 ## Production Operations command centre (21 Oct 2026)
 - **Agency reporting is transactional and scope-bound.** `/operations/dashboard` reads orders, fulfilment transitions, inventory, commercial accounts, invoices, collections, and named delivery capacity directly through the protected API. Every request requires `agency.view` inside the selected agency scope; no cross-agency aggregate or mock fallback exists.
 - **Operational periods use Asia/Kolkata.** Daily, weekly, and monthly comparisons share the Platform Control reporting timezone. Booked value is labelled separately from delivered value, collections, settlement, and revenue so the dashboard does not imply unsupported accounting equivalence.

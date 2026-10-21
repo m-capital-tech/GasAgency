@@ -3,6 +3,7 @@ import { Router } from "express";
 import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized, hasRoleType } from "../security/rbac";
@@ -106,6 +107,7 @@ export function tenantWorkflowRouter(options: { pool: pg.Pool; tokenPepper: stri
       const publicId = tenantId.safeParse(request.params.tenantPublicId);
       if (!publicId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
       const principal = authenticatedPrincipal(response);
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.tenant_onboarding", "Tenant onboarding submissions are temporarily paused by a Super Admin.");
       const result = await withTransaction(options.pool, async (client) => {
         const context = await lockTenantContext(client, publicId.data);
         assertAuthorized(principal, "tenant.submit", { city: context.city, agencyPublicId: context.agency_public_id, tenantPublicId: context.tenant_public_id });

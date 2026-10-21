@@ -35,6 +35,8 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0012_operations_dashboard.sql` adds the agency-and-time reporting index used by the production Operations dashboard. The dashboard reads transactional facts directly and does not introduce an independently drifting aggregate store.
 
+`0013_platform_configuration.sql` adds the closed catalogue of global workflow, operations, and feature controls managed by Super Admins. Values are typed, versioned for optimistic concurrency, MFA-protected at the API boundary, and paired with immutable audit events for every change.
+
 Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules

@@ -53,6 +53,7 @@ export function authSessionRouter(options: { pool: pg.Pool; tokenPepper: string 
         session: {
           publicId: principal.sessionPublicId,
           authMethod: principal.authMethod,
+          mfaVerifiedAt: principal.mfaVerifiedAt?.toISOString() ?? null,
         },
         tenants,
         agencies,

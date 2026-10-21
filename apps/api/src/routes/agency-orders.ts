@@ -4,6 +4,7 @@ import { Router } from "express";
 import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized } from "../security/rbac";
@@ -410,6 +411,7 @@ export function agencyOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
       const idempotencyKey = request.header("idempotency-key")?.trim();
       if (!idempotencyKey || !safeIdempotencyKey.test(idempotencyKey)) throw new HttpError(400, "invalid_idempotency_key", "Idempotency-Key must contain 8–128 safe characters.");
       const principal = authenticatedPrincipal(response);
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.agency_fulfillment", "Agency fulfilment actions are temporarily paused by a Super Admin.");
       const hash = createHash("sha256").update(JSON.stringify(parsed.data), "utf8").digest();
       const scope = `agency.order.transition:${principal.userPublicId}:${agencyId.data}:${orderId.data}`;
       const result = await withTransaction(options.pool, async (client) => {

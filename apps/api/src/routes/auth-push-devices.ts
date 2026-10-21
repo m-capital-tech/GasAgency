@@ -3,6 +3,7 @@ import type pg from "pg";
 import { Router } from "express";
 import { encryptSecret, uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 
@@ -56,6 +57,9 @@ export function authPushDevicesRouter(options: { pool: pg.Pool; tokenPepper: str
 
       const principal = authenticatedPrincipal(response);
       const registration = parsed.data;
+      if (registration.action === "register") {
+        await assertPlatformWorkflowEnabled(options.pool, "features.push_registration", "Push notification registration is not enabled for this release.");
+      }
       const tokenDigest = hashPushToken(registration.token);
 
       if (registration.action === "revoke") {

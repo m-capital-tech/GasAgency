@@ -16,6 +16,8 @@ The production path consists of `apps/api`, `apps/worker`, forward-only PostgreS
 
 The explicit demo mode runs locally with **no API keys, no real payments, and no SMS**. It is isolated from the PostgreSQL-backed production routes and is never linked from the production landing page.
 
+For the temporary client audit, `INTERNAL_AUDIT_MODE=true` redirects only the exact `/control` and `/operations` entry points to fictional read-only review pages. Secure login routes and protected APIs remain active. Set it to `false` when the audit closes so the authenticated production dashboards become the default entry points.
+
 ---
 
 ## 1. Run the demo

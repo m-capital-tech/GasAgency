@@ -5,6 +5,7 @@ import { withTransaction } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import { normalizeGstin, isValidGstin } from "../domain/gstin";
+import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized } from "../security/rbac";
@@ -101,6 +102,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
       const body = parsed.data;
       const principal = authenticatedPrincipal(response);
       assertAuthorized(principal, "tenant.create", { city: body.outlet.city, agencyPublicId: body.agencyPublicId });
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.tenant_onboarding", "Tenant onboarding is temporarily paused by a Super Admin.");
       const hash = requestHash(body);
       const scope = `tenant.create:${principal.userPublicId}`;
 
