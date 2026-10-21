@@ -12,6 +12,7 @@ import { authMfaRouter } from "./routes/auth-mfa";
 import { authPushDevicesRouter } from "./routes/auth-push-devices";
 import { authSessionRouter } from "./routes/auth-session";
 import { agencyAccountsRouter } from "./routes/agency-accounts";
+import { agencyAdministrationRouter } from "./routes/agency-administration";
 import { agencyDashboardRouter } from "./routes/agency-dashboard";
 import { agencyOrdersRouter } from "./routes/agency-orders";
 import { adminReadRouter } from "./routes/admin-read";
@@ -83,6 +84,7 @@ export function createApp(options: { config: ApiConfig; pool: pg.Pool; logger: L
   app.use("/v1", authMfaRouter({ pool, config }));
   app.use("/v1", authPushDevicesRouter({ pool, tokenPepper: config.sessionTokenPepper, encryptionKey: config.pushTokenEncryptionKey }));
   app.use("/v1", authSessionRouter({ pool, tokenPepper: config.sessionTokenPepper }));
+  app.use("/v1", agencyAdministrationRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminReadRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", adminDashboardRouter({ pool, tokenPepper: config.sessionTokenPepper }));
   app.use("/v1", dashboardDataRouter({ pool, tokenPepper: config.sessionTokenPepper }));

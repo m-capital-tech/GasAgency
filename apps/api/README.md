@@ -23,6 +23,9 @@ This service is separate from the investor-demo API. Its current protected produ
 - `POST /v1/admin/revenue-entries` for fresh-MFA-protected Super Admin posting to the append-only platform revenue ledger;
 - `GET|POST /v1/admin/support-cases` and `POST /v1/admin/support-cases/:supportCasePublicId/transitions` for scoped support intake, queue visibility, acknowledgement, work, resolution, reopening, closure, and comments;
 - `GET /v1/admin/agencies` for approved agencies available within the actor's assignment scope;
+- `GET /v1/admin/agency-registry` and `GET /v1/admin/agency-registry/:agencyPublicId` for the scope-bounded agency verification queue, owner profile, service area, and review history;
+- `POST /v1/admin/agencies` for idempotent agency and owner registration with GSTIN, address, distributor, and service-area data;
+- `POST /v1/admin/agencies/:agencyPublicId/reviews` for fresh-MFA maker-checker approval or rejection, and `POST /v1/admin/agencies/:agencyPublicId/lifecycle` for suspension or reinstatement with session revocation;
 - `GET /v1/admin/tenants` and `GET /v1/admin/tenants/:tenantPublicId` for a keyset-paginated queue and complete review record;
 - `GET /v1/admin/permissions`, `GET /v1/admin/roles`, and `GET /v1/admin/team-members` for permission-ceiling-aware team administration;
 - `GET /v1/tenants/:tenantPublicId/home` for the tenant's outlets, stock, serving agency, account prices, slots, and payment eligibility;
@@ -32,6 +35,8 @@ This service is separate from the investor-demo API. Its current protected produ
 - `GET /v1/tenants/:tenantPublicId/billing` and `GET /v1/tenants/:tenantPublicId/invoices/:invoicePublicId` for tenant-scoped receivables, GST invoices, and allocated collections;
 - `GET /v1/agencies/:agencyPublicId/orders` and `GET /v1/agencies/:agencyPublicId/orders/:orderPublicId` for the scoped fulfillment queue and order detail;
 - `GET /v1/agencies/:agencyPublicId/delivery-staff` and `GET /v1/agencies/:agencyPublicId/inventory` for active delivery capacity and current cylinder custody;
+- `POST /v1/agencies/:agencyPublicId/delivery-staff` and `POST /v1/agencies/:agencyPublicId/delivery-staff/:staffPublicId/lifecycle` for SMS-first staff invitation and access suspension or reinstatement;
+- `POST /v1/agencies/:agencyPublicId/inventory/adjustments` for balance-checked, reasoned inventory corrections recorded in the append-only movement ledger;
 - `POST /v1/agencies/:agencyPublicId/orders/:orderPublicId/transitions` for idempotent accept, reject, cancel, assign, dispatch, fail, reschedule, and deliver actions;
 - `GET /v1/agencies/:agencyPublicId/accounts` and `GET /v1/agencies/:agencyPublicId/payments` for scoped commercial accounts, receivables, prices, and collection history;
 - `POST /v1/agencies/:agencyPublicId/credit-policy` for an agency-wide credit availability switch;
@@ -45,6 +50,8 @@ Tenant ordering is scoped through active membership, tenant, outlet, agency assi
 Agency fulfillment is scoped through active RBAC assignments and separates `order.view`, `order.edit`, and reserved `order.execute` authority. Acceptance reserves inventory, dispatch removes physical stock, failed delivery returns it, and completion records typed empties, outlet stock, account custody, payment state, and an invoice. Status, audit, outbox, inventory, and invoice effects commit atomically. The production web console is available at `/operations`; its Next.js gateway keeps the opaque API token in an HttpOnly cookie and requires the server-side `PLATFORM_API_URL` setting.
 
 Agency account operations preserve the confirmed commercial boundary: agencies can pause new credit orders globally, set account-specific negotiated prices, and record invoice settlements. They cannot create credit approval, alter an account limit, or change net terms. Collection records and their invoice allocations are append-only at the database layer; overpayments are rejected until an advance-payment model is explicitly introduced.
+
+Agency administration preserves a separate governance boundary. Platform users register the legal entity, owner, GSTIN, distributor, godown address, and service area; a different authorized reviewer must approve it unless Super Admin records an explicit override. Approval creates scoped owner access, enforces privileged MFA, initializes cylinder inventory, and queues the SMS-first invitation atomically. Agency owners can manage delivery staff and physical stock only inside their approved agency. Suspension revokes scoped live sessions without erasing the review or inventory history.
 
 Platform Control is available at `/control`. Its read models apply the same RBAC assignments inside every database query, use keyset pagination for tenant lists, and calculate daily/weekly/monthly periods in `Asia/Kolkata`. Super Admin receives global results only through global scope; Platform Admin/team results remain bounded to their region, city, agency, selected agencies, or tenant. The command centre separates source-backed actuals from estimates: revenue comes only from its immutable posting ledger, support metrics come from the scoped case workflow, and the forecast card is explicitly labelled as an elapsed-period run-rate projection with an evidence threshold and confidence band. Platform revenue is restricted to Super Admin. The UI cannot bypass maker–checker, lifecycle, credit, role, or team-access permissions because every decision is re-authorized by the API. Suspending a tenant revokes its live sessions; reinstatement restores eligibility without silently altering its separately managed credit state.
 
@@ -104,7 +111,7 @@ Phone OTP activates tenant users. Privileged platform users with `mfa_required=t
 
 ## Tests
 
-Unit tests run without external services. The database-backed integration suites exercise delegated onboarding, lifecycle and credit controls, tenant ordering/tracking/billing, agency fulfillment, negotiated pricing, credit availability, and append-only payment collection when a disposable migrated PostgreSQL database is supplied:
+Unit tests run without external services. The database-backed integration suites exercise delegated onboarding, lifecycle and credit controls, agency registration and maker-checker approval, delivery-staff access, inventory custody, tenant ordering/tracking/billing, agency fulfillment, negotiated pricing, credit availability, and append-only payment collection when a disposable migrated PostgreSQL database is supplied:
 
 ```bash
 pnpm --filter @platform/api test

@@ -41,6 +41,20 @@ export interface AdminDashboard {
 }
 
 export interface AdminAgency { publicId: string; displayName: string; legalName: string; gstin: string; phoneE164: string; city: string; stateCode: string; creditEnabled: boolean; status: string; }
+export interface AgencyRegistryItem {
+  publicId: string; displayName: string; legalName: string; gstin: string; omc: string | null; distributorCode: string | null;
+  phoneE164: string; city: string; stateCode: string; status: string; submittedAt: string | null; approvedAt: string | null;
+  ownerName: string | null; tenantCount: number; staffCount: number; servicePincodes: string[];
+}
+export interface AgencyRegistryDetail {
+  publicId: string; legalName: string; displayName: string; gstin: string; distributorCode: string | null; omc: string | null;
+  phoneE164: string; city: string; stateCode: string; status: string; creditEnabled: boolean;
+  address: { addressLine1: string | null; addressLine2: string | null; pincode: string | null; latitude: number | null; longitude: number | null };
+  serviceArea: { pincodes: string[]; radiusKm: number | null };
+  owner: null | { publicId: string; fullName: string; phoneE164: string; email: string | null };
+  submittedAt: string | null; approvedAt: string | null; suspendedAt: string | null;
+  reviews: Array<{ publicId: string; decision: string; fromStatus: string; toStatus: string; reason: string; overrideUsed: boolean; reviewerName: string; createdAt: string }>;
+}
 export interface TenantSummary {
   publicId: string; displayName: string; legalName: string; businessType: string; gstin: string; status: string; createdAt: string; submittedAt: string | null; city: string;
   owner: { fullName: string; phoneE164: string }; agency: { publicId: string; displayName: string }; creatorName: string;
@@ -100,6 +114,11 @@ export const controlApi = {
   overview: () => request<AdminOverview>("admin/overview"),
   dashboard: (period: DashboardPeriod) => request<AdminDashboard>(`admin/dashboard?period=${period}`),
   agencies: () => request<{ agencies: AdminAgency[] }>("admin/agencies"),
+  agencyRegistry: (status = "all") => request<{ agencies: AgencyRegistryItem[] }>(`admin/agency-registry?status=${encodeURIComponent(status)}`),
+  agencyRecord: (publicId: string) => request<{ agency: AgencyRegistryDetail }>(`admin/agency-registry/${publicId}`),
+  createAgency: (body: Record<string, unknown>, idempotencyKey = `web:agency:${crypto.randomUUID()}`) => request<{ agency: { publicId: string; status: string; displayName: string } }>("admin/agencies", { method: "POST", body, idempotencyKey }),
+  reviewAgency: (publicId: string, body: { decision: "approved" | "rejected"; reason: string; override?: boolean }) => request<{ agency: { publicId: string; status: string } }>(`admin/agencies/${publicId}/reviews`, { method: "POST", body }),
+  changeAgencyLifecycle: (publicId: string, body: { action: "suspend" | "reinstate"; reason: string }) => request<{ agency: { publicId: string; status: string; revokedSessions: number } }>(`admin/agencies/${publicId}/lifecycle`, { method: "POST", body }),
   tenants: (status?: string, cursor?: string) => request<{ tenants: TenantSummary[]; nextCursor: string | null }>(`admin/tenants?limit=50${status ? `&status=${encodeURIComponent(status)}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
   tenant: (publicId: string) => request<{ tenant: TenantDetail }>(`admin/tenants/${publicId}`),
   submitTenant: (publicId: string) => request<{ tenant: { status: string }; alreadySubmitted: boolean }>(`admin/tenants/${publicId}/submit`, { method: "POST" }),

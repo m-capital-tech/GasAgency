@@ -37,7 +37,7 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0013_platform_configuration.sql` adds the closed catalogue of global workflow, operations, and feature controls managed by Super Admins. Values are typed, versioned for optimistic concurrency, MFA-protected at the API boundary, and paired with immutable audit events for every change.
 
-Payment-provider records, agency replenishment/adjustment workflows, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
+Payment-provider records, supplier replenishment procurement, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 
 ## Identifier and data rules
 
@@ -82,3 +82,5 @@ DATABASE_URL='postgresql://...' DATABASE_SSL_MODE=disable \
 The migration is intentionally forward-only and records itself in `app.schema_migrations`. Do not run the same file twice and do not edit an applied migration; add a new numbered migration instead.
 
 Migration `0014_dashboard_data_coverage.sql` adds the append-only platform-revenue ledger and scoped support-case workflow used by executive reporting.
+
+Migration `0015_agency_administration.sql` adds the production agency profile, service-area pincodes, lifecycle review ledger, and maker–checker approval guard.
