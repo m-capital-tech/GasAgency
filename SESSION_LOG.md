@@ -1,5 +1,12 @@
 # SESSION_LOG.md
 
+## 2026-10-22 — DigitalOcean production release
+
+- Manually deployed GitHub `main` commit `1ab1e99` to the production DigitalOcean app as deployment `fdc8d984-9231-4b12-a0c8-6673aa9abcd0` after confirming the live release predated the completed tenant-app work.
+- DigitalOcean built the API, dashboard, and database-migration job successfully. The release job completed before the API and web rollout; API readiness and liveness checks returned HTTP 200, and the deployment reached `Success`, `Live Deployment`, and `Healthy` at 09:44:13 IST.
+- Public `/v1`, Platform Control login, Operations login/accounts/administration, and both internal-review dashboards returned HTTP 200. Unauthenticated admin overview/session/team/roles/tenant-drafts, agency-account, and tenant-billing APIs returned HTTP 401.
+- The stable provider hostname still contains the legacy `staging` label, but the DigitalOcean app, runtime variables, and deployment are the production environment. Deploy-on-push remains disabled.
+
 ## 2026-10-22 — Production tenant app completion
 
 - Added tenant-scoped profile, daily/weekly/monthly analytics, outlet/stock/requirement maintenance, support cases, and controlled-field change-request APIs with active-membership, active-agency, and open-account guards.

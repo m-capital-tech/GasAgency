@@ -150,13 +150,22 @@ The environment was provisioned on 9 October 2026 and promoted in place to produ
 - app: `commercial-lpg-production` (`ba80d08f-c743-4c27-824d-1ec3fac0b8f2`);
 - public URL: `https://commercial-lpg-staging-67i9v.ondigitalocean.app`;
 - PostgreSQL: `commercial-lpg-staging-db` (`867eac0f-2d4e-480e-94ac-e587d51aedec`), database `platform_staging`; these legacy internal identifiers are retained to avoid a risky data migration and do not define the runtime environment;
-- active deployment: `e343f04d-185e-49a7-a38a-63a26800c42d`, a successful manual release sourced from commit `b7999cc`;
+- active deployment: `fdc8d984-9231-4b12-a0c8-6673aa9abcd0`, a successful manual release of GitHub `main` at commit `1ab1e99`;
 - database identities: `platform_runtime` for the API and `platform_migrator` for release migrations; and
 - database firewall: the App Platform app is the only trusted source.
 
 The DigitalOcean project environment, API `APP_ENV`, and dashboard `APP_ENV` are all set to `production`. Renaming the app does not rename the stable provider-generated hostname.
 
-The active release reached `Success`, `Live Deployment`, and `Healthy` after the pre-deploy database job and both service health checks passed. The public `/v1`, `/control/login`, and `/operations/login` routes passed HTTPS smoke tests; protected dashboard, session, team, role, and tenant-draft APIs rejected unauthenticated requests with HTTP 401. DigitalOcean reports source hash `b7999cc`, and automatic deployment remains disabled.
+The active release reached `Success`, `Live Deployment`, and `Healthy` after the pre-deploy database job and both service health checks passed. Public API, Platform Control, Operations, administration, and internal-review routes passed HTTPS smoke tests; protected admin, session, team, role, tenant-draft, agency-account, and tenant-billing APIs rejected unauthenticated requests with HTTP 401. Automatic deployment remains disabled.
+
+### 22 October 2026 production completion release
+
+- GitHub `main` commit `1ab1e99` completed the production operations dashboard, Super Admin expansion, dashboard data coverage, agency administration, private-document metadata and storage controls, and the production tenant app.
+- Manual deployment `fdc8d984-9231-4b12-a0c8-6673aa9abcd0` fetched current repository updates, built the API, web dashboard, and database migration job under the Node.js 22 production contract, and went live at 09:44:13 IST.
+- The pre-deploy job completed the forward-only migration and runtime-grant contract before service rollout. API `/health/ready` and `/health/live` returned HTTP 200, the web service became ready, and DigitalOcean marked the release `Success`, `Live Deployment`, and `Healthy`.
+- Public smoke tests returned HTTP 200 for `/v1`, `/control/login`, `/operations/login`, `/operations/accounts`, `/operations/administration`, `/review/control`, and `/review/operations`.
+- Unauthenticated `/v1/admin/overview`, `/v1/auth/session`, `/v1/admin/team`, `/v1/admin/roles`, `/v1/admin/tenant-drafts`, `/v1/agencies/test/accounts`, and `/v1/tenants/test/billing` returned HTTP 401, confirming the production authentication boundaries remained closed.
+- Before release, a clean disposable database applied all 16 migrations and passed all 16 SQL verification suites, 17 API tests, 12 worker tests, and 3 database tests. All 11 TypeScript targets, engine/mobile release checks, and production builds passed.
 
 ### 21 October 2026 dashboard, RBAC, and Super Admin release
 
