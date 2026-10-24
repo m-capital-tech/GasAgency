@@ -12,9 +12,9 @@ const options = (fetchImplementation: typeof fetch, overrides: Partial<MessageIn
   entityId: "100123456789",
   requestTimeoutMs: 5_000,
   templates: {
-    login_otp: { id: "100000000001", text: "Your login OTP is {{code}}. It expires in 5 minutes." },
-    tenant_registration: { id: "100000000002", text: "{{businessName}} is registered. Sign in to place your LPG order." },
-    platform_access: { id: "100000000003", text: "Your platform access is ready. Sign in with your registered mobile number." },
+    login_otp: { id: "100000000001", text: "{{code}} is your OTP to log in to Munna Gas Connect. It is valid for 5 minutes. Do not share it with anyone." },
+    tenant_registration: { id: "100000000002", text: "{{businessName}} is registered on Munna Gas Connect with {{servingAgencyName}}. Get the app: {{appLink}}. Support: {{supportContact}}." },
+    platform_access: { id: "100000000003", text: "Your Munna Gas Connect platform access is ready. Log in with your registered mobile number and OTP." },
   },
   fetchImplementation,
   ...overrides,
@@ -43,7 +43,7 @@ test("sends an encoded DLT-compliant request without changing the provider contr
   assert.deepEqual(Object.fromEntries(body), {
     username: "account-user",
     apikey: "secret-api-key-value",
-    message: "Your login OTP is 123456. It expires in 5 minutes.",
+    message: "123456 is your OTP to log in to Munna Gas Connect. It is valid for 5 minutes. Do not share it with anyone.",
     sendername: "GASB2B",
     smstype: "TRANS",
     numbers: "919876543210",
@@ -62,12 +62,46 @@ test("supports the provider dashboard GET contract only over HTTPS", async () =>
     idempotencyKey: "tenant-invitation-sms:invitation-1",
     channel: "sms",
     destinationE164: "+919999999999",
-    template: { name: "tenant_registration", version: "v1", parameters: { businessName: "Test Kitchen" } },
+    template: {
+      name: "tenant_registration",
+      version: "v1",
+      parameters: {
+        businessName: "Test Kitchen",
+        servingAgencyName: "City Gas Agency",
+        appLink: "https://play.google.com/store/apps/details?id=com.munnagas.connect",
+        supportContact: "support@munnaunited.com",
+      },
+    },
   });
   assert.equal(capturedUrl?.searchParams.get("apikey"), "secret-api-key-value");
   assert.equal(capturedUrl?.searchParams.get("templateid"), "100000000002");
+  assert.equal(
+    capturedUrl?.searchParams.get("message"),
+    "Test Kitchen is registered on Munna Gas Connect with City Gas Agency. Get the app: https://play.google.com/store/apps/details?id=com.munnagas.connect. Support: support@munnaunited.com.",
+  );
   assert.equal(receipt.providerReference, "abc-123");
   assert.throws(() => new MessageIndiaProvider(options(fetch, { sendUrl: "http://sms.example.test/v2/sendSMS" })), /must use HTTPS/);
+});
+
+test("requires the exact placeholder contract before accepting a configured DLT template", () => {
+  assert.throws(
+    () => new MessageIndiaProvider(options(fetch, {
+      templates: {
+        ...options(fetch).templates,
+        tenant_registration: { id: "100000000002", text: "{{businessName}} is registered." },
+      },
+    })),
+    /does not use parameter servingAgencyName,appLink,supportContact/,
+  );
+  assert.throws(
+    () => new MessageIndiaProvider(options(fetch, {
+      templates: {
+        ...options(fetch).templates,
+        platform_access: { id: "100000000003", text: "Welcome {{name}}." },
+      },
+    })),
+    /missing parameter name/,
+  );
 });
 
 test("rejects provider failures without leaking credentials or destinations", async () => {
@@ -102,11 +136,11 @@ test("production configuration requires HTTPS POST and every DLT template", () =
     MESSAGEINDIA_SENDER_NAME: "GASB2B",
     MESSAGEINDIA_ENTITY_ID: "100123456789",
     MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID: "100000000001",
-    MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT: "Your login OTP is {{code}}.",
+    MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT: "{{code}} is your OTP to log in to Munna Gas Connect. It is valid for 5 minutes. Do not share it with anyone.",
     MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID: "100000000002",
-    MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT: "{{businessName}} is registered.",
+    MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT: "{{businessName}} is registered on Munna Gas Connect with {{servingAgencyName}}. Get the app: {{appLink}}. Support: {{supportContact}}.",
     MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID: "100000000003",
-    MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT: "Your platform access is ready.",
+    MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT: "Your Munna Gas Connect platform access is ready. Log in with your registered mobile number and OTP.",
   };
   assert.throws(() => loadWorkerConfig(environment), /must use HTTPS/);
   assert.throws(() => loadWorkerConfig({ ...environment, MESSAGEINDIA_SEND_URL: "https://sms.example.test/v2/sendSMS" }), /require POST/);

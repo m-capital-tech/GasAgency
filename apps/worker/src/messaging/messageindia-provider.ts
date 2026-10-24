@@ -22,6 +22,11 @@ export interface MessageIndiaProviderOptions {
   fetchImplementation?: typeof fetch;
 }
 
+const templateParameters: Record<MessageIndiaTemplateName, readonly string[]> = {
+  login_otp: ["code"],
+  tenant_registration: ["businessName", "servingAgencyName", "appLink", "supportContact"],
+  platform_access: [],
+};
 const referenceKeys = new Set(["id", "messageid", "message_id", "msgid", "msg_id", "requestid", "request_id"]);
 const failurePattern = /\b(error|failed|failure|invalid|unauthori[sz]ed|insufficient|rejected)\b/i;
 
@@ -85,6 +90,10 @@ export class MessageIndiaProvider implements MessagingProvider {
     this.sendUrl = new URL(options.sendUrl);
     if (this.sendUrl.protocol !== "https:" && !options.allowInsecureHttp) {
       throw new Error("messageindia send URL must use HTTPS");
+    }
+    for (const name of Object.keys(templateParameters) as MessageIndiaTemplateName[]) {
+      const parameters = Object.fromEntries(templateParameters[name].map((key) => [key, `__${key}__`]));
+      renderTemplate(options.templates[name], parameters);
     }
     this.fetchImplementation = options.fetchImplementation ?? fetch;
   }

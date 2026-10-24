@@ -31,6 +31,7 @@ interface TenantContextRow {
   assignment_public_id: string;
   agency_id: string;
   agency_public_id: string;
+  agency_display_name: string;
   agency_status: string;
   agency_credit_enabled: boolean;
   proposal_id: string;
@@ -56,6 +57,7 @@ async function lockTenantContext(client: pg.PoolClient, publicId: string): Promi
               assignment.public_id::text as assignment_public_id,
               agency.id::text as agency_id,
               agency.public_id::text as agency_public_id,
+              agency.display_name as agency_display_name,
               agency.status as agency_status,
               agency.credit_enabled as agency_credit_enabled,
               proposal.id::text as proposal_id,
@@ -98,7 +100,14 @@ function databaseCode(error: unknown): string | undefined {
   return typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
 }
 
-export function tenantWorkflowRouter(options: { pool: pg.Pool; tokenPepper: string }): Router {
+export function tenantWorkflowRouter(options: {
+  pool: pg.Pool;
+  tokenPepper: string;
+  registrationAppLink?: string;
+  registrationSupportContact?: string;
+}): Router {
+  const registrationAppLink = options.registrationAppLink ?? "https://play.google.com/store/apps/details?id=com.munnagas.connect";
+  const registrationSupportContact = options.registrationSupportContact ?? "support@munnaunited.com";
   const router = Router();
   router.use(requireAuthentication(options));
 
@@ -281,7 +290,19 @@ export function tenantWorkflowRouter(options: { pool: pg.Pool; tokenPepper: stri
           `insert into app.outbox_events (
              public_id, event_type, aggregate_type, aggregate_public_id, payload, dedupe_key
            ) values ($1, 'tenant.invitation.sms.requested', 'invitation', $2, $3::jsonb, $4)`,
-          [uuidV7(), invitationPublicId, JSON.stringify({ invitationId: invitation.id, invitationPublicId, tenantPublicId: context.tenant_public_id, tenantDisplayName: context.tenant_display_name, userPublicId: context.owner_user_public_id, destinationE164: context.owner_phone_e164, strategy: "sms_first", whatsappFallbackAfterSeconds: 300 }), `tenant-invitation-sms:${invitationPublicId}`],
+          [uuidV7(), invitationPublicId, JSON.stringify({
+            invitationId: invitation.id,
+            invitationPublicId,
+            tenantPublicId: context.tenant_public_id,
+            tenantDisplayName: context.tenant_display_name,
+            servingAgencyName: context.agency_display_name,
+            appLink: registrationAppLink,
+            supportContact: registrationSupportContact,
+            userPublicId: context.owner_user_public_id,
+            destinationE164: context.owner_phone_e164,
+            strategy: "sms_first",
+            whatsappFallbackAfterSeconds: 300,
+          }), `tenant-invitation-sms:${invitationPublicId}`],
         );
         await client.query(
           `insert into app.audit_events (

@@ -796,7 +796,12 @@ integrationTest("delegated creator submits and a separate administrator activate
          (select count(*) from app.tenant_commercial_proposals proposal join app.tenants tenant on tenant.id = proposal.tenant_id where tenant.public_id = $1 and proposal.decision_status = 'approved')::text as proposals,
          (select count(*) from app.agency_assignments assignment join app.tenants tenant on tenant.id = assignment.tenant_id where tenant.public_id = $1 and assignment.status = 'active')::text as assignments,
          (select count(*) from app.invitations invitation join app.tenants tenant on tenant.id = invitation.tenant_id where tenant.public_id = $1 and invitation.status = 'queued')::text as invitations,
-         (select count(*) from app.outbox_events where event_type = 'tenant.invitation.sms.requested' and (payload->>'tenantPublicId')::uuid = $1)::text as outbox,
+         (select count(*) from app.outbox_events
+           where event_type = 'tenant.invitation.sms.requested'
+             and (payload->>'tenantPublicId')::uuid = $1
+             and payload->>'servingAgencyName' = 'Integration Agency'
+             and payload->>'appLink' = 'https://play.google.com/store/apps/details?id=com.munnagas.connect'
+             and payload->>'supportContact' = 'support@munnaunited.com')::text as outbox,
          (select count(*) from app.credit_accounts credit join app.commercial_accounts commercial on commercial.id = credit.commercial_account_id join app.tenants tenant on tenant.id = commercial.tenant_id where tenant.public_id = $1 and credit.status = 'approved')::text as credit_accounts,
          (select count(*) from app.tenant_memberships membership join app.tenants tenant on tenant.id = membership.tenant_id where tenant.public_id = $1 and membership.status = 'active')::text as active_memberships,
          (select count(*) from app.device_sessions session_row join app.tenant_memberships membership on membership.user_id = session_row.user_id join app.tenants tenant on tenant.id = membership.tenant_id where tenant.public_id = $1 and session_row.auth_method = 'otp' and session_row.revoked_at is null)::text as otp_sessions,
