@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(request: NextRequest) {
+  const auditModeEnabled = process.env.INTERNAL_AUDIT_MODE !== "false";
+
   // Temporary internal-audit entry points. The audit pages are isolated from the
   // production API, contain fictional data, and expose no write operations.
-  // Remove these two redirects when the audit closes to restore the authenticated
-  // dashboards as the default entry points; OTP/MFA remains implemented below.
-  if (process.env.INTERNAL_AUDIT_MODE !== "false" && (request.nextUrl.pathname === "/control" || request.nextUrl.pathname === "/operations")) {
+  if (auditModeEnabled && (request.nextUrl.pathname === "/control" || request.nextUrl.pathname === "/operations")) {
     const destination = request.nextUrl.clone();
     destination.search = "";
     destination.pathname = request.nextUrl.pathname === "/control" ? "/review/control" : "/review/operations";
+    return NextResponse.redirect(destination);
+  }
+
+  // Audit links were intentionally shareable during review. Once audit mode is
+  // closed, old direct links must not keep the fictional dashboards reachable.
+  if (!auditModeEnabled && request.nextUrl.pathname.startsWith("/review")) {
+    const destination = request.nextUrl.clone();
+    destination.search = "";
+    destination.pathname = request.nextUrl.pathname.startsWith("/review/operations") ? "/operations/login" : "/control/login";
     return NextResponse.redirect(destination);
   }
 
@@ -23,5 +32,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/control", "/operations", "/admin/:path*", "/agency/:path*", "/login"],
+  matcher: ["/control", "/operations", "/review/:path*", "/admin/:path*", "/agency/:path*", "/login"],
 };
