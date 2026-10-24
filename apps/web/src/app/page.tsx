@@ -45,7 +45,10 @@ export default function Landing() {
           </div>
         </div>
 
-        <p className="mt-8 text-xs text-faint">Authorized business users only. Access attempts and account actions are auditable.</p>
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-faint">
+          <p>Authorized business users only. Access attempts and account actions are auditable.</p>
+          <Link href="/privacy" className="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary">Privacy policy</Link>
+        </div>
       </div>
     </main>
   );
