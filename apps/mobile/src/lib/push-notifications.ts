@@ -3,7 +3,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-const androidChannelId = "orders";
+const androidChannelId = "account-updates";
 let presentationConfigured = false;
 let currentRegistration: PushTokenRegistration | null = null;
 
@@ -51,8 +51,8 @@ function isExpoGo(): boolean {
 async function prepareAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync(androidChannelId, {
-    name: "Order updates",
-    description: "Order status, delivery, and invoice updates",
+    name: "Account and order updates",
+    description: "Orders, deliveries, invoices, credit, reminders, and support updates",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 200, 250],
     lightColor: "#A31E21",

@@ -219,7 +219,7 @@ export default function ReviewScreen() {
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{m.label}</Text>
                     <Text variant="caption" tone="muted">
-                      {m.key === "credit" ? (q.creditAllowed ? `Net-${q.creditTermDays} · ${formatINR(q.creditAvailable, { decimals: false })} available` : q.creditStatus === "requested" ? "Awaiting GasSetu approval" : m.sub) : m.sub}
+                      {m.key === "credit" ? (q.creditAllowed ? `Net-${q.creditTermDays} · ${formatINR(q.creditAvailable, { decimals: false })} available` : q.creditStatus === "requested" ? "Awaiting Munna Gas Connect approval" : m.sub) : m.sub}
                     </Text>
                   </View>
                   {m.key === "credit" && q.creditAllowed ? (

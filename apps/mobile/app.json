@@ -1,16 +1,53 @@
 {
   "expo": {
-    "name": "GasSetu",
-    "slug": "gassetu",
-    "scheme": "gassetu",
+    "name": "Munna Gas Connect",
+    "slug": "munna-gas-connect",
+    "scheme": "munnagasconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.gassetu.demo", "infoPlist": { "NSLocationWhenInUseUsageDescription": "Used to show delivery and nearby serving-agency options for your business." } },
-    "android": { "package": "com.gassetu.demo", "adaptiveIcon": { "backgroundColor": "#A31E21", "foregroundImage": "./assets/android-icon-foreground.png" } },
-    "web": { "favicon": "./assets/favicon.png", "bundler": "metro", "output": "single" },
-    "plugins": ["expo-router", "expo-font", "expo-secure-store", ["expo-splash-screen", { "backgroundColor": "#A31E21", "image": "./assets/splash-icon.png", "imageWidth": 160 }]],
-    "experiments": { "typedRoutes": false }
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.munnagas.connect",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used to show delivery and nearby serving-agency options for your business."
+      }
+    },
+    "android": {
+      "package": "com.munnagas.connect",
+      "adaptiveIcon": {
+        "backgroundColor": "#A31E21",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#A31E21",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4843ac47-13e9-4126-9874-77d49dc47aa2"
+      }
+    },
+    "owner": "m-capital"
   }
 }

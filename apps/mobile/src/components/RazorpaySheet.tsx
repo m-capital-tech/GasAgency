@@ -78,7 +78,7 @@ export function RazorpaySheet() {
               </View>
               <View>
                 <Text variant="bodyStrong" style={{ color: "#fff" }}>
-                  GasSetu
+                  Munna Gas Connect
                 </Text>
                 <Text variant="caption" style={{ color: "#BFD9FF" }}>
                   {order?.orderId ?? ""} · Test mode

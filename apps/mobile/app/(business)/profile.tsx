@@ -98,7 +98,7 @@ export default function ProfileScreen() {
         />
       </Card>
       <Text variant="caption" tone="faint" center style={{ marginTop: 20 }}>
-        GasSetu for Business · prototype · all data is illustrative
+        Munna Gas Connect for Business · prototype · all data is illustrative
       </Text>
       <Sheet open={langOpen} onClose={() => setLangOpen(false)} title="Language">
         <Row gap={8} style={{ flexWrap: "wrap", marginBottom: 8 }}>

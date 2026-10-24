@@ -2,6 +2,14 @@ const RELEASE_PROFILES = new Set(["preview", "production"]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PACKAGE_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
+const APPROVED_IDENTITY = {
+  owner: "m-capital",
+  projectId: "4843ac47-13e9-4126-9874-77d49dc47aa2",
+  name: "Munna Gas Connect",
+  slug: "munna-gas-connect",
+  scheme: "munnagasconnect",
+  bundleIdentifier: "com.munnagas.connect",
+};
 
 function isPrivateHostname(hostname) {
   const normalized = hostname.toLowerCase();
@@ -19,6 +27,7 @@ function collectReleaseConfigurationErrors({ profile, config, easConfig, env = p
   const profileConfig = easConfig?.build?.[profile];
   const projectId = config?.extra?.eas?.projectId;
   const apiOrigin = env.EXPO_PUBLIC_PLATFORM_API_URL?.trim();
+  const privacyPolicyUrl = env.EXPO_PUBLIC_PRIVACY_POLICY_URL?.trim();
 
   if (!profileConfig) {
     errors.push(`EAS build profile "${profile}" is missing.`);
@@ -55,6 +64,20 @@ function collectReleaseConfigurationErrors({ profile, config, easConfig, env = p
     }
   }
 
+  if (!privacyPolicyUrl) {
+    errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL is required for release builds.");
+  } else {
+    try {
+      const parsed = new URL(privacyPolicyUrl);
+      if (parsed.protocol !== "https:") errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL must use HTTPS.");
+      if (isPrivateHostname(parsed.hostname)) errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL cannot target localhost or a private network.");
+      if (parsed.username || parsed.password) errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL cannot contain credentials.");
+      if (parsed.hash) errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL cannot contain a fragment.");
+    } catch {
+      errors.push("EXPO_PUBLIC_PRIVACY_POLICY_URL must be a valid absolute URL.");
+    }
+  }
+
   if (!["true", "false"].includes(env.EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED ?? "")) {
     errors.push("EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED must be explicitly set to either \"true\" or \"false\".");
   }
@@ -70,23 +93,26 @@ function collectReleaseConfigurationErrors({ profile, config, easConfig, env = p
     const iosBundle = config?.ios?.bundleIdentifier?.trim();
     const androidPackage = config?.android?.package?.trim();
 
-    if (!owner) {
-      errors.push("Set the permanent Expo account or organization owner before a production build.");
+    if (owner !== APPROVED_IDENTITY.owner) {
+      errors.push(`Production Expo owner must remain "${APPROVED_IDENTITY.owner}".`);
     }
-    if (!name || name.toLowerCase() === "gassetu") {
-      errors.push("Replace the temporary GasSetu display name before a production build.");
+    if (projectId !== APPROVED_IDENTITY.projectId) {
+      errors.push(`Production Expo project must remain "${APPROVED_IDENTITY.projectId}".`);
     }
-    if (!slug || slug.toLowerCase() === "gassetu") {
-      errors.push("Replace the temporary gassetu Expo slug before a production build.");
+    if (name !== APPROVED_IDENTITY.name) {
+      errors.push(`Production display name must remain "${APPROVED_IDENTITY.name}".`);
     }
-    if (!scheme || scheme.toLowerCase() === "gassetu") {
-      errors.push("Replace the temporary gassetu deep-link scheme before a production build.");
+    if (slug !== APPROVED_IDENTITY.slug) {
+      errors.push(`Production Expo slug must remain "${APPROVED_IDENTITY.slug}".`);
     }
-    if (!PACKAGE_PATTERN.test(iosBundle ?? "") || /(?:^|\.)demo(?:\.|$)/i.test(iosBundle ?? "")) {
-      errors.push("Set a permanent, non-demo iOS bundle identifier before a production build.");
+    if (scheme !== APPROVED_IDENTITY.scheme) {
+      errors.push(`Production deep-link scheme must remain "${APPROVED_IDENTITY.scheme}".`);
     }
-    if (!PACKAGE_PATTERN.test(androidPackage ?? "") || /(?:^|\.)demo(?:\.|$)/i.test(androidPackage ?? "")) {
-      errors.push("Set a permanent, non-demo Android package before a production build.");
+    if (!PACKAGE_PATTERN.test(iosBundle ?? "") || iosBundle !== APPROVED_IDENTITY.bundleIdentifier) {
+      errors.push(`Production iOS bundle identifier must remain "${APPROVED_IDENTITY.bundleIdentifier}".`);
+    }
+    if (!PACKAGE_PATTERN.test(androidPackage ?? "") || androidPackage !== APPROVED_IDENTITY.bundleIdentifier) {
+      errors.push(`Production Android package must remain "${APPROVED_IDENTITY.bundleIdentifier}".`);
     }
   }
 

@@ -78,7 +78,7 @@ export default function BillingScreen() {
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong">Credit request under review</Text>
                   <Text variant="small" tone="muted">
-                    GasSetu sets your limit and terms after verifying the business. Until then, pay per order.
+                    Munna Gas Connect sets your limit and terms after verifying the business. Until then, pay per order.
                   </Text>
                 </View>
               </Row>
@@ -86,7 +86,7 @@ export default function BillingScreen() {
               <>
                 <Text variant="bodyStrong">Order now, pay on invoice</Text>
                 <Text variant="small" tone="muted" style={{ marginTop: 2 }}>
-                  Get net-15 / net-30 credit terms and one consolidated monthly bill. GasSetu approves the limit after a quick check.
+                  Get net-15 / net-30 credit terms and one consolidated monthly bill. Munna Gas Connect approves the limit after a quick check.
                 </Text>
                 <Button title="Request credit account" variant="secondary" icon="card-outline" style={{ marginTop: 12 }} loading={requestCredit.isPending} onPress={() => requestCredit.mutateAsync({ note: "Requested from app" }).then(() => toast.success("Request sent", "Our team reviews credit within 1 working day.")).catch((e) => toast.error("Couldn't send", e.message))} />
               </>

@@ -25,7 +25,7 @@ module.exports = ({ config }) => {
         "expo-notifications",
         {
           color: "#A31E21",
-          defaultChannel: "orders",
+          defaultChannel: "account-updates",
           enableRemoteNotifications: true,
           enableBackgroundRemoteNotifications: false,
         },

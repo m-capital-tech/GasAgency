@@ -11,7 +11,7 @@ import { Badge, Button, Card, Chip, EmptyState, Input, Row, Screen, Sheet, Skele
 
 const FAQ = [
   { q: "When will my cylinders arrive?", a: "Pick 'Before opening' for a 6–9 AM delivery the next day, or Express for delivery within 3 hours. Standard is any time the next working day." },
-  { q: "How does credit work?", a: "Once GasSetu verifies your business, you get a credit limit and net-15 or net-30 terms. Each delivery raises an invoice; pay invoices from Billing and get one consolidated monthly statement." },
+  { q: "How does credit work?", a: "Once Munna Gas Connect verifies your business, you get a credit limit and net-15 or net-30 terms. Each delivery raises an invoice; pay invoices from Billing and get one consolidated monthly statement." },
   { q: "What is the delivery OTP?", a: "A 4-digit code shown in the app for each order. Your outlet manager shares it with the delivery partner on arrival." },
   { q: "What about empty cylinders?", a: "Tell us how many empties to collect when ordering; the partner picks them up on the same trip and they're credited back to your agency account." },
   { q: "Do I get GST invoices?", a: "Yes — add your GSTIN in Profile and every invoice carries it with CGST/SGST split, so you can claim input credit." },

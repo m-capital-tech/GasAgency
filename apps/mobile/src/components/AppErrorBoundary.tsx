@@ -14,7 +14,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode; onReset?:
     return { error };
   }
   componentDidCatch(error: Error, info: { componentStack?: string }) {
-    console.error("[GasSetu] uncaught render error", error, info.componentStack);
+    console.error("[Munna Gas Connect] uncaught render error", error, info.componentStack);
   }
   render() {
     if (!this.state.error) return this.props.children;

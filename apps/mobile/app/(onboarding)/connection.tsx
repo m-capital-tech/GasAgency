@@ -120,7 +120,7 @@ export default function ConnectionScreen() {
           </View>
           <AgencyCard agency={result.agency} distanceKm={result.agency.distanceKm} />
           <Text variant="caption" tone="faint" center>
-            Not the right agency? Request a change anytime from Profile. Credit terms are set by GasSetu once your business is verified.
+            Not the right agency? Request a change anytime from Profile. Credit terms are set by Munna Gas Connect once your business is verified.
           </Text>
         </View>
       )}

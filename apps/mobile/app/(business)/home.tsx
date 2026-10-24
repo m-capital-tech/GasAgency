@@ -108,7 +108,7 @@ export default function HomeScreen() {
                     <>
                       <Text variant="h3">Awaiting approval</Text>
                       <Text variant="caption" tone="muted">
-                        GasSetu is reviewing your credit request
+                        Munna Gas Connect is reviewing your credit request
                       </Text>
                     </>
                   ) : (

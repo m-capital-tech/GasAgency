@@ -88,7 +88,7 @@ export default function AgencyScreen() {
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Request agency change">
         <Text variant="small" tone="muted" style={{ marginBottom: 12 }}>
-          Your current agency and the GasSetu team will review this. Outstanding credit invoices must be cleared before a transfer.
+          Your current agency and the Munna Gas Connect team will review this. Outstanding credit invoices must be cleared before a transfer.
         </Text>
         <Text variant="caption" tone="muted" style={{ marginBottom: 8 }}>
           Preferred agency (optional)

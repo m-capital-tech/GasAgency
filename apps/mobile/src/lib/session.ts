@@ -117,7 +117,7 @@ export const useSession = create<SessionState>()(
       },
     }),
     {
-      name: "gassetu.b2b.session",
+      name: "munna-gas-connect.b2b.session",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({
         sessionKind: s.sessionKind,

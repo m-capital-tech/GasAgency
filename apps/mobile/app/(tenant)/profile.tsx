@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert, Linking, View } from "react-native";
 import { toast } from "@/components/Toast";
+import { PRIVACY_POLICY_URL } from "@/lib/config";
 import {
   loadTenantDocuments,
   loadTenantProfile,
@@ -162,6 +163,7 @@ export default function TenantProfileScreen() {
           <Card style={{ paddingVertical: 4 }}>
             <ListItem icon="create-outline" title="Request a registered-detail change" subtitle="Business name, GST/FSSAI, phone, or address" onPress={() => router.push({ pathname: "/(tenant)/support", params: { kind: "change_request" } })} />
             <ListItem icon="help-circle-outline" title="Support and safety" subtitle="Cases, FAQ, and LPG emergency guidance" onPress={() => router.push("/(tenant)/support")} />
+            {PRIVACY_POLICY_URL ? <ListItem icon="shield-checkmark-outline" title="Privacy policy" subtitle="How account and business data is handled" onPress={() => { void Linking.openURL(PRIVACY_POLICY_URL); }} /> : null}
             <ListItem icon="language-outline" title="Language" subtitle={language === "en" ? "English" : language === "hi" ? "हिंदी" : "తెలుగు"} onPress={() => setLanguageOpen(true)} />
             {tenants.length > 1 ? <ListItem icon="swap-horizontal-outline" title="Switch business" subtitle={`${tenants.length} businesses available`} onPress={() => router.push("/(auth)/select-tenant")} /> : null}
           </Card>

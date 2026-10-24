@@ -407,7 +407,7 @@ export function requestTenantOtp(phoneE164: string): Promise<OtpRequestResponse>
 }
 
 export function verifyTenantOtp(challengePublicId: string, code: string): Promise<OtpVerificationResponse> {
-  return request("/auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "GasSetu mobile app" } });
+  return request("/auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "Munna Gas Connect mobile app" } });
 }
 
 export function restoreTenantSession(): Promise<TenantSessionResponse> {

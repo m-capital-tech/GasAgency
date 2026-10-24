@@ -3,13 +3,13 @@ const test = require("node:test");
 const { collectReleaseConfigurationErrors } = require("./release-config.cjs");
 
 const validConfig = {
-  owner: "ideaye",
-  name: "Commercial LPG",
-  slug: "commercial-lpg",
-  scheme: "commerciallpg",
-  ios: { bundleIdentifier: "com.example.commerciallpg" },
-  android: { package: "com.example.commerciallpg" },
-  extra: { eas: { projectId: "324a4054-6885-4c9d-a550-75f51f6eae1a" } },
+  owner: "m-capital",
+  name: "Munna Gas Connect",
+  slug: "munna-gas-connect",
+  scheme: "munnagasconnect",
+  ios: { bundleIdentifier: "com.munnagas.connect" },
+  android: { package: "com.munnagas.connect" },
+  extra: { eas: { projectId: "4843ac47-13e9-4126-9874-77d49dc47aa2" } },
 };
 const validEasConfig = {
   build: {
@@ -19,6 +19,7 @@ const validEasConfig = {
 };
 const validEnv = {
   EXPO_PUBLIC_PLATFORM_API_URL: "https://commercial-lpg.example.com",
+  EXPO_PUBLIC_PRIVACY_POLICY_URL: "https://www.example.com/privacy",
   EXPO_PUBLIC_DEMO_MODE: "false",
   EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "false",
 };
@@ -55,6 +56,7 @@ test("rejects unsafe release endpoints and demo mode", () => {
     easConfig: validEasConfig,
     env: {
       EXPO_PUBLIC_PLATFORM_API_URL: "http://192.168.1.20:8080/v1/",
+      EXPO_PUBLIC_PRIVACY_POLICY_URL: "http://localhost:3000/privacy#draft",
       EXPO_PUBLIC_DEMO_MODE: "true",
       EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "sometimes",
     },
@@ -65,6 +67,9 @@ test("rejects unsafe release endpoints and demo mode", () => {
   assert.ok(errors.some((error) => error.includes("must not end with a slash")));
   assert.ok(errors.some((error) => error.includes("DEMO_MODE")));
   assert.ok(errors.some((error) => error.includes("PUSH_REGISTRATION_ENABLED")));
+  assert.ok(errors.some((error) => error.includes("PRIVACY_POLICY_URL must use HTTPS")));
+  assert.ok(errors.some((error) => error.includes("PRIVACY_POLICY_URL cannot target localhost")));
+  assert.ok(errors.some((error) => error.includes("PRIVACY_POLICY_URL cannot contain a fragment")));
 });
 
 test("rejects missing project linkage and mismatched EAS routing", () => {
@@ -77,6 +82,21 @@ test("rejects missing project linkage and mismatched EAS routing", () => {
   assert.ok(errors.some((error) => error.includes("project UUID")));
   assert.ok(errors.some((error) => error.includes("update channel")));
   assert.ok(errors.some((error) => error.includes("EAS environment")));
+});
+
+test("rejects a different production Expo owner or project", () => {
+  const errors = collectReleaseConfigurationErrors({
+    profile: "production",
+    config: {
+      ...validConfig,
+      owner: "another-owner",
+      extra: { eas: { projectId: "324a4054-6885-4c9d-a550-75f51f6eae1a" } },
+    },
+    easConfig: validEasConfig,
+    env: validEnv,
+  });
+  assert.ok(errors.some((error) => error.includes('owner must remain "m-capital"')));
+  assert.ok(errors.some((error) => error.includes('project must remain "4843ac47-13e9-4126-9874-77d49dc47aa2"')));
 });
 
 test("requires the Android Firebase client file when push registration is enabled", () => {

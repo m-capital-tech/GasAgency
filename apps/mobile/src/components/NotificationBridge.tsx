@@ -54,6 +54,22 @@ export function NotificationBridge() {
           router.push({ pathname: "/(tenant)/invoice-detail", params: { id: invoicePublicId } });
           return true;
         }
+        const route = dataString(data, "route");
+        if (route === "billing") {
+          if (tenantPublicId !== activeTenantPublicId) selectTenant(tenantPublicId);
+          router.push("/(tenant)/billing");
+          return true;
+        }
+        if (route === "support") {
+          if (tenantPublicId !== activeTenantPublicId) selectTenant(tenantPublicId);
+          router.push("/(tenant)/support");
+          return true;
+        }
+        if (route === "order") {
+          if (tenantPublicId !== activeTenantPublicId) selectTenant(tenantPublicId);
+          router.push("/(tenant)/order");
+          return true;
+        }
         return false;
       }
 

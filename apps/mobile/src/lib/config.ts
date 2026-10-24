@@ -18,4 +18,5 @@ export const PLATFORM_API_URL = resolveServiceUrl(process.env.EXPO_PUBLIC_PLATFO
 export const WS_URL = API_URL.replace(/^http/, "ws") + "/live";
 export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 export const PUSH_REGISTRATION_ENABLED = process.env.EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED === "true";
+export const PRIVACY_POLICY_URL = process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL?.trim() || null;
 export const DEMO_OTP = "123456";
