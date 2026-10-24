@@ -58,7 +58,7 @@ export class ExpoPushProvider implements PushProvider {
           body: message.body,
           data: message.data,
           priority: "high",
-          channelId: "orders",
+          channelId: "account-updates",
         }))),
         signal: controller.signal,
       });

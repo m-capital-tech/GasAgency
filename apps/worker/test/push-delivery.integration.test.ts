@@ -30,17 +30,39 @@ integrationTest("push delivery is membership-scoped, idempotent, encrypted, and 
   const suffix = uuidV7().replaceAll("-", "").slice(-10);
   const token = `ExpoPushToken[${suffix}${suffix}${suffix}]`;
   const tokenDigest = createHash("sha256").update(token, "utf8").digest();
-  const created: { userId?: string; membershipId?: string; sessionId?: string; deviceId?: string; eventIds: string[] } = { eventIds: [] };
+  const created: { tenantId?: string; userId?: string; membershipId?: string; sessionId?: string; deviceId?: string; eventIds: string[] } = { eventIds: [] };
 
   try {
-    const tenant = (
+    let tenant = (
       await pool.query<{ id: string; public_id: string; creator_id: string }>(
         `select tenant.id::text, tenant.public_id::text,
                 coalesce(tenant.approved_by_user_id, tenant.created_by_user_id)::text as creator_id
            from app.tenants tenant where tenant.status = 'active' order by tenant.id limit 1`,
       )
     ).rows[0];
-    assert.ok(tenant, "bootstrap one active tenant before this integration test");
+    if (!tenant) {
+      const administrator = (
+        await pool.query<{ id: string }>(
+          `select assignment.user_id::text as id
+             from app.role_assignments assignment
+             join app.roles role_row on role_row.id = assignment.role_id
+            where role_row.role_type = 'super_admin' and assignment.status = 'active'
+            order by assignment.id limit 1`,
+        )
+      ).rows[0];
+      assert.ok(administrator, "bootstrap a Super Admin before this integration test");
+      tenant = (
+        await pool.query<{ id: string; public_id: string; creator_id: string }>(
+          `insert into app.tenants (
+             public_id, legal_name, display_name, business_type, gstin, status,
+             created_by_user_id, approved_by_user_id, approved_at
+           ) values ($1, $2, $2, 'restaurant', '27AAPFU0939F1ZV', 'active', $3, $3, now())
+           returning id::text, public_id::text, created_by_user_id::text as creator_id`,
+          [uuidV7(), `Push Delivery Tenant ${suffix}`, administrator.id],
+        )
+      ).rows[0]!;
+      created.tenantId = tenant.id;
+    }
     const userPublicId = uuidV7();
     const phoneSuffix = String(Number.parseInt(suffix.slice(-8), 16) % 100_000_000).padStart(8, "0");
     const user = (
@@ -103,6 +125,12 @@ integrationTest("push delivery is membership-scoped, idempotent, encrypted, and 
     );
     assert.deepEqual(accepted.rows[0], { count: "1", status: "accepted", attempt_count: 1 });
 
+    const expired = await makeEvent("order.status_changed", { tenantPublicId: tenant.public_id, orderPublicId: uuidV7(), orderNumber: "ORD-PUSH-EXPIRED", toStatus: "accepted" });
+    expired.createdAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1_000);
+    await handlers.get(expired.eventType)!(expired);
+    assert.equal(provider.calls.length, 1, "expired outbox events must not produce delayed tenant notifications");
+    assert.equal((await pool.query("select count(*)::int as count from app.push_deliveries where outbox_event_id = $1", [expired.id])).rows[0]!.count, 0);
+
     provider.outcome = "device_not_registered";
     const invoicePublicId = uuidV7();
     const second = await makeEvent("invoice.issued", { tenantPublicId: tenant.public_id, orderPublicId, invoicePublicId, invoiceNumber: "INV-PUSH-1", totalAmount: "500.00" });
@@ -132,6 +160,7 @@ integrationTest("push delivery is membership-scoped, idempotent, encrypted, and 
     if (created.sessionId) await pool.query("delete from app.device_sessions where id = $1", [created.sessionId]);
     if (created.membershipId) await pool.query("delete from app.tenant_memberships where id = $1", [created.membershipId]);
     if (created.userId) await pool.query("delete from app.users where id = $1", [created.userId]);
+    if (created.tenantId) await pool.query("delete from app.tenants where id = $1", [created.tenantId]);
     await pool.end();
   }
 });

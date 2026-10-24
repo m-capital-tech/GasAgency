@@ -34,6 +34,46 @@ const paymentRecorded = z.object({
   amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
 }).passthrough();
 
+const creditTermsChanged = z.object({
+  tenantPublicId: z.string().uuid(),
+  creditAccountPublicId: z.string().uuid(),
+  change: z.enum(["approved", "updated"]),
+  creditLimit: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
+  netTermDays: z.union([z.literal(7), z.literal(15), z.literal(30)]),
+}).passthrough();
+
+const creditStatusChanged = z.object({
+  tenantPublicId: z.string().uuid(),
+  creditAccountPublicId: z.string().uuid(),
+  status: z.enum(["suspended", "reinstated", "agency_disabled", "agency_enabled"]),
+  agencyDisplayName: z.string().min(1).max(200).optional(),
+}).passthrough();
+
+const invoiceReminder = z.object({
+  tenantPublicId: z.string().uuid(),
+  invoicePublicId: z.string().uuid(),
+  invoiceNumber: z.string().min(1).max(100),
+  outstandingAmount: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
+  dueAt: z.string().datetime({ offset: true }),
+}).passthrough();
+
+const supportCaseUpdated = z.object({
+  tenantPublicId: z.string().uuid(),
+  casePublicId: z.string().uuid(),
+  caseNumber: z.string().min(1).max(100),
+  status: z.enum(["open", "acknowledged", "in_progress", "resolved", "closed"]),
+  updateType: z.enum(["created", "acknowledged", "started", "resolved", "reopened", "closed", "commented"]),
+}).passthrough();
+
+const standingOrderReminder = z.object({
+  tenantPublicId: z.string().uuid(),
+  requirementPublicId: z.string().uuid(),
+  outletPublicId: z.string().uuid(),
+  outletLabel: z.string().min(1).max(200),
+  deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  totalQuantity: z.number().int().positive(),
+}).passthrough();
+
 interface PushContent {
   tenantPublicId: string;
   title: string;
@@ -73,6 +113,10 @@ const statusLabels: Record<z.infer<typeof orderStatusChanged>["toStatus"], strin
   delivered: "delivered",
   cancelled: "cancelled",
 };
+
+function inr(value: string): string {
+  return Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export function pushTokenAssociatedData(userPublicId: string, provider: "expo", tokenDigest: Buffer): string {
   return `commercial-lpg:push-token:v1:${userPublicId}:${provider}:${tokenDigest.toString("hex")}`;
@@ -117,7 +161,67 @@ export function buildPushContent(event: OutboxEvent): PushContent {
       tenantPublicId: payload.tenantPublicId,
       title: "Payment recorded",
       body: `Your payment of ₹${payload.amount} was recorded.`,
-      data: { tenantPublicId: payload.tenantPublicId, paymentPublicId: payload.paymentPublicId, eventType: event.eventType },
+      data: { tenantPublicId: payload.tenantPublicId, paymentPublicId: payload.paymentPublicId, eventType: event.eventType, route: "billing" },
+    };
+  }
+  if (event.eventType === "credit.terms_changed") {
+    const payload = creditTermsChanged.parse(event.payload);
+    return {
+      tenantPublicId: payload.tenantPublicId,
+      title: payload.change === "approved" ? "Credit approved" : "Credit terms updated",
+      body: `Your credit limit is ₹${inr(payload.creditLimit)} with net-${payload.netTermDays} terms.`,
+      data: { tenantPublicId: payload.tenantPublicId, creditAccountPublicId: payload.creditAccountPublicId, eventType: event.eventType, route: "billing" },
+    };
+  }
+  if (event.eventType === "credit.status_changed") {
+    const payload = creditStatusChanged.parse(event.payload);
+    const content = {
+      suspended: { title: "Credit suspended", body: "Credit ordering is paused. Open Billing for account details." },
+      reinstated: { title: "Credit reinstated", body: "Your approved credit is available for eligible orders again." },
+      agency_disabled: { title: "Agency credit paused", body: `${payload.agencyDisplayName ?? "Your serving agency"} has temporarily disabled credit ordering.` },
+      agency_enabled: { title: "Agency credit available", body: `${payload.agencyDisplayName ?? "Your serving agency"} has enabled credit ordering again.` },
+    }[payload.status];
+    return {
+      tenantPublicId: payload.tenantPublicId,
+      ...content,
+      data: { tenantPublicId: payload.tenantPublicId, creditAccountPublicId: payload.creditAccountPublicId, eventType: event.eventType, route: "billing" },
+    };
+  }
+  if (event.eventType === "invoice.due_soon" || event.eventType === "invoice.overdue") {
+    const payload = invoiceReminder.parse(event.payload);
+    const overdue = event.eventType === "invoice.overdue";
+    return {
+      tenantPublicId: payload.tenantPublicId,
+      title: overdue ? "Invoice overdue" : "Invoice due tomorrow",
+      body: `${payload.invoiceNumber} has ₹${inr(payload.outstandingAmount)} outstanding.`,
+      data: { tenantPublicId: payload.tenantPublicId, invoicePublicId: payload.invoicePublicId, eventType: event.eventType },
+    };
+  }
+  if (event.eventType === "support_case.updated") {
+    const payload = supportCaseUpdated.parse(event.payload);
+    const labels: Record<typeof payload.updateType, string> = {
+      created: "was opened by the platform team",
+      acknowledged: "was acknowledged",
+      started: "is now in progress",
+      resolved: "was resolved",
+      reopened: "was reopened",
+      closed: "was closed",
+      commented: "has a new response",
+    };
+    return {
+      tenantPublicId: payload.tenantPublicId,
+      title: "Support case update",
+      body: `${payload.caseNumber} ${labels[payload.updateType]}.`,
+      data: { tenantPublicId: payload.tenantPublicId, casePublicId: payload.casePublicId, eventType: event.eventType, route: "support" },
+    };
+  }
+  if (event.eventType === "standing_order.reminder") {
+    const payload = standingOrderReminder.parse(event.payload);
+    return {
+      tenantPublicId: payload.tenantPublicId,
+      title: "Standing order reminder",
+      body: `${payload.totalQuantity} cylinder${payload.totalQuantity === 1 ? "" : "s"} planned for ${payload.outletLabel} tomorrow. Review and place the order.`,
+      data: { tenantPublicId: payload.tenantPublicId, outletPublicId: payload.outletPublicId, eventType: event.eventType, route: "order" },
     };
   }
   throw new Error("unsupported push event type");
@@ -212,13 +316,18 @@ export function createPushHandlers(options: {
   provider: PushProvider;
   pushTokenEncryptionKey: string;
   maxDeliveryAttempts: number;
+  maxEventAgeSeconds?: number;
 }): Map<string, PushEventHandler> {
-  const { pool, provider, pushTokenEncryptionKey, maxDeliveryAttempts } = options;
+  const { pool, provider, pushTokenEncryptionKey, maxDeliveryAttempts, maxEventAgeSeconds = 172_800 } = options;
   if (!Number.isInteger(maxDeliveryAttempts) || maxDeliveryAttempts < 1 || maxDeliveryAttempts > 10) {
     throw new Error("maxDeliveryAttempts must be between 1 and 10");
   }
+  if (!Number.isInteger(maxEventAgeSeconds) || maxEventAgeSeconds < 300 || maxEventAgeSeconds > 604_800) {
+    throw new Error("maxEventAgeSeconds must be between 300 and 604800");
+  }
 
   const deliver = async (event: OutboxEvent) => {
+    if (Date.now() - event.createdAt.getTime() > maxEventAgeSeconds * 1_000) return;
     const content = buildPushContent(event);
     const devices = await activeDevices(pool, content.tenantPublicId);
     const prepared: PreparedPush[] = [];
@@ -281,5 +390,11 @@ export function createPushHandlers(options: {
     ["order.status_changed", deliver],
     ["invoice.issued", deliver],
     ["payment.recorded", deliver],
+    ["credit.terms_changed", deliver],
+    ["credit.status_changed", deliver],
+    ["invoice.due_soon", deliver],
+    ["invoice.overdue", deliver],
+    ["support_case.updated", deliver],
+    ["standing_order.reminder", deliver],
   ]);
 }

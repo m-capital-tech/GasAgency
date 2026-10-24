@@ -127,7 +127,7 @@ services:
       - key: MFA_ISSUER
         scope: RUN_TIME
         type: GENERAL
-        value: Commercial LPG Platform
+        value: Munna Gas Connect
       - key: MFA_TICKET_TTL_SECONDS
         scope: RUN_TIME
         type: GENERAL
@@ -195,6 +195,10 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: GENERAL
         value: "1"
+      - key: INTERNAL_AUDIT_MODE
+        scope: RUN_TIME
+        type: GENERAL
+        value: "false"
       - key: PLATFORM_API_URL
         scope: RUN_TIME
         type: GENERAL
@@ -281,6 +285,26 @@ workers:
         scope: RUN_TIME
         type: GENERAL
         value: "5"
+      - key: PUSH_MAX_EVENT_AGE_SECONDS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "172800"
+      - key: NOTIFICATION_SCHEDULER_INTERVAL_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "300000"
+      - key: INVOICE_DUE_REMINDER_HOURS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "24"
+      - key: STANDING_ORDER_REMINDER_LOCAL_HOUR
+        scope: RUN_TIME
+        type: GENERAL
+        value: "7"
+      - key: BUSINESS_TIME_ZONE
+        scope: RUN_TIME
+        type: GENERAL
+        value: Asia/Kolkata
 
 jobs:
   - name: database-migrations

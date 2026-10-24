@@ -3,6 +3,7 @@ import { Router } from "express";
 import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
+import { enqueueTenantPushEvent } from "../domain/tenant-notifications";
 import { HttpError } from "../http/error";
 import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized } from "../security/rbac";
@@ -347,6 +348,19 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
             sourceIp,
             userAgent,
           });
+          await enqueueTenantPushEvent(client, {
+            eventType: "credit.terms_changed",
+            aggregateType: "credit_account",
+            aggregatePublicId: creditAccountPublicId,
+            tenantPublicId: context.tenant_public_id,
+            payload: {
+              creditAccountPublicId,
+              change: "approved",
+              creditLimit: parsed.data.creditLimit.toFixed(2),
+              netTermDays: parsed.data.netTermDays,
+            },
+            dedupeKey: `credit-terms:${decisionPublicId}`,
+          });
           return {
             creditAccount: {
               publicId: creditAccountPublicId,
@@ -419,6 +433,19 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
             sourceIp,
             userAgent,
           });
+          await enqueueTenantPushEvent(client, {
+            eventType: "credit.terms_changed",
+            aggregateType: "credit_account",
+            aggregatePublicId: context.credit_account_public_id,
+            tenantPublicId: context.tenant_public_id,
+            payload: {
+              creditAccountPublicId: context.credit_account_public_id,
+              change: "updated",
+              creditLimit: nextLimit.toFixed(2),
+              netTermDays: nextNetTermDays,
+            },
+            dedupeKey: `credit-terms:${correlationId}`,
+          });
           return {
             creditAccount: { publicId: context.credit_account_public_id, status: context.credit_status, creditLimit: nextLimit.toFixed(2), netTermDays: nextNetTermDays },
             exposure,
@@ -461,6 +488,17 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
           correlationId,
           sourceIp,
           userAgent,
+        });
+        await enqueueTenantPushEvent(client, {
+          eventType: "credit.status_changed",
+          aggregateType: "credit_account",
+          aggregatePublicId: context.credit_account_public_id,
+          tenantPublicId: context.tenant_public_id,
+          payload: {
+            creditAccountPublicId: context.credit_account_public_id,
+            status: parsed.data.action === "suspend" ? "suspended" : "reinstated",
+          },
+          dedupeKey: `credit-status:${decisionPublicId}`,
         });
         return {
           creditAccount: { publicId: context.credit_account_public_id, status: nextStatus, creditLimit: context.credit_limit, netTermDays: context.net_term_days },

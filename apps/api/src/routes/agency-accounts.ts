@@ -416,6 +416,33 @@ export function agencyAccountsRouter(options: { pool: pg.Pool; tokenPepper: stri
         await client.query("select id from app.agencies where id = $1 for update", [agency.id]);
         const current = (await client.query<{ credit_enabled: boolean }>("select credit_enabled from app.agencies where id = $1", [agency.id])).rows[0]!;
         await client.query("update app.agencies set credit_enabled = $2, updated_at = now() where id = $1", [agency.id, parsed.data.creditEnabled]);
+        if (current.credit_enabled !== parsed.data.creditEnabled) {
+          const changePublicId = uuidV7();
+          await client.query(
+            `insert into app.outbox_events (
+               public_id, event_type, aggregate_type, aggregate_public_id, payload, dedupe_key
+             )
+             select gen_random_uuid(), 'credit.status_changed', 'credit_account', credit.public_id,
+                    jsonb_build_object(
+                      'tenantPublicId', tenant.public_id,
+                      'creditAccountPublicId', credit.public_id,
+                      'status', case when $2 then 'agency_enabled' else 'agency_disabled' end,
+                      'agencyDisplayName', $3::text
+                    ),
+                    concat('agency-credit:', $4::text, ':', tenant.public_id::text)
+               from app.agency_assignments assignment
+               join app.tenants tenant on tenant.id = assignment.tenant_id and tenant.status = 'active'
+               join app.commercial_accounts account
+                 on account.tenant_id = tenant.id and account.agency_id = assignment.agency_id
+                and account.status in ('open', 'suspended')
+               join app.credit_accounts credit on credit.commercial_account_id = account.id and credit.status <> 'closed'
+              where assignment.agency_id = $1
+                and assignment.status = 'active'
+                and assignment.ends_at is null
+             on conflict (dedupe_key) do nothing`,
+            [agency.id, parsed.data.creditEnabled, agency.display_name, changePublicId],
+          );
+        }
         const body = { agency: { publicId: agency.public_id, displayName: agency.display_name, creditEnabled: parsed.data.creditEnabled } };
         await recordAudit(client, request, principal, "agency.credit_availability_changed", "agency", agency.public_id, parsed.data.reason, { creditEnabled: current.credit_enabled }, { creditEnabled: parsed.data.creditEnabled });
         await completeIdempotency(client, scope, key, 200, body);

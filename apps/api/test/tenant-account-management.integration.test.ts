@@ -296,6 +296,30 @@ integrationTest("platform tenant lifecycle and post-activation credit decisions 
       assert.equal((await response.json() as { creditAccount: { status: string } }).creditAccount.status, action === "suspend" ? "suspended" : "approved");
     }
 
+    const creditNotifications = await pool.query<{ event_type: string; payload: Record<string, unknown> }>(
+      `select event_type, payload
+         from app.outbox_events
+        where aggregate_type = 'credit_account'
+          and aggregate_public_id = (select public_id from app.credit_accounts where commercial_account_id = $1)
+          and event_type in ('credit.terms_changed', 'credit.status_changed')
+        order by id`,
+      [commercialAccount.id],
+    );
+    assert.deepEqual(
+      creditNotifications.rows.map((event) => ({
+        type: event.event_type,
+        change: event.payload.change ?? null,
+        status: event.payload.status ?? null,
+        includesReason: Object.hasOwn(event.payload, "reason"),
+      })),
+      [
+        { type: "credit.terms_changed", change: "approved", status: null, includesReason: false },
+        { type: "credit.terms_changed", change: "updated", status: null, includesReason: false },
+        { type: "credit.status_changed", change: null, status: "suspended", includesReason: false },
+        { type: "credit.status_changed", change: null, status: "reinstated", includesReason: false },
+      ],
+    );
+
     const suspended = await fetch(`${origin}/lifecycle`, {
       method: "POST", headers: headers(superToken),
       body: JSON.stringify({ action: "suspend", reason: "Temporary compliance investigation" }),

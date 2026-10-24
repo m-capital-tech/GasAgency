@@ -13,6 +13,7 @@ import { LocalMessagingProvider } from "./messaging/local-provider";
 import { MessageIndiaProvider } from "./messaging/messageindia-provider";
 import { ExpoPushProvider } from "./push/expo-provider";
 import { createPushHandlers } from "./push/handlers";
+import { enqueueScheduledPushEvents } from "./push/scheduler";
 
 const config = loadWorkerConfig();
 const logger = createLogger("platform-worker", config.logLevel);
@@ -44,12 +45,14 @@ if (config.pushProvider === "expo") {
     provider: pushProvider,
     pushTokenEncryptionKey: config.pushTokenEncryptionKey!,
     maxDeliveryAttempts: config.pushMaxDeliveryAttempts,
+    maxEventAgeSeconds: config.pushMaxEventAgeSeconds,
   })) {
     handlers.set(eventType, handler);
   }
 }
 let stopping = false;
 let wake: (() => void) | undefined;
+let nextNotificationScheduleAt = 0;
 
 function sleep(milliseconds: number): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -95,6 +98,22 @@ async function run(): Promise<void> {
   logger.info("worker_started", { worker_id: workerId, environment: config.appEnv, registered_event_types: [...handlers.keys()] });
 
   while (!stopping) {
+    if (config.pushProvider === "expo" && Date.now() >= nextNotificationScheduleAt) {
+      nextNotificationScheduleAt = Date.now() + config.notificationSchedulerIntervalMs;
+      try {
+        const scheduled = await enqueueScheduledPushEvents({
+          pool,
+          invoiceDueReminderHours: config.invoiceDueReminderHours,
+          standingOrderReminderLocalHour: config.standingOrderReminderLocalHour,
+          businessTimeZone: config.businessTimeZone,
+        });
+        if (scheduled.dueSoon || scheduled.overdue || scheduled.standingOrder) {
+          logger.info("notification_events_scheduled", { ...scheduled });
+        }
+      } catch (error) {
+        logger.error("notification_scheduler_failed", { error });
+      }
+    }
     const eventTypes = [...handlers.keys()];
     if (eventTypes.length === 0) {
       await sleep(config.pollIntervalMs);

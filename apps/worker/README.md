@@ -51,6 +51,11 @@ PUSH_TOKEN_ENCRYPTION_KEY=...                   # canonical base64 32-byte key; 
 EXPO_PUSH_ACCESS_TOKEN=...                      # optional Expo enhanced-security token
 EXPO_PUSH_REQUEST_TIMEOUT_MS=10000
 PUSH_MAX_DELIVERY_ATTEMPTS=5
+PUSH_MAX_EVENT_AGE_SECONDS=172800             # discard stale transactional events after 48 hours
+NOTIFICATION_SCHEDULER_INTERVAL_MS=300000     # materialize time-based reminders every five minutes
+INVOICE_DUE_REMINDER_HOURS=24                # send one reminder in the final 24 hours
+STANDING_ORDER_REMINDER_LOCAL_HOUR=7         # 07:00 in the business time zone, one day before
+BUSINESS_TIME_ZONE=Asia/Kolkata
 ```
 
 A production worker may run push-only while the SMS provider is pending:
@@ -61,3 +66,5 @@ PUSH_PROVIDER=expo
 ```
 
 This does not permit `MESSAGE_PROVIDER=local` in staging or production; the local messaging provider remains forbidden there.
+
+Scheduled push events are written into the same durable outbox as transactional events. Invoice due reminders are sent once per invoice/due-date pair, overdue reminders are sent once after the invoice crosses its due date, and weekly standing-order reminders are derived from each outlet's saved requirement and preferred delivery days. A reminder opens the order form but never places an order automatically.

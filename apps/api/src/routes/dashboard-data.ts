@@ -4,6 +4,7 @@ import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import { platformReportingParams, platformReportingScope, scopedTenantsSql } from "../domain/platform-reporting";
+import { enqueueTenantPushEvent } from "../domain/tenant-notifications";
 import { HttpError } from "../http/error";
 import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized, hasPermission, hasRoleType } from "../security/rbac";
@@ -49,6 +50,7 @@ const supportTransitionSchema = z.object({
 interface SupportContext {
   id: string;
   public_id: string;
+  case_number: string;
   status: "open" | "acknowledged" | "in_progress" | "resolved" | "closed";
   tenant_public_id: string | null;
   agency_public_id: string | null;
@@ -216,6 +218,16 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
         );
         await client.query(`insert into app.support_case_events (public_id, support_case_id, actor_user_id, event_type, to_status, note)
           select $1, id, $2, 'created', 'open', $3 from app.support_cases where public_id = $4`, [uuidV7(), principal.userId, parsed.data.description, casePublicId]);
+        if (context.tenant_public_id) {
+          await enqueueTenantPushEvent(client, {
+            eventType: "support_case.updated",
+            aggregateType: "support_case",
+            aggregatePublicId: casePublicId,
+            tenantPublicId: context.tenant_public_id,
+            payload: { casePublicId, caseNumber, status: "open", updateType: "created" },
+            dedupeKey: `support-case-created:${casePublicId}`,
+          });
+        }
         await audit(client, principal, { action: "support_case.created", entityType: "support_case", entityPublicId: casePublicId,
           reason: parsed.data.subject, after: { category: parsed.data.category, priority: parsed.data.priority, status: "open", slaHours }, requestId: response.locals.requestId ?? uuidV7() });
         return inserted.rows[0]!;
@@ -233,7 +245,7 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
       const principal = authenticatedPrincipal(response);
       const updated = await withTransaction(options.pool, async (client) => {
         const context = (await client.query<SupportContext>(
-          `select support.id::text, support.public_id::text, support.status,
+          `select support.id::text, support.public_id::text, support.case_number, support.status,
                   tenant.public_id::text as tenant_public_id, agency.public_id::text as agency_public_id,
                   outlet.city, outlet.state_code
              from app.support_cases support
@@ -251,8 +263,19 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
           close: { from: ["resolved"], to: "closed", event: "closed" },
         };
         if (parsed.data.action === "comment") {
-          await client.query("insert into app.support_case_events (public_id, support_case_id, actor_user_id, event_type, from_status, to_status, note) values ($1, $2, $3, 'commented', $4, $4, $5)", [uuidV7(), context.id, principal.userId, context.status, parsed.data.note]);
+          const supportEventPublicId = uuidV7();
+          await client.query("insert into app.support_case_events (public_id, support_case_id, actor_user_id, event_type, from_status, to_status, note) values ($1, $2, $3, 'commented', $4, $4, $5)", [supportEventPublicId, context.id, principal.userId, context.status, parsed.data.note]);
           await client.query("update app.support_cases set updated_at = now() where id = $1", [context.id]);
+          if (context.tenant_public_id) {
+            await enqueueTenantPushEvent(client, {
+              eventType: "support_case.updated",
+              aggregateType: "support_case",
+              aggregatePublicId: context.public_id,
+              tenantPublicId: context.tenant_public_id,
+              payload: { casePublicId: context.public_id, caseNumber: context.case_number, status: context.status, updateType: "commented" },
+              dedupeKey: `support-case:${supportEventPublicId}`,
+            });
+          }
           return { publicId: context.public_id, status: context.status };
         }
         const transition = transitions[parsed.data.action]!;
@@ -266,7 +289,18 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
              updated_at = now() where id = $1`,
           [context.id, transition.to, parsed.data.note],
         );
-        await client.query("insert into app.support_case_events (public_id, support_case_id, actor_user_id, event_type, from_status, to_status, note) values ($1, $2, $3, $4, $5, $6, $7)", [uuidV7(), context.id, principal.userId, transition.event, context.status, transition.to, parsed.data.note]);
+        const supportEventPublicId = uuidV7();
+        await client.query("insert into app.support_case_events (public_id, support_case_id, actor_user_id, event_type, from_status, to_status, note) values ($1, $2, $3, $4, $5, $6, $7)", [supportEventPublicId, context.id, principal.userId, transition.event, context.status, transition.to, parsed.data.note]);
+        if (context.tenant_public_id) {
+          await enqueueTenantPushEvent(client, {
+            eventType: "support_case.updated",
+            aggregateType: "support_case",
+            aggregatePublicId: context.public_id,
+            tenantPublicId: context.tenant_public_id,
+            payload: { casePublicId: context.public_id, caseNumber: context.case_number, status: transition.to, updateType: transition.event },
+            dedupeKey: `support-case:${supportEventPublicId}`,
+          });
+        }
         await audit(client, principal, { action: `support_case.${transition.event}`, entityType: "support_case", entityPublicId: context.public_id,
           reason: parsed.data.note, after: { fromStatus: context.status, toStatus: transition.to }, requestId: response.locals.requestId ?? uuidV7() });
         return { publicId: context.public_id, status: transition.to };

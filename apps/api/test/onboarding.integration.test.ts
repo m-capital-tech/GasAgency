@@ -571,6 +571,25 @@ integrationTest("delegated creator submits and a separate administrator activate
       body: JSON.stringify({ creditEnabled: true, reason: "Agency reconciliation completed" }),
     });
     assert.equal(restoredCredit.status, 200);
+    const policyNotifications = await pool.query<{ payload: Record<string, unknown> }>(
+      `select payload from app.outbox_events
+        where event_type = 'credit.status_changed'
+          and payload->>'tenantPublicId' = $1
+          and payload->>'status' in ('agency_disabled', 'agency_enabled')
+        order by id`,
+      [createdBody.tenant.publicId],
+    );
+    assert.deepEqual(
+      policyNotifications.rows.map((event) => ({
+        status: event.payload.status,
+        agencyDisplayName: event.payload.agencyDisplayName,
+        includesReason: Object.hasOwn(event.payload, "reason"),
+      })),
+      [
+        { status: "agency_disabled", agencyDisplayName: "Integration Agency", includesReason: false },
+        { status: "agency_enabled", agencyDisplayName: "Integration Agency", includesReason: false },
+      ],
+    );
 
     const paymentEndpoint = `${accountsEndpoint}/${approvedBody.commercialAccount.publicId}/payments`;
     const paymentHeaders = { ...agencyJsonHeaders, "idempotency-key": "agency-payment-record-0001" };

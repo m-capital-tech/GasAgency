@@ -9,6 +9,7 @@ import { platformTeamRouter } from "../src/routes/platform-team";
 import { systemConfigurationRouter } from "../src/routes/system-configuration";
 import { authMfaRouter } from "../src/routes/auth-mfa";
 import { loadApiConfig } from "../src/config";
+import { gstinCheckDigit } from "../src/domain/gstin";
 import { HttpError } from "../src/http/error";
 import { totpCode } from "../src/security/mfa";
 import { hashSessionToken } from "../src/security/token";
@@ -124,7 +125,21 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
     }) });
     assert.equal(duplicateRevenue.status, 409);
 
+    const supportTenantPublicId = uuidV7();
+    const supportTenantKey = supportTenantPublicId.replaceAll("-", "");
+    const supportTenantPanLetters = [...supportTenantKey.slice(-5)].map((value) => String.fromCharCode(65 + Number.parseInt(value, 16))).join("");
+    const supportTenantRegistration = String(Number.parseInt(supportTenantKey.slice(-9, -5), 16) % 10_000).padStart(4, "0");
+    const supportTenantGstinPrefix = `29${supportTenantPanLetters}${supportTenantRegistration}F1Z`;
+    await pool.query(
+      `insert into app.tenants (
+         public_id, legal_name, display_name, business_type, gstin, status,
+         created_by_user_id, approved_by_user_id, approved_at
+       ) values ($1, $2, $2, 'restaurant', $3, 'active', $4, $4, now())`,
+      [supportTenantPublicId, `Governance Support Tenant ${suffix}`, `${supportTenantGstinPrefix}${gstinCheckDigit(supportTenantGstinPrefix)}`, superAdmin.id],
+    );
+
     const supportCreated = await fetch(`${base}/admin/support-cases`, { method: "POST", headers, body: JSON.stringify({
+      tenantPublicId: supportTenantPublicId,
       category: "technical", priority: "high", subject: "Integration support workflow", description: "Validate support lifecycle and SLA reporting",
     }) });
     assert.equal(supportCreated.status, 201);
@@ -136,6 +151,25 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
     const supportList = await fetch(`${base}/admin/support-cases?status=resolved`, { headers });
     assert.equal(supportList.status, 200);
     assert.equal((await supportList.json() as { cases: Array<{ publicId: string }> }).cases.some((item) => item.publicId === supportCase.publicId), true);
+    const supportNotifications = await pool.query<{ payload: Record<string, unknown> }>(
+      `select payload from app.outbox_events
+        where event_type = 'support_case.updated'
+          and aggregate_public_id = $1
+        order by id`,
+      [supportCase.publicId],
+    );
+    assert.deepEqual(
+      supportNotifications.rows.map((event) => ({
+        updateType: event.payload.updateType,
+        status: event.payload.status,
+        includesNote: Object.hasOwn(event.payload, "note") || Object.hasOwn(event.payload, "description") || Object.hasOwn(event.payload, "resolution"),
+      })),
+      [
+        { updateType: "created", status: "open", includesNote: false },
+        { updateType: "acknowledged", status: "acknowledged", includesNote: false },
+        { updateType: "resolved", status: "resolved", includesNote: false },
+      ],
+    );
 
     const coveredDashboard = await fetch(`${base}/admin/dashboard?period=daily`, { headers });
     assert.equal(coveredDashboard.status, 200);

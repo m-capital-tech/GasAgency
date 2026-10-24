@@ -33,6 +33,7 @@ test("Expo adapter sends a bounded authenticated batch without returning tokens"
   assert.equal(captured?.url, "https://exp.host/--/api/v2/push/send");
   assert.equal(captured?.init?.method, "POST");
   assert.equal((captured?.init?.headers as Record<string, string>).authorization, "Bearer expo-access-token-value");
+  assert.equal((JSON.parse(String(captured?.init?.body)) as Array<{ channelId: string }>)[0]?.channelId, "account-updates");
   assert.deepEqual(results, [
     { deliveryPublicId: "delivery-one", outcome: "accepted", providerReference: "ticket-one" },
     { deliveryPublicId: "delivery-two", outcome: "accepted", providerReference: "ticket-two" },
@@ -133,9 +134,44 @@ test("all supported commercial events expose only trusted navigation identifiers
     tenantPublicId, orderPublicId, invoicePublicId, invoiceNumber: "INV-100", totalAmount: "500.00",
   })).data, { tenantPublicId, orderPublicId, invoicePublicId, eventType: "invoice.issued" });
   assert.deepEqual(buildPushContent(event("payment.recorded", { tenantPublicId, paymentPublicId, amount: "500.00" })).data, {
-    tenantPublicId, paymentPublicId, eventType: "payment.recorded",
+    tenantPublicId, paymentPublicId, eventType: "payment.recorded", route: "billing",
   });
+  const creditAccountPublicId = "0199ed7f-7450-7000-8000-000000000005";
+  const supportCasePublicId = "0199ed7f-7450-7000-8000-000000000006";
+  const requirementPublicId = "0199ed7f-7450-7000-8000-000000000007";
+  const outletPublicId = "0199ed7f-7450-7000-8000-000000000008";
+  assert.deepEqual(buildPushContent(event("credit.terms_changed", {
+    tenantPublicId, creditAccountPublicId, change: "updated", creditLimit: "150000.00", netTermDays: 30,
+  })).data, { tenantPublicId, creditAccountPublicId, eventType: "credit.terms_changed", route: "billing" });
+  assert.equal(buildPushContent(event("credit.status_changed", {
+    tenantPublicId, creditAccountPublicId, status: "suspended", reason: "private internal reason",
+  })).body, "Credit ordering is paused. Open Billing for account details.");
+  assert.deepEqual(buildPushContent(event("invoice.due_soon", {
+    tenantPublicId, invoicePublicId, invoiceNumber: "INV-100", outstandingAmount: "500.00", dueAt: "2026-10-23T04:30:00.000Z",
+  })).data, { tenantPublicId, invoicePublicId, eventType: "invoice.due_soon" });
+  assert.deepEqual(buildPushContent(event("support_case.updated", {
+    tenantPublicId, casePublicId: supportCasePublicId, caseNumber: "CASE-100", status: "in_progress", updateType: "started", note: "private case response",
+  })).data, { tenantPublicId, casePublicId: supportCasePublicId, eventType: "support_case.updated", route: "support" });
+  assert.deepEqual(buildPushContent(event("standing_order.reminder", {
+    tenantPublicId, requirementPublicId, outletPublicId, outletLabel: "Main kitchen", deliveryDate: "2026-10-23", totalQuantity: 3,
+  })).data, { tenantPublicId, outletPublicId, eventType: "standing_order.reminder", route: "order" });
   assert.throws(() => buildPushContent(event("unknown.event", {})), /unsupported push event type/);
+});
+
+test("new account and support notifications never expose operator reasons or case notes", () => {
+  const tenantPublicId = "0199ed7f-7450-7000-8000-000000000001";
+  const aggregatePublicId = "0199ed7f-7450-7000-8000-000000000002";
+  const event = (eventType: string, payload: unknown): OutboxEvent => ({
+    id: "1", publicId: "0199ed7f-7450-7000-8000-000000000010", eventType,
+    aggregateType: "test", aggregatePublicId, payload, attemptCount: 1, createdAt: new Date(),
+  });
+  const credit = buildPushContent(event("credit.status_changed", {
+    tenantPublicId, creditAccountPublicId: aggregatePublicId, status: "suspended", reason: "risk-team-only text",
+  }));
+  const support = buildPushContent(event("support_case.updated", {
+    tenantPublicId, casePublicId: aggregatePublicId, caseNumber: "CASE-100", status: "resolved", updateType: "resolved", note: "private resolution",
+  }));
+  assert.doesNotMatch(JSON.stringify([credit, support]), /risk-team-only|private resolution/);
 });
 
 test("production can run push-only while the local messaging provider remains forbidden", () => {

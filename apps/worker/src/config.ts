@@ -44,6 +44,11 @@ const schema = z
     EXPO_PUSH_ACCESS_TOKEN: z.string().min(16).optional(),
     EXPO_PUSH_REQUEST_TIMEOUT_MS: integer(10_000, 1_000, 30_000),
     PUSH_MAX_DELIVERY_ATTEMPTS: integer(5, 1, 10),
+    PUSH_MAX_EVENT_AGE_SECONDS: integer(172_800, 300, 604_800),
+    NOTIFICATION_SCHEDULER_INTERVAL_MS: integer(300_000, 10_000, 3_600_000),
+    INVOICE_DUE_REMINDER_HOURS: integer(24, 1, 168),
+    STANDING_ORDER_REMINDER_LOCAL_HOUR: integer(7, 0, 23),
+    BUSINESS_TIME_ZONE: z.string().min(1).max(100).default("Asia/Kolkata"),
   })
   .superRefine((value, context) => {
     if (value.APP_ENV === "production" && value.DATABASE_SSL_MODE !== "verify-full") {
@@ -93,6 +98,11 @@ const schema = z
     if (value.PUSH_PROVIDER === "expo" && !value.PUSH_TOKEN_ENCRYPTION_KEY) {
       context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "is required for Expo push delivery" });
     }
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: value.BUSINESS_TIME_ZONE }).format(new Date());
+    } catch {
+      context.addIssue({ code: "custom", path: ["BUSINESS_TIME_ZONE"], message: "must be a valid IANA time zone" });
+    }
   });
 
 export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
@@ -133,5 +143,10 @@ export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
       requestTimeoutMs: value.EXPO_PUSH_REQUEST_TIMEOUT_MS,
     } : undefined,
     pushMaxDeliveryAttempts: value.PUSH_MAX_DELIVERY_ATTEMPTS,
+    pushMaxEventAgeSeconds: value.PUSH_MAX_EVENT_AGE_SECONDS,
+    notificationSchedulerIntervalMs: value.NOTIFICATION_SCHEDULER_INTERVAL_MS,
+    invoiceDueReminderHours: value.INVOICE_DUE_REMINDER_HOURS,
+    standingOrderReminderLocalHour: value.STANDING_ORDER_REMINDER_LOCAL_HOUR,
+    businessTimeZone: value.BUSINESS_TIME_ZONE,
   } as const;
 }
