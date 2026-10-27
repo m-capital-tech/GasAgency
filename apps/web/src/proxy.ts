@@ -36,7 +36,9 @@ export function proxy(request: NextRequest) {
 
   const destination = request.nextUrl.clone();
   destination.search = "";
-  destination.pathname = request.nextUrl.pathname.startsWith("/agency") || request.nextUrl.searchParams.get("as") === "agency"
+  destination.pathname = request.nextUrl.pathname.startsWith("/operations")
+    || request.nextUrl.pathname.startsWith("/agency")
+    || request.nextUrl.searchParams.get("as") === "agency"
     ? "/operations/login"
     : "/control/login";
   return NextResponse.redirect(destination);

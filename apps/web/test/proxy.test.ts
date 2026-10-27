@@ -50,3 +50,12 @@ test("redirects an unauthenticated control request to the control login", async 
     assert.equal(response.headers.get("location"), "https://example.test/control/login");
   });
 });
+
+test("redirects an unauthenticated operations request to the operations login", async () => {
+  await withProductionEnvironment(() => {
+    const response = proxy(new NextRequest("https://example.test/operations"));
+
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "https://example.test/operations/login");
+  });
+});
