@@ -16,9 +16,9 @@
     "@platform/database": "workspace:*",
     "@platform/runtime": "workspace:*",
     "cors": "^2.8.5",
-    "express": "^5.2.1",
+    "express": "^5.3.0",
     "helmet": "^8.1.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
