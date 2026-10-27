@@ -369,6 +369,7 @@ export interface MfaAuthenticationResponse {
   accessToken: string;
   tokenType: "Bearer";
   expiresInSeconds: number;
+  firstLogin: boolean;
   user: TenantSessionUser;
   tenants: TenantAccess[];
   recoveryCodes?: string[];

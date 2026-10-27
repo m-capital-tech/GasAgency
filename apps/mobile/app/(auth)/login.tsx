@@ -46,6 +46,7 @@ export default function LoginScreen() {
   const [mfaCode, setMfaCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [selectTenantAfterRecovery, setSelectTenantAfterRecovery] = useState(false);
+  const [registrationSummaryAfterRecovery, setRegistrationSummaryAfterRecovery] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -71,6 +72,7 @@ export default function LoginScreen() {
     setMfaCode("");
     setRecoveryCodes([]);
     setSelectTenantAfterRecovery(false);
+    setRegistrationSummaryAfterRecovery(false);
     setTimer(0);
     setError(message ?? null);
   };
@@ -165,16 +167,17 @@ export default function LoginScreen() {
         ? await confirmMfaEnrollment(mfaTicket, mfaEnrollment.factorPublicId, mfaCode)
         : await verifyMfa(mfaTicket, mfaCode);
       if (!response.tenants.length) throw new PlatformApiError("tenant_access_required", "This account has no active business access in the mobile app.", 403);
-      await loginTenant(response.accessToken, response.user, response.tenants, false);
+      await loginTenant(response.accessToken, response.user, response.tenants, response.firstLogin);
       if (response.recoveryCodes?.length) {
         setRecoveryCodes(response.recoveryCodes);
         setSelectTenantAfterRecovery(response.tenants.length > 1);
+        setRegistrationSummaryAfterRecovery(response.firstLogin);
         setMfaTicket(null);
         setMfaEnrollment(null);
         setMfaCode("");
         setStep("recovery");
       } else {
-        routeAfterAuthentication(response.tenants, false);
+        routeAfterAuthentication(response.tenants, response.firstLogin);
       }
     } catch (caught) {
       if (caught instanceof PlatformApiError && caught.code === "invalid_mfa_ticket") {
@@ -279,7 +282,7 @@ export default function LoginScreen() {
           <Text variant="title" style={{ marginTop: 12 }}>Authenticator enabled</Text>
           <Text variant="body" tone="muted" style={{ marginTop: 6, marginBottom: 18 }}>Save these one-time recovery codes securely. They will not be shown again.</Text>
           <Card tone="alt"><View style={styles.recoveryGrid}>{recoveryCodes.map((value) => <Text key={value} variant="small" style={styles.recoveryCode}>{value}</Text>)}</View></Card>
-          <Button title="I saved the codes — continue" onPress={() => router.replace(selectTenantAfterRecovery ? "/(auth)/select-tenant" : "/(tenant)/home")} style={{ marginTop: 20 }} size="lg" />
+          <Button title="I saved the codes — continue" onPress={() => router.replace(selectTenantAfterRecovery ? "/(auth)/select-tenant" : registrationSummaryAfterRecovery ? "/(tenant)/registration-summary" : "/(tenant)/home")} style={{ marginTop: 20 }} size="lg" />
         </>
       )}
     </Screen>

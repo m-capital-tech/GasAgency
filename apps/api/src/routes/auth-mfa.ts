@@ -18,13 +18,14 @@ const enrollmentVerifySchema = z.object({ mfaTicket: ticket, factorPublicId: z.s
 const verifySchema = z.object({ mfaTicket: ticket, code: z.string().trim().min(6).max(20) }).strict();
 const stepUpSchema = z.object({ code: z.string().trim().min(6).max(20) }).strict();
 
-interface TicketRow { id: string; public_id: string; user_id: string; user_public_id: string; full_name: string; phone_e164: string; attempts_remaining: number; device_name: string | null; device_identifier_hash: Buffer | null; created_ip: string | null; }
+interface TicketRow { id: string; public_id: string; user_id: string; user_public_id: string; full_name: string; phone_e164: string; first_login: boolean; attempts_remaining: number; device_name: string | null; device_identifier_hash: Buffer | null; created_ip: string | null; }
 interface FactorRow { id: string; public_id: string; secret_envelope: string; status: "pending" | "active"; last_used_step: string | null; }
 
 async function lockTicket(client: pg.PoolClient, rawTicket: string, config: ApiConfig): Promise<TicketRow | null> {
   return (await client.query<TicketRow>(
     `select ticket.id::text, ticket.public_id::text, ticket.user_id::text,
             user_row.public_id::text as user_public_id, user_row.full_name, user_row.phone_e164,
+            user_row.last_login_at is null as first_login,
             ticket.attempts_remaining, ticket.device_name, ticket.device_identifier_hash, ticket.created_ip::text
        from app.mfa_login_tickets ticket
        join app.users user_row on user_row.id = ticket.user_id
@@ -47,10 +48,10 @@ async function createMfaSession(client: pg.PoolClient, ticketRow: TicketRow, con
   );
   await client.query("update app.users set last_login_at = now(), updated_at = now() where id = $1", [ticketRow.user_id]);
   await client.query("update app.mfa_login_tickets set consumed_at = now() where id = $1", [ticketRow.id]);
-  return { accessToken, sessionPublicId };
+  return { accessToken, sessionPublicId, firstLogin: ticketRow.first_login };
 }
 
-async function authenticatedBody(pool: pg.Pool, accessToken: string, config: ApiConfig) {
+async function authenticatedBody(pool: pg.Pool, accessToken: string, config: ApiConfig, firstLogin: boolean) {
   const principal = await loadPrincipalBySessionHash(pool, hashSessionToken(accessToken, config.sessionTokenPepper));
   if (!principal) throw new Error("new MFA session could not be restored");
   const [memberships, agencies] = await Promise.all([
@@ -64,7 +65,7 @@ async function authenticatedBody(pool: pg.Pool, accessToken: string, config: Api
     activeAgencyAccess(pool, principal.userId),
   ]);
   return {
-    status: "authenticated" as const, accessToken, tokenType: "Bearer" as const, expiresInSeconds: config.privilegedSessionTtlSeconds,
+    status: "authenticated" as const, accessToken, tokenType: "Bearer" as const, expiresInSeconds: config.privilegedSessionTtlSeconds, firstLogin,
     user: { publicId: principal.userPublicId, fullName: principal.fullName, phoneE164: principal.phoneE164 },
     tenants: memberships.rows.map((row) => ({ publicId: row.public_id, displayName: row.display_name, membershipType: row.membership_type })),
     agencies, platformAccess: platformAccessFromAssignments(principal.assignments),
@@ -136,10 +137,10 @@ export function authMfaRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
            values ($1, $2, 'privileged_user', 'mfa.enrolled', 'mfa_factor', $3, $4::jsonb, $5, $6, $7, $8)`,
           [uuidV7(), ticketRow.user_id, factor.public_id, JSON.stringify({ factorType: "totp", recoveryCodeCount: recoveryCodes.length, sessionPublicId: session.sessionPublicId }), uuidV7(), uuidV7(), request.ip || null, request.header("user-agent")?.slice(0, 500) ?? null],
         );
-        return { invalid: false as const, accessToken: session.accessToken, recoveryCodes };
+        return { invalid: false as const, accessToken: session.accessToken, firstLogin: session.firstLogin, recoveryCodes };
       });
       if (result.invalid) throw new HttpError(422, "invalid_mfa_code", "The authenticator code is invalid or expired.", { remainingAttempts: result.remainingAttempts });
-      response.status(200).json({ ...(await authenticatedBody(pool, result.accessToken, config)), recoveryCodes: result.recoveryCodes });
+      response.status(200).json({ ...(await authenticatedBody(pool, result.accessToken, config, result.firstLogin)), recoveryCodes: result.recoveryCodes });
     } catch (error) { next(error); }
   });
 
@@ -180,10 +181,10 @@ export function authMfaRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
            values ($1, $2, 'privileged_user', 'mfa.verified', 'device_session', $3, $4::jsonb, $5, $6, $7, $8)`,
           [uuidV7(), ticketRow.user_id, session.sessionPublicId, JSON.stringify({ method, factorPublicId: factor.public_id }), uuidV7(), uuidV7(), request.ip || null, request.header("user-agent")?.slice(0, 500) ?? null],
         );
-        return { invalid: false as const, accessToken: session.accessToken, recoveryCodeUsed: method === "recovery_code" };
+        return { invalid: false as const, accessToken: session.accessToken, firstLogin: session.firstLogin, recoveryCodeUsed: method === "recovery_code" };
       });
       if (result.invalid) throw new HttpError(422, "invalid_mfa_code", "The authenticator or recovery code is invalid.", { remainingAttempts: result.remainingAttempts });
-      response.status(200).json({ ...(await authenticatedBody(pool, result.accessToken, config)), recoveryCodeUsed: result.recoveryCodeUsed });
+      response.status(200).json({ ...(await authenticatedBody(pool, result.accessToken, config, result.firstLogin)), recoveryCodeUsed: result.recoveryCodeUsed });
     } catch (error) { next(error); }
   });
 
