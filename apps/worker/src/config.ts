@@ -39,6 +39,7 @@ const schema = z
     MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID: z.string().regex(/^[0-9]{6,30}$/).optional(),
     MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT: z.string().min(1).max(1000).optional(),
     MESSAGEINDIA_REQUEST_TIMEOUT_MS: integer(10_000, 1_000, 30_000),
+    MESSAGEINDIA_RELAY_SIGNING_SECRET: z.string().min(32).optional(),
     PUSH_PROVIDER: z.enum(["disabled", "expo"]).default("disabled"),
     PUSH_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     EXPO_PUSH_ACCESS_TOKEN: z.string().min(16).optional(),
@@ -76,8 +77,6 @@ const schema = z
       const required = [
         "MESSAGEINDIA_SEND_URL", "MESSAGEINDIA_USERNAME", "MESSAGEINDIA_API_KEY", "MESSAGEINDIA_SENDER_NAME", "MESSAGEINDIA_ENTITY_ID",
         "MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID", "MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT",
-        "MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID", "MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT",
-        "MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID", "MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT",
       ] as const;
       for (const key of required) {
         if (!value[key]) context.addIssue({ code: "custom", path: [key], message: "is required for the MessageIndia provider" });
@@ -88,11 +87,27 @@ const schema = z
       if (["staging", "production"].includes(value.APP_ENV) && value.MESSAGEINDIA_TRANSPORT !== "post") {
         context.addIssue({ code: "custom", path: ["MESSAGEINDIA_TRANSPORT"], message: "staging and production require POST so credentials are not placed in URLs" });
       }
+      if (
+        ["staging", "production"].includes(value.APP_ENV)
+        && value.MESSAGEINDIA_SEND_URL
+        && ["myemipay.com", "www.myemipay.com"].includes(new URL(value.MESSAGEINDIA_SEND_URL).hostname)
+        && !value.MESSAGEINDIA_RELAY_SIGNING_SECRET
+      ) {
+        context.addIssue({ code: "custom", path: ["MESSAGEINDIA_RELAY_SIGNING_SECRET"], message: "is required for the My EMI relay" });
+      }
       if (value.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT && !value.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT.includes("{{code}}")) {
         context.addIssue({ code: "custom", path: ["MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT"], message: "must contain {{code}}" });
       }
       if (value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT && !value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT.includes("{{businessName}}")) {
         context.addIssue({ code: "custom", path: ["MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT"], message: "must contain {{businessName}}" });
+      }
+      for (const [idKey, textKey] of [
+        ["MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID", "MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT"],
+        ["MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID", "MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT"],
+      ] as const) {
+        if (Boolean(value[idKey]) !== Boolean(value[textKey])) {
+          context.addIssue({ code: "custom", path: [idKey], message: "template ID and text must be configured together" });
+        }
       }
     }
     if (value.PUSH_PROVIDER === "expo" && !value.PUSH_TOKEN_ENCRYPTION_KEY) {
@@ -130,10 +145,15 @@ export function loadWorkerConfig(environment: NodeJS.ProcessEnv = process.env) {
       senderName: value.MESSAGEINDIA_SENDER_NAME!,
       entityId: value.MESSAGEINDIA_ENTITY_ID!,
       requestTimeoutMs: value.MESSAGEINDIA_REQUEST_TIMEOUT_MS,
+      relaySigningSecret: value.MESSAGEINDIA_RELAY_SIGNING_SECRET,
       templates: {
         login_otp: { id: value.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID!, text: value.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT! },
-        tenant_registration: { id: value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID!, text: value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT! },
-        platform_access: { id: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID!, text: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT! },
+        ...(value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID && value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT
+          ? { tenant_registration: { id: value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_ID, text: value.MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT } }
+          : {}),
+        ...(value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID && value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT
+          ? { platform_access: { id: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID, text: value.MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT } }
+          : {}),
       },
     } : undefined,
     pushProvider: value.PUSH_PROVIDER,

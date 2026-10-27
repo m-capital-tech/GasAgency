@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 import { loadWorkerConfig } from "../src/config";
 import { MessageIndiaProvider, type MessageIndiaProviderOptions } from "../src/messaging/messageindia-provider";
@@ -50,6 +51,32 @@ test("sends an encoded DLT-compliant request without changing the provider contr
     peid: "100123456789",
     templateid: "100000000001",
   });
+});
+
+test("signs relay submissions without placing the relay secret in the request", async () => {
+  let capturedRequest: RequestInit | undefined;
+  const relaySigningSecret = "relay-signing-secret-with-at-least-32-bytes";
+  const provider = new MessageIndiaProvider(options(async (_input, init) => {
+    capturedRequest = init;
+    return new Response(JSON.stringify({ success: true, messageId: "provider-message-2" }), { status: 200 });
+  }, { sendUrl: "https://myemipay.com/api/munna-sms-relay", relaySigningSecret }));
+
+  await provider.send({
+    idempotencyKey: "auth-otp-sms:challenge-signed",
+    channel: "sms",
+    destinationE164: "+919876543210",
+    template: { name: "login_otp", version: "v1", parameters: { code: "123456" } },
+  });
+
+  const headers = new Headers(capturedRequest?.headers);
+  const timestamp = headers.get("x-munna-timestamp");
+  assert.ok(timestamp);
+  assert.equal(headers.get("x-munna-idempotency-key"), "auth-otp-sms:challenge-signed");
+  const expected = createHmac("sha256", relaySigningSecret)
+    .update(`${timestamp}\nauth-otp-sms:challenge-signed\n${String(capturedRequest?.body)}`)
+    .digest("hex");
+  assert.equal(headers.get("x-munna-signature"), `v1=${expected}`);
+  assert.doesNotMatch(JSON.stringify(Object.fromEntries(headers)), /relay-signing-secret/);
 });
 
 test("supports the provider dashboard GET contract only over HTTPS", async () => {
@@ -121,7 +148,7 @@ test("rejects provider failures without leaking credentials or destinations", as
   );
 });
 
-test("production configuration requires HTTPS POST and every DLT template", () => {
+test("production configuration requires HTTPS POST and validates configured DLT templates", () => {
   const environment = {
     APP_ENV: "staging",
     DATABASE_URL: "postgresql://runtime:secret@db.example.test:25060/platform",
@@ -151,4 +178,40 @@ test("production configuration requires HTTPS POST and every DLT template", () =
   });
   assert.equal(parsed.messageProvider, "messageindia");
   assert.equal(parsed.messageIndia?.templates.login_otp.id, "100000000001");
+  assert.throws(
+    () => loadWorkerConfig({
+      ...environment,
+      MESSAGEINDIA_SEND_URL: "https://myemipay.com/api/munna-sms-relay",
+      MESSAGEINDIA_TRANSPORT: "post",
+    }),
+    /My EMI relay/,
+  );
+  const relayParsed = loadWorkerConfig({
+    ...environment,
+    MESSAGEINDIA_SEND_URL: "https://myemipay.com/api/munna-sms-relay",
+    MESSAGEINDIA_TRANSPORT: "post",
+    MESSAGEINDIA_RELAY_SIGNING_SECRET: "relay-signing-secret-with-at-least-32-bytes",
+  });
+  assert.equal(relayParsed.messageIndia?.relaySigningSecret, "relay-signing-secret-with-at-least-32-bytes");
+});
+
+test("production configuration can activate approved login OTP while later DLT templates remain unavailable", () => {
+  const parsed = loadWorkerConfig({
+    APP_ENV: "production",
+    DATABASE_URL: "postgresql://runtime:secret@db.example.test:25060/platform",
+    DATABASE_SSL_MODE: "verify-full",
+    DATABASE_CA_CERT: "test-ca",
+    OTP_DELIVERY_KEY: Buffer.alloc(32, 9).toString("base64"),
+    MESSAGE_PROVIDER: "messageindia",
+    MESSAGEINDIA_SEND_URL: "https://myemipay.com/api/munna-sms-relay",
+    MESSAGEINDIA_TRANSPORT: "post",
+    MESSAGEINDIA_USERNAME: "account-user",
+    MESSAGEINDIA_API_KEY: "secret-api-key-value",
+    MESSAGEINDIA_SENDER_NAME: "MEMIPY",
+    MESSAGEINDIA_ENTITY_ID: "1701178557282913157",
+    MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID: "1777179264578233316",
+    MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT: "Your My EMI login OTP is {{code}}. It is valid for 5 minutes. Do not share this OTP with anyone. - My EMI",
+    MESSAGEINDIA_RELAY_SIGNING_SECRET: "relay-signing-secret-with-at-least-32-bytes",
+  });
+  assert.deepEqual(Object.keys(parsed.messageIndia?.templates ?? {}), ["login_otp"]);
 });

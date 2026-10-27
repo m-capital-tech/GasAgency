@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import type { DeliveryReceipt, MessagingProvider, OutboundMessage } from "./provider";
 
 export type MessageIndiaTransport = "get" | "post";
@@ -16,8 +16,9 @@ export interface MessageIndiaProviderOptions {
   apiKey: string;
   senderName: string;
   entityId: string;
-  templates: Record<MessageIndiaTemplateName, MessageIndiaTemplate>;
+  templates: Partial<Record<MessageIndiaTemplateName, MessageIndiaTemplate>>;
   requestTimeoutMs: number;
+  relaySigningSecret?: string;
   allowInsecureHttp?: boolean;
   fetchImplementation?: typeof fetch;
 }
@@ -91,9 +92,10 @@ export class MessageIndiaProvider implements MessagingProvider {
     if (this.sendUrl.protocol !== "https:" && !options.allowInsecureHttp) {
       throw new Error("messageindia send URL must use HTTPS");
     }
-    for (const name of Object.keys(templateParameters) as MessageIndiaTemplateName[]) {
+    for (const name of Object.keys(options.templates) as MessageIndiaTemplateName[]) {
+      if (!options.templates[name]) continue;
       const parameters = Object.fromEntries(templateParameters[name].map((key) => [key, `__${key}__`]));
-      renderTemplate(options.templates[name], parameters);
+      renderTemplate(options.templates[name]!, parameters);
     }
     this.fetchImplementation = options.fetchImplementation ?? fetch;
   }
@@ -123,6 +125,18 @@ export class MessageIndiaProvider implements MessagingProvider {
     if (this.options.transport === "post") {
       request.headers = { ...request.headers, "content-type": "application/x-www-form-urlencoded" };
       request.body = form;
+      if (this.options.relaySigningSecret) {
+        const timestamp = Math.floor(Date.now() / 1_000).toString();
+        const signature = createHmac("sha256", this.options.relaySigningSecret)
+          .update(`${timestamp}\n${message.idempotencyKey}\n${form.toString()}`)
+          .digest("hex");
+        request.headers = {
+          ...request.headers,
+          "x-munna-timestamp": timestamp,
+          "x-munna-idempotency-key": message.idempotencyKey,
+          "x-munna-signature": `v1=${signature}`,
+        };
+      }
     } else {
       endpoint.search = form.toString();
     }

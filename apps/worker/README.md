@@ -12,7 +12,7 @@ The push pipeline consumes tenant order, invoice, and recorded-payment events. I
 
 The MessageIndia adapter supports form-encoded POST and the legacy query-string GET contract for local contract testing, but always requires an HTTPS endpoint and permits only POST in staging or production so credentials never appear in URLs. It renders only configured DLT templates, supplies the sender header, principal entity ID and template ID on every request, treats submission as `sent` rather than delivered, redacts credentials and message contents from errors, and uses a bounded request timeout. The API key must remain an encrypted runtime secret.
 
-Production or staging startup with `MESSAGE_PROVIDER=messageindia` requires all three approved templates. Template text must exactly match the DLT registration. The supported placeholder contract is `{{code}}` for login OTP; `{{businessName}}`, `{{servingAgencyName}}`, `{{appLink}}`, and `{{supportContact}}` for tenant registration; and no placeholders for platform access. Provider startup rejects missing, extra, or unused placeholders. Do not enable the worker against the legacy plaintext HTTP endpoint.
+Production or staging startup with `MESSAGE_PROVIDER=messageindia` requires the approved login OTP template. Tenant-registration and platform-access templates remain disabled until each ID and matching text are configured together. Template text must exactly match the DLT registration. The supported placeholder contract is `{{code}}` for login OTP; `{{businessName}}`, `{{servingAgencyName}}`, `{{appLink}}`, and `{{supportContact}}` for tenant registration; and no placeholders for platform access. Provider startup rejects missing, extra, or unused placeholders. Do not enable the worker directly against the legacy plaintext HTTP endpoint.
 
 Delivery callbacks remain blocked until MessageIndia supplies the real callback signing/authentication scheme, message-reference field, retry behavior, and terminal status mapping. Do not invent or expose an unsigned callback endpoint. WhatsApp fallback execution also remains subsequent work; the worker now persists each invitation's payload-controlled fallback deadline instead of hardcoding five minutes.
 
@@ -43,6 +43,7 @@ MESSAGEINDIA_TENANT_REGISTRATION_TEMPLATE_TEXT={{businessName}} is registered on
 MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_ID=...
 MESSAGEINDIA_PLATFORM_ACCESS_TEMPLATE_TEXT=Your Munna Gas Connect platform access is ready. Log in with your registered mobile number and OTP.
 MESSAGEINDIA_REQUEST_TIMEOUT_MS=10000
+MESSAGEINDIA_RELAY_SIGNING_SECRET=...            # encrypted secret; required for the temporary myemipay.com relay
 ```
 
 Expo push configuration:
