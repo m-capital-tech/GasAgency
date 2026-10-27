@@ -171,6 +171,35 @@ test("expired OTP challenges are rejected before decrypting or calling the provi
   assert.ok(pool.calls.some((call) => call.text.includes("set delivery_status = 'failed'")));
 });
 
+test("OTP resend uses a distinct provider idempotency key while preserving the challenge code", async () => {
+  const pool = new ScriptedPool([], [{
+    delivery_status: "queued",
+    expires_at: new Date(Date.now() + 5 * 60_000),
+    consumed_at: null,
+    invalidated_at: null,
+    user_id: "17",
+    user_status: "active",
+    phone_e164: destinationE164,
+  }]);
+  const provider = new RecordingProvider();
+  const handler = createMessagingHandlers({ pool: pool as unknown as pg.Pool, provider, otpDeliveryKey: deliveryKey, logger })
+    .get("auth.otp.sms.requested");
+  assert.ok(handler);
+
+  await handler(event("auth.otp.sms.requested", challengePublicId, {
+    challengePublicId,
+    destinationE164,
+    encryptedCode: encryptSecret("123456", deliveryKey, challengePublicId),
+    purpose: "login",
+    strategy: "sms_first",
+    deliveryAttempt: 2,
+  }));
+
+  assert.equal(provider.messages.length, 1);
+  assert.equal(provider.messages[0]?.idempotencyKey, `auth-otp-sms:${challengePublicId}:attempt-2`);
+  assert.deepEqual(provider.messages[0]?.template.parameters, { code: "123456" });
+});
+
 test("expired platform assignments prevent stale access invitations", async () => {
   const pool = new ScriptedPool([], [], "queued", [{
     status: "queued",

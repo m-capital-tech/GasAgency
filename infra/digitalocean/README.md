@@ -2,7 +2,7 @@
 
 The production cloud is DigitalOcean. The primary region is Bangalore: App Platform uses `blr`, while the associated regional resources and VPC use `blr1`.
 
-The commercial product name is not finalized. Resource names therefore use neutral operational identifiers such as `commercial-lpg-production`; application behavior does not depend on the working name GasSetu or on a custom domain.
+The commercial product name is Munna Gas Connect. Existing resource names remain neutral operational identifiers such as `commercial-lpg-production`; changing them would add migration risk and application behavior does not depend on those labels or on a custom domain.
 
 ## Production topology
 
@@ -38,12 +38,12 @@ Values marked secret are configured through encrypted App Platform environment v
 | `PUBLIC_APP_ORIGIN` | API | General | Admin dashboard origin; provider URL until a domain exists |
 | `PUBLIC_API_ORIGIN` | Dashboard/mobile builds | General | Public API base URL |
 | `PLATFORM_API_URL` | Dashboard server | General | Server-side production API origin used by the `/operations` gateway; never exposed to browser code |
-| `OBJECT_STORAGE_ENDPOINT` | API, worker | General | Spaces S3-compatible endpoint |
-| `OBJECT_STORAGE_PROVIDER` | API | General | `disabled` until a private bucket is connected; then `spaces` |
-| `OBJECT_STORAGE_REGION` | API | General | Spaces signing region; `blr1` for the approved primary region |
-| `OBJECT_STORAGE_BUCKET` | API, worker | General | Environment-specific private bucket |
-| `OBJECT_STORAGE_ACCESS_KEY` | API, worker | Secret | Dedicated application credential |
-| `OBJECT_STORAGE_SECRET_KEY` | API, worker | Secret | Dedicated application credential |
+| `OBJECT_STORAGE_ENDPOINT` | API | General | Spaces S3-compatible endpoint |
+| `OBJECT_STORAGE_PROVIDER` | API | General | `spaces` in production after the private bucket and restricted credential are connected |
+| `OBJECT_STORAGE_REGION` | API | General | Spaces signing region; `sgp1` for the production document bucket |
+| `OBJECT_STORAGE_BUCKET` | API | General | Environment-specific private bucket |
+| `OBJECT_STORAGE_ACCESS_KEY` | API | Secret | Dedicated bucket-scoped application credential |
+| `OBJECT_STORAGE_SECRET_KEY` | API | Secret | Dedicated bucket-scoped application credential |
 | `OBJECT_STORAGE_MAX_BYTES` | API | General | Per-file limit; production schema and API currently cap uploads at 10 MiB |
 | `LOG_LEVEL` | API, worker | General | Structured-log verbosity |
 | `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned production integration |
@@ -59,10 +59,17 @@ Values marked secret are configured through encrypted App Platform environment v
 | `EXPO_PUSH_ACCESS_TOKEN` | Worker | Secret | Optional Expo enhanced-security access token; omit unless enabled for the Expo project |
 | `EXPO_PUSH_REQUEST_TIMEOUT_MS` | Worker | General | Bounded Expo HTTPS submission timeout |
 | `PUSH_MAX_DELIVERY_ATTEMPTS` | Worker | General | Per-event/device retry ceiling before a terminal ledger result |
+| `PUSH_MAX_EVENT_AGE_SECONDS` | Worker | General | Maximum age for a transactional push; older queued events are completed without delivery |
+| `NOTIFICATION_SCHEDULER_INTERVAL_MS` | Worker | General | Interval for materializing due, overdue, and weekly requirement reminders into the outbox |
+| `INVOICE_DUE_REMINDER_HOURS` | Worker | General | Due-soon window; one notification is deduplicated per invoice and due date |
+| `STANDING_ORDER_REMINDER_LOCAL_HOUR` | Worker | General | Local hour for the day-before weekly requirement reminder |
+| `BUSINESS_TIME_ZONE` | Worker | General | IANA time zone used for business reminder schedules; `Asia/Kolkata` for launch |
 
 The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled production specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
 
-The business-document adapter is also provider-neutral. The production specification deliberately sets `OBJECT_STORAGE_PROVIDER=disabled` because Spaces is outside the approved USD 45 ceiling. After a private bucket and dedicated restricted credential are separately approved, add the endpoint, bucket, access key and secret as App Platform variables, change the provider to `spaces`, run the storage smoke test, and only then enable `features.document_uploads` in Super Admin controls. The local adapter is rejected in staging and production.
+The business-document adapter is also provider-neutral. Production uses the private `munna-gas-connect-production-documents` Space in `sgp1` with a dedicated bucket-scoped credential. The credential values are supplied only through encrypted App Platform variables. Run the storage smoke test before enabling `features.document_uploads` in Super Admin controls. The local adapter is rejected in staging and production.
+
+Production OTPs use a 10-minute server validity window and a two-minute resend delay. Privileged phone-to-authenticator handoff tickets use the maximum supported 15-minute window. These settings accommodate observed carrier latency and first-login authenticator setup while retaining the existing per-phone/IP rate limits, five-attempt ceilings, single-use challenges, and newest-request invalidation behavior. Users must enter the newest SMS after requesting another code.
 
 ## Version-controlled production specification
 
@@ -109,6 +116,8 @@ export OTP_DELIVERY_KEY='canonical-base64-encoded-32-byte-key'
 export MFA_ENCRYPTION_KEY='another-canonical-base64-encoded-32-byte-key'
 export PUSH_TOKEN_ENCRYPTION_KEY='a-third-canonical-base64-encoded-32-byte-key'
 export MFA_TICKET_PEPPER='another-independent-random-secret-at-least-32-characters'
+export OBJECT_STORAGE_ACCESS_KEY='dedicated-bucket-scoped-access-key'
+export OBJECT_STORAGE_SECRET_KEY='matching-secret-key'
 
 pnpm deploy:production:render -- .do/app.yaml
 ```

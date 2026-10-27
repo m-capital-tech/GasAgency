@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPublicAuthenticationPath, shouldClearOperationsSessionCookie } from "@/lib/operations-session-cookie";
 
 const sessionCookie = "platform_operations_session";
 const platformApiUrl = process.env.PLATFORM_API_URL ?? "http://127.0.0.1:8080";
@@ -45,8 +46,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   if (request.method !== "GET" && !sameOrigin(request)) return NextResponse.json({ error: { code: "invalid_origin", message: "Cross-site requests are not allowed." } }, { status: 403 });
 
   const token = request.cookies.get(sessionCookie)?.value;
-  const publicAuthPaths = ["auth/otp/request", "auth/otp/verify", "auth/mfa/enroll", "auth/mfa/enroll/verify", "auth/mfa/verify"];
-  const isPublicAuth = publicAuthPaths.includes(path);
+  const isPublicAuth = isPublicAuthenticationPath(path);
   if (!isPublicAuth && !token) return NextResponse.json({ error: { code: "authentication_required", message: "Sign in to continue." } }, { status: 401 });
 
   const target = new URL(`/v1/${path}`, platformApiUrl);
@@ -98,7 +98,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const response = upstream.status === 204
     ? new NextResponse(null, { status: 204 })
     : NextResponse.json(payload, { status: upstream.status });
-  if (path === "auth/logout" || upstream.status === 401) response.cookies.delete(sessionCookie);
+  if (shouldClearOperationsSessionCookie(path, upstream.status)) response.cookies.delete(sessionCookie);
   return response;
 }
 

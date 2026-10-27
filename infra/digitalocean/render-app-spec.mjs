@@ -51,6 +51,14 @@ if (new Set(Object.values(authenticationSecrets)).size !== Object.keys(authentic
   throw new Error("authentication secrets and encryption keys must all be independent values");
 }
 
+const objectStorageSecrets = {
+  OBJECT_STORAGE_ACCESS_KEY: required("OBJECT_STORAGE_ACCESS_KEY", (value) => value.length >= 8),
+  OBJECT_STORAGE_SECRET_KEY: required("OBJECT_STORAGE_SECRET_KEY", (value) => value.length >= 16),
+};
+if (objectStorageSecrets.OBJECT_STORAGE_ACCESS_KEY === objectStorageSecrets.OBJECT_STORAGE_SECRET_KEY) {
+  throw new Error("OBJECT_STORAGE_ACCESS_KEY and OBJECT_STORAGE_SECRET_KEY must differ");
+}
+
 const values = new Map([
   ["__GITHUB_REPOSITORY__", required("DO_GITHUB_REPOSITORY", (value) => /^[^/\s]+\/[^/\s]+$/.test(value))],
   ["__GITHUB_BRANCH__", optional("DO_GITHUB_BRANCH", "main", (value) => /^[A-Za-z0-9._/-]+$/.test(value))],
@@ -64,6 +72,8 @@ const values = new Map([
   ["__MFA_ENCRYPTION_KEY__", authenticationSecrets.MFA_ENCRYPTION_KEY],
   ["__PUSH_TOKEN_ENCRYPTION_KEY__", authenticationSecrets.PUSH_TOKEN_ENCRYPTION_KEY],
   ["__MFA_TICKET_PEPPER__", authenticationSecrets.MFA_TICKET_PEPPER],
+  ["__OBJECT_STORAGE_ACCESS_KEY__", objectStorageSecrets.OBJECT_STORAGE_ACCESS_KEY],
+  ["__OBJECT_STORAGE_SECRET_KEY__", objectStorageSecrets.OBJECT_STORAGE_SECRET_KEY],
 ]);
 
 let rendered = await readFile(templatePath, "utf8");

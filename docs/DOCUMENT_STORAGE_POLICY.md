@@ -32,14 +32,22 @@ The production document service stores tenant and agency onboarding evidence: GS
 
 ## Production activation checklist
 
-1. Approve the incremental Spaces cost outside the USD 45 monthly ceiling.
-2. Create a private, environment-specific bucket in the approved region or nearest supported region. Do not enable a public CDN.
-3. Create dedicated application credentials and verify their actual scope. If the provider credential can reach unrelated buckets, isolate the account/team further.
+1. Record the separately approved incremental Spaces cost outside the original USD 45 monthly ceiling.
+2. Confirm the private `munna-gas-connect-production-documents` bucket in `sgp1`. Do not enable a public CDN or public file listing.
+3. Use the dedicated bucket-scoped Read/Write/Delete application credential. Do not expose it to the dashboard, mobile app, worker, or repository.
 4. Configure encrypted App Platform variables for endpoint, region, bucket, access key, and secret; set `OBJECT_STORAGE_PROVIDER=spaces`.
-5. Upload, download, digest-verify, archive, and unauthorized-access-test a non-sensitive fixture through the deployed API.
+5. Upload, download, digest-verify, archive, and unauthorized-access-test a non-sensitive fixture through the deployed API. Direct unauthenticated object and bucket-list requests must fail; the API download must reproduce the fixture's SHA-256 digest; archived content must return `document_unavailable`.
 6. Configure and test an independent object backup/copy strategy. Primary-bucket availability is not a backup.
 7. Record recovery time and integrity results, access-log retention, incident ownership, and credential-rotation procedure.
 8. Only after steps 1–7 pass, enable `features.document_uploads` through the Super Admin control with fresh MFA and an audit reason.
+
+### Controlled production acceptance
+
+Keep `features.document_uploads` disabled while the App Platform storage variables are applied and the API is redeployed. Confirm `/health/ready` first, then verify that unauthenticated requests to both the bucket root and a known object URL return `403`; a private bucket must not list or serve objects directly.
+
+Use a small non-sensitive PDF fixture with a locally recorded SHA-256 digest. A Super Admin with a fresh MFA session may then enable the feature with a reason that identifies the controlled storage acceptance test. Upload the fixture from the private-documents panel of one test agency or tenant, download it through the application, and compare the downloaded digest and byte size to the original. Verify that a signed-out application request returns `401` and, when a limited-scope test user is available, that an out-of-scope request returns `403`.
+
+Archive the fixture with an audit reason and confirm that the record is shown as archived, a subsequent content request returns `409 document_unavailable`, and the private object is retained. If upload, retrieval, integrity, authorization, or archive behavior fails, immediately disable the feature again and preserve the failed record and logs for diagnosis. Do not physically delete the archived acceptance fixture; it is evidence of the release check. Record the deployment identifier, document public ID, original and downloaded digests, HTTP results, tester, and timestamp without recording credentials or session tokens.
 
 ## Incident handling
 

@@ -36,6 +36,7 @@ const otpRequest = z.object({
   encryptedCode: z.string().min(1),
   purpose: z.literal("login"),
   strategy: z.literal("sms_first"),
+  deliveryAttempt: z.number().int().positive().default(1),
 });
 
 type MessageKind = "tenant_invitation" | "platform_user_invitation" | "login_otp";
@@ -328,7 +329,9 @@ export function createMessagingHandlers(options: {
     ["auth.otp.sms.requested", async (event) => {
       const payload = otpRequest.parse(event.payload);
       const messageWithoutCode: OutboundMessage = {
-        idempotencyKey: `auth-otp-sms:${payload.challengePublicId}`,
+        idempotencyKey: payload.deliveryAttempt === 1
+          ? `auth-otp-sms:${payload.challengePublicId}`
+          : `auth-otp-sms:${payload.challengePublicId}:attempt-${payload.deliveryAttempt}`,
         channel: "sms",
         destinationE164: payload.destinationE164,
         template: { name: "login_otp", version: "v1", parameters: {} },

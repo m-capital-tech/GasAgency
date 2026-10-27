@@ -111,11 +111,27 @@ services:
       - key: OBJECT_STORAGE_PROVIDER
         scope: RUN_TIME
         type: GENERAL
-        value: disabled
+        value: spaces
+      - key: OBJECT_STORAGE_ENDPOINT
+        scope: RUN_TIME
+        type: GENERAL
+        value: https://sgp1.digitaloceanspaces.com
       - key: OBJECT_STORAGE_REGION
         scope: RUN_TIME
         type: GENERAL
-        value: blr1
+        value: sgp1
+      - key: OBJECT_STORAGE_BUCKET
+        scope: RUN_TIME
+        type: GENERAL
+        value: munna-gas-connect-production-documents
+      - key: OBJECT_STORAGE_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __OBJECT_STORAGE_ACCESS_KEY__
+      - key: OBJECT_STORAGE_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __OBJECT_STORAGE_SECRET_KEY__
       - key: OBJECT_STORAGE_MAX_BYTES
         scope: RUN_TIME
         type: GENERAL
@@ -131,7 +147,7 @@ services:
       - key: MFA_TICKET_TTL_SECONDS
         scope: RUN_TIME
         type: GENERAL
-        value: "600"
+        value: "900"
       - key: MFA_MAX_ATTEMPTS
         scope: RUN_TIME
         type: GENERAL
@@ -143,11 +159,11 @@ services:
       - key: OTP_TTL_SECONDS
         scope: RUN_TIME
         type: GENERAL
-        value: "300"
+        value: "600"
       - key: OTP_RESEND_SECONDS
         scope: RUN_TIME
         type: GENERAL
-        value: "60"
+        value: "120"
       - key: OTP_MAX_ATTEMPTS
         scope: RUN_TIME
         type: GENERAL

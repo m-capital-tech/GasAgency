@@ -36,13 +36,15 @@ const schema = z
     OBJECT_STORAGE_LOCAL_ROOT: z.string().trim().min(1).default(".local-object-storage"),
     OBJECT_STORAGE_MAX_BYTES: integer(10 * 1024 * 1024, 1024, 10 * 1024 * 1024),
     MFA_TICKET_PEPPER: z.string().min(32).optional(),
-    MFA_ISSUER: z.string().trim().min(2).max(80).default("Commercial LPG Platform"),
-    MFA_TICKET_TTL_SECONDS: integer(600, 300, 900),
+    MFA_ISSUER: z.string().trim().min(2).max(80).default("Munna Gas Connect"),
+    MFA_TICKET_TTL_SECONDS: integer(900, 300, 900),
     MFA_MAX_ATTEMPTS: integer(5, 3, 10),
     PRIVILEGED_SESSION_TTL_SECONDS: integer(28_800, 900, 86_400),
     OTP_LOCAL_CODE: z.string().regex(/^[0-9]{6}$/).optional(),
     OTP_LOCAL_EXPOSE_CODE: boolean("false"),
-    OTP_TTL_SECONDS: integer(300, 60, 900),
+    OTP_DEMO_PHONE_E164: z.string().regex(/^\+[1-9][0-9]{7,14}$/).optional(),
+    OTP_DEMO_CODE: z.string().regex(/^[0-9]{6}$/).optional(),
+    OTP_TTL_SECONDS: integer(600, 60, 900),
     OTP_RESEND_SECONDS: integer(60, 30, 300),
     OTP_MAX_ATTEMPTS: integer(5, 1, 10),
     SESSION_TTL_SECONDS: integer(2_592_000, 3_600, 7_776_000),
@@ -92,6 +94,9 @@ const schema = z
     if (["staging", "production"].includes(value.APP_ENV) && (value.OTP_LOCAL_CODE || value.OTP_LOCAL_EXPOSE_CODE)) {
       context.addIssue({ code: "custom", path: ["OTP_LOCAL_CODE"], message: "local OTP controls are forbidden outside local/test" });
     }
+    if (Boolean(value.OTP_DEMO_PHONE_E164) !== Boolean(value.OTP_DEMO_CODE)) {
+      context.addIssue({ code: "custom", path: ["OTP_DEMO_CODE"], message: "OTP_DEMO_PHONE_E164 and OTP_DEMO_CODE must be configured together" });
+    }
   });
 
 export interface ApiConfig {
@@ -125,6 +130,8 @@ export interface ApiConfig {
   privilegedSessionTtlSeconds: number;
   otpLocalCode?: string;
   otpLocalExposeCode: boolean;
+  otpDemoPhoneE164?: string;
+  otpDemoCode?: string;
   otpTtlSeconds: number;
   otpResendSeconds: number;
   otpMaxAttempts: number;
@@ -168,6 +175,8 @@ export function loadApiConfig(environment: NodeJS.ProcessEnv = process.env): Api
     privilegedSessionTtlSeconds: value.PRIVILEGED_SESSION_TTL_SECONDS,
     otpLocalCode: value.OTP_LOCAL_CODE,
     otpLocalExposeCode: value.OTP_LOCAL_EXPOSE_CODE,
+    otpDemoPhoneE164: value.OTP_DEMO_PHONE_E164,
+    otpDemoCode: value.OTP_DEMO_CODE,
     otpTtlSeconds: value.OTP_TTL_SECONDS,
     otpResendSeconds: value.OTP_RESEND_SECONDS,
     otpMaxAttempts: value.OTP_MAX_ATTEMPTS,

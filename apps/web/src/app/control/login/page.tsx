@@ -2,9 +2,9 @@
 
 import { Building2, Check, Copy, KeyRound, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Card, CardContent, Field, Input } from "@/components/ui";
-import { operationsApi, type MfaEnrollment } from "@/lib/operations-api";
+import { OperationsApiError, operationsApi, type MfaEnrollment } from "@/lib/operations-api";
 
 type Stage = "phone" | "otp" | "enroll" | "mfa" | "recovery";
 
@@ -22,19 +22,30 @@ export default function ControlLoginPage() {
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const submitLock = useRef(false);
+
+  useEffect(() => {
+    if (stage !== "otp" || resendIn <= 0) return;
+    const timeout = window.setTimeout(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1_000);
+    return () => window.clearTimeout(timeout);
+  }, [resendIn, stage]);
 
   const send = async () => {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setBusy(true); setError(null);
     try {
       const result = await operationsApi.requestOtp(`+91${phone.replace(/\D/g, "").slice(-10)}`);
-      setChallenge(result.challengePublicId); setDestination(result.destination); setDebugCode(result.localDebugCode ?? null); setStage("otp");
+      setChallenge(result.challengePublicId); setDestination(result.destination); setDebugCode(result.localDebugCode ?? null); setResendIn(result.resendAfterSeconds); setOtpCode(""); setStage("otp");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not request an OTP."); }
-    finally { setBusy(false); }
+    finally { submitLock.current = false; setBusy(false); }
   };
 
   const verifyOtp = async () => {
-    if (!challenge) return;
+    if (!challenge || submitLock.current) return;
+    submitLock.current = true;
     setBusy(true); setError(null);
     try {
       const result = await operationsApi.verifyOtp(challenge, otpCode);
@@ -52,29 +63,44 @@ export default function ControlLoginPage() {
         setStage("mfa");
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Verification failed."); }
-    finally { setBusy(false); }
+    finally { submitLock.current = false; setBusy(false); }
   };
 
   const completeMfa = async () => {
-    if (!mfaTicket) return;
+    if (!mfaTicket || submitLock.current) return;
+    submitLock.current = true;
     setBusy(true); setError(null);
     try {
       if (stage === "enroll") {
         if (!enrollment) return;
         const result = await operationsApi.confirmMfaEnrollment(mfaTicket, enrollment.factorPublicId, mfaCode);
         if (!result.platformAccess) throw new Error("This account has no Platform Admin access.");
-        setRecoveryCodes(result.recoveryCodes ?? []); setStage("recovery"); setMfaCode("");
+        setRecoveryCodes(result.recoveryCodes ?? []); setStage("recovery"); setMfaCode(""); setMfaTicket(null);
       } else {
         const result = await operationsApi.verifyMfa(mfaTicket, mfaCode);
         if (!result.platformAccess) throw new Error("This account has no Platform Admin access.");
         router.replace("/control");
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "MFA verification failed."); }
-    finally { setBusy(false); }
+    } catch (cause) {
+      if (cause instanceof OperationsApiError && cause.code === "invalid_mfa_ticket") {
+        try {
+          const session = await operationsApi.session();
+          if (session.platformAccess) {
+            router.replace("/control");
+            return;
+          }
+        } catch {
+          // No completed sibling request established a session; restart phone verification below.
+        }
+        setStage("phone"); setChallenge(null); setOtpCode(""); setMfaCode(""); setMfaTicket(null); setEnrollment(null); setRecoveryCodes([]); setDebugCode(null); setResendIn(0);
+        setError("Your secure sign-in window expired. Request a new OTP to continue; an unfinished authenticator setup can be resumed safely.");
+      } else setError(cause instanceof Error ? cause.message : "MFA verification failed.");
+    }
+    finally { submitLock.current = false; setBusy(false); }
   };
 
   const reset = () => {
-    setStage("phone"); setChallenge(null); setOtpCode(""); setMfaCode(""); setMfaTicket(null); setEnrollment(null); setRecoveryCodes([]); setDebugCode(null); setError(null);
+    setStage("phone"); setChallenge(null); setOtpCode(""); setMfaCode(""); setMfaTicket(null); setEnrollment(null); setRecoveryCodes([]); setDebugCode(null); setResendIn(0); setError(null);
   };
 
   const copyRecoveryCodes = async () => {
@@ -109,7 +135,7 @@ export default function ControlLoginPage() {
 
       {debugCode ? <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">Local test OTP: <strong>{debugCode}</strong></p> : null}
       {stage === "phone" ? <Button size="lg" loading={busy} disabled={phone.length !== 10} onClick={() => void send()}>Send OTP</Button> : null}
-      {stage === "otp" ? <Button size="lg" loading={busy} disabled={otpCode.length !== 6} onClick={() => void verifyOtp()}>Verify phone</Button> : null}
+      {stage === "otp" ? <><Button size="lg" loading={busy} disabled={otpCode.length !== 6} onClick={() => void verifyOtp()}>Verify phone</Button><Button variant="outline" disabled={busy || resendIn > 0} onClick={() => void send()}>{resendIn > 0 ? `Resend OTP in ${resendIn}s` : "Resend the same OTP"}</Button><p className="text-center text-xs text-muted-foreground">A resend keeps the current code valid until its original expiry.</p></> : null}
       {stage === "enroll" || stage === "mfa" ? <Button size="lg" loading={busy} disabled={mfaCode.length < 6} onClick={() => void completeMfa()}>{stage === "enroll" ? "Enable authenticator" : "Verify and continue"}</Button> : null}
       {stage === "recovery" ? <Button size="lg" onClick={() => router.replace("/control")}>I saved these codes — continue</Button> : null}
       {stage !== "phone" && stage !== "recovery" ? <Button variant="ghost" onClick={reset}>Use another number</Button> : null}

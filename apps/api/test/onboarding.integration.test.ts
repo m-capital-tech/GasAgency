@@ -343,6 +343,29 @@ integrationTest("delegated creator submits and a separate administrator activate
     });
     assert.equal((await repeatedRequest.json() as { challengePublicId: string }).challengePublicId, tenantChallenge.challengePublicId);
 
+    await pool.query(
+      "update app.otp_challenges set resend_available_at = now() where public_id = $1",
+      [tenantChallenge.challengePublicId],
+    );
+    const resentRequest = await fetch(`${origin}/auth/otp/request`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ phoneE164: payload.owner.phoneE164 }),
+    });
+    assert.equal(resentRequest.status, 202);
+    const resentChallenge = await resentRequest.json() as { challengePublicId: string; localDebugCode: string; expiresInSeconds: number };
+    assert.equal(resentChallenge.challengePublicId, tenantChallenge.challengePublicId);
+    assert.equal(resentChallenge.localDebugCode, tenantChallenge.localDebugCode);
+    assert.ok(resentChallenge.expiresInSeconds > 0 && resentChallenge.expiresInSeconds <= config.otpTtlSeconds);
+    const otpDeliveryEvents = await pool.query<{ delivery_attempt: string }>(
+      `select payload->>'deliveryAttempt' as delivery_attempt
+         from app.outbox_events
+        where event_type = 'auth.otp.sms.requested'
+          and aggregate_public_id = $1
+        order by id`,
+      [tenantChallenge.challengePublicId],
+    );
+    assert.deepEqual(otpDeliveryEvents.rows.map((row) => row.delivery_attempt), ["1", "2"]);
+
     const wrongOtp = await fetch(`${origin}/auth/otp/verify`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ challengePublicId: tenantChallenge.challengePublicId, code: "000000", deviceName: "Integration phone" }),

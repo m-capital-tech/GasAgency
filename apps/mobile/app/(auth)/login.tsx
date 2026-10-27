@@ -90,7 +90,11 @@ export default function LoginScreen() {
       await loginTenant(response.accessToken, response.user, response.tenants, response.firstLogin);
       router.replace(response.tenants.length > 1 ? "/(auth)/select-tenant" : response.firstLogin ? "/(tenant)/registration-summary" : "/(tenant)/home");
     } catch (caught) {
-      setError(caught instanceof PlatformApiError || caught instanceof ApiError ? caught.message : "Could not verify the OTP. Try again.");
+      if (caught instanceof PlatformApiError && caught.code === "invalid_otp") {
+        setError("This code has expired or was replaced by a newer request. Enter the newest SMS, or resend once and wait for that code.");
+      } else {
+        setError(caught instanceof PlatformApiError || caught instanceof ApiError ? caught.message : "Could not verify the OTP. Try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -164,6 +168,7 @@ export default function LoginScreen() {
                 <Text variant="small" tone="primary" style={{ fontWeight: "600" }}>Resend OTP</Text>
               </Pressable>
             )}
+            <Text variant="caption" tone="faint" center style={{ marginTop: 8 }}>Resending sends the same valid code again. Either SMS will work until it expires.</Text>
           </View>
           {localDebugCode ? (
             <Text variant="caption" tone="faint" center style={{ marginTop: 24 }}>Local development OTP: {localDebugCode}</Text>

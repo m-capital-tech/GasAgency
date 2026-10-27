@@ -131,7 +131,7 @@ async function uploadDocument(path: string, file: File, documentType: string, re
 }
 
 export const operationsApi = {
-  requestOtp: (phoneE164: string) => request<{ accepted: true; challengePublicId: string; destination: string; localDebugCode?: string }>("auth/otp/request", { method: "POST", body: { phoneE164 } }),
+  requestOtp: (phoneE164: string) => request<{ accepted: true; challengePublicId: string; destination: string; expiresInSeconds: number; resendAfterSeconds: number; localDebugCode?: string }>("auth/otp/request", { method: "POST", body: { phoneE164 } }),
   verifyOtp: (challengePublicId: string, code: string) => request<OtpVerification>("auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "Commercial LPG web" } }),
   beginMfaEnrollment: (mfaTicket: string) => request<MfaEnrollment>("auth/mfa/enroll", { method: "POST", body: { mfaTicket, label: "Authenticator app" } }),
   confirmMfaEnrollment: (mfaTicket: string, factorPublicId: string, code: string) => request<MfaAuthentication>("auth/mfa/enroll/verify", { method: "POST", body: { mfaTicket, factorPublicId, code } }),

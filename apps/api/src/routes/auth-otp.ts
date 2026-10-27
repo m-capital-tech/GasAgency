@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 import type pg from "pg";
 import { Router } from "express";
 import { withTransaction } from "@platform/database";
-import { encryptSecret, uuidV7 } from "@platform/runtime";
+import { decryptSecret, encryptSecret, uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import type { ApiConfig } from "../config";
 import { activeAgencyAccess } from "../domain/agency-access";
@@ -31,16 +31,27 @@ interface EligibleUserRow {
   has_platform_access: boolean;
 }
 
-function generateCode(config: ApiConfig): string {
-  return config.otpLocalCode ?? randomInt(0, 1_000_000).toString().padStart(6, "0");
+function demoCodeFor(config: ApiConfig, phoneE164: string): string | undefined {
+  return phoneE164 === config.otpDemoPhoneE164 ? config.otpDemoCode : undefined;
 }
 
-function requestResult(config: ApiConfig, phoneE164: string, challengePublicId: string, resendAfterSeconds: number, localDebugCode?: string) {
+function generateCode(config: ApiConfig, phoneE164: string): string {
+  return demoCodeFor(config, phoneE164) ?? config.otpLocalCode ?? randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
+
+function requestResult(
+  config: ApiConfig,
+  phoneE164: string,
+  challengePublicId: string,
+  resendAfterSeconds: number,
+  localDebugCode?: string,
+  expiresInSeconds = config.otpTtlSeconds,
+) {
   return {
     accepted: true,
     challengePublicId,
     destination: maskPhone(phoneE164),
-    expiresInSeconds: config.otpTtlSeconds,
+    expiresInSeconds,
     resendAfterSeconds,
     ...(localDebugCode ? { localDebugCode } : {}),
   };
@@ -94,6 +105,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
       const ipHash = hashRateKey("ip", ip, config.otpHashPepper);
 
       const result = await withTransaction(pool, async (client) => {
+        const demoCode = demoCodeFor(config, phoneE164);
         await client.query(
           `delete from app.auth_rate_events
             where id in (
@@ -114,22 +126,85 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
                   ($3, 'otp_request_ip', $4, now() + interval '1 hour')`,
           [uuidV7(), phoneHash, uuidV7(), ipHash],
         );
+        const limited = (counts.rows[0]?.phone_count ?? 0) >= 5 || (counts.rows[0]?.ip_count ?? 0) >= 20;
         const existing = (
-          await client.query<{ public_id: string; resend_seconds: number }>(
-            `select public_id::text,
-                    greatest(0, ceil(extract(epoch from resend_available_at - now())))::int as resend_seconds
+          await client.query<{ public_id: string; user_id: string | null; resend_seconds: number; expires_seconds: number }>(
+            `select public_id::text, user_id::text,
+                    greatest(0, ceil(extract(epoch from resend_available_at - now())))::int as resend_seconds,
+                    greatest(0, ceil(extract(epoch from expires_at - now())))::int as expires_seconds
                from app.otp_challenges
               where phone_e164 = $1 and purpose = 'login'
                 and consumed_at is null and invalidated_at is null and expires_at > now()
-              order by created_at desc limit 1`,
+              order by created_at desc limit 1
+              for update`,
             [phoneE164],
           )
         ).rows[0];
-        if (existing && existing.resend_seconds > 0) {
-          return { response: requestResult(config, phoneE164, existing.public_id, existing.resend_seconds) };
+        if (existing && !demoCode && existing.resend_seconds > 0) {
+          return { response: requestResult(config, phoneE164, existing.public_id, existing.resend_seconds, undefined, existing.expires_seconds) };
         }
 
-        const limited = (counts.rows[0]?.phone_count ?? 0) >= 5 || (counts.rows[0]?.ip_count ?? 0) >= 20;
+        if (existing && !demoCode) {
+          const latestDelivery = existing.user_id && !limited
+            ? (
+              await client.query<{ payload: Record<string, unknown>; delivery_attempt: number }>(
+                `select payload,
+                        count(*) over ()::int + 1 as delivery_attempt
+                   from app.outbox_events
+                  where event_type = 'auth.otp.sms.requested'
+                    and aggregate_public_id = $1
+                  order by id desc
+                  limit 1`,
+                [existing.public_id],
+              )
+            ).rows[0]
+            : undefined;
+          const encryptedCode = typeof latestDelivery?.payload.encryptedCode === "string"
+            ? latestDelivery.payload.encryptedCode
+            : undefined;
+          await client.query(
+            `update app.otp_challenges
+                set resend_available_at = now() + make_interval(secs => $2),
+                    delivery_status = case when $3::boolean then 'queued' else delivery_status end
+              where public_id = $1`,
+            [existing.public_id, config.otpResendSeconds, Boolean(encryptedCode)],
+          );
+          if (encryptedCode && latestDelivery) {
+            const deliveryAttempt = latestDelivery.delivery_attempt;
+            await client.query(
+              `insert into app.outbox_events (
+                 public_id, event_type, aggregate_type, aggregate_public_id, payload, dedupe_key
+               ) values ($1, 'auth.otp.sms.requested', 'otp_challenge', $2, $3::jsonb, $4)`,
+              [
+                uuidV7(),
+                existing.public_id,
+                JSON.stringify({
+                  challengePublicId: existing.public_id,
+                  destinationE164: phoneE164,
+                  encryptedCode,
+                  purpose: "login",
+                  strategy: "sms_first",
+                  deliveryAttempt,
+                }),
+                `auth-otp-sms:${existing.public_id}:attempt-${deliveryAttempt}`,
+              ],
+            );
+          }
+          const localDebugCode = encryptedCode && config.otpLocalExposeCode
+            ? decryptSecret(encryptedCode, config.otpDeliveryKey, existing.public_id)
+            : undefined;
+          return {
+            response: requestResult(
+              config,
+              phoneE164,
+              existing.public_id,
+              config.otpResendSeconds,
+              localDebugCode,
+              existing.expires_seconds,
+            ),
+          };
+        }
+
         const user = limited ? undefined : await eligibleUser(client, phoneE164);
         await client.query(
           `update app.otp_challenges set invalidated_at = now()
@@ -138,7 +213,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
           [phoneE164],
         );
         const challengePublicId = uuidV7();
-        const code = generateCode(config);
+        const code = generateCode(config, phoneE164);
         await client.query(
           `insert into app.otp_challenges (
              public_id, user_id, phone_e164, purpose, code_hash, request_ip_hash,
@@ -149,12 +224,12 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
            )`,
           [challengePublicId, user?.id ?? null, phoneE164, hashOtpCode(challengePublicId, user ? code : randomBytes(16).toString("hex"), config.otpHashPepper), ipHash, config.otpMaxAttempts, config.otpTtlSeconds, config.otpResendSeconds],
         );
-        if (user) {
+        if (user && !demoCode) {
           await client.query(
             `insert into app.outbox_events (
                public_id, event_type, aggregate_type, aggregate_public_id, payload, dedupe_key
              ) values ($1, 'auth.otp.sms.requested', 'otp_challenge', $2, $3::jsonb, $4)`,
-            [uuidV7(), challengePublicId, JSON.stringify({ challengePublicId, destinationE164: phoneE164, encryptedCode: encryptSecret(code, config.otpDeliveryKey, challengePublicId), purpose: "login", strategy: "sms_first" }), `auth-otp-sms:${challengePublicId}`],
+            [uuidV7(), challengePublicId, JSON.stringify({ challengePublicId, destinationE164: phoneE164, encryptedCode: encryptSecret(code, config.otpDeliveryKey, challengePublicId), purpose: "login", strategy: "sms_first", deliveryAttempt: 1 }), `auth-otp-sms:${challengePublicId}`],
           );
         }
         return { response: requestResult(config, phoneE164, challengePublicId, config.otpResendSeconds, user && config.otpLocalExposeCode ? code : undefined) };
