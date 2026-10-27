@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(request: NextRequest) {
   const auditModeEnabled = process.env.INTERNAL_AUDIT_MODE !== "false";
+  const operationsSessionCookie = "platform_operations_session";
 
   // Temporary internal-audit entry points. The audit pages are isolated from the
   // production API, contain fictional data, and expose no write operations.
@@ -22,6 +23,16 @@ export function proxy(request: NextRequest) {
   }
 
   if (process.env.APP_ENV !== "production") return NextResponse.next();
+
+  // The dashboard pages perform the authoritative session and RBAC checks
+  // against the API. Proxy only makes the optimistic routing decision needed
+  // to let an authenticated browser reach those pages in production.
+  const pathname = request.nextUrl.pathname;
+  const protectedDashboard = pathname === "/control"
+    || pathname === "/operations"
+    || pathname.startsWith("/admin")
+    || pathname.startsWith("/agency");
+  if (protectedDashboard && request.cookies.has(operationsSessionCookie)) return NextResponse.next();
 
   const destination = request.nextUrl.clone();
   destination.search = "";
