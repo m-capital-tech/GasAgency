@@ -346,7 +346,34 @@ export type OtpVerificationResponse =
       user: TenantSessionUser;
       tenants: TenantAccess[];
     }
-  | { status: "mfa_enrollment_required"; user: TenantSessionUser };
+  | {
+      status: "mfa_enrollment_required" | "mfa_verification_required";
+      mfaTicket: string;
+      expiresInSeconds: number;
+      user: TenantSessionUser;
+    };
+
+export interface MfaEnrollmentResponse {
+  factorPublicId: string;
+  factorType: "totp";
+  manualKey: string;
+  otpauthUri: string;
+  issuer: string;
+  algorithm: "SHA1";
+  digits: 6;
+  periodSeconds: 30;
+}
+
+export interface MfaAuthenticationResponse {
+  status: "authenticated";
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresInSeconds: number;
+  user: TenantSessionUser;
+  tenants: TenantAccess[];
+  recoveryCodes?: string[];
+  recoveryCodeUsed?: boolean;
+}
 
 export class PlatformApiError extends Error {
   constructor(
@@ -408,6 +435,18 @@ export function requestTenantOtp(phoneE164: string): Promise<OtpRequestResponse>
 
 export function verifyTenantOtp(challengePublicId: string, code: string): Promise<OtpVerificationResponse> {
   return request("/auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "Munna Gas Connect mobile app" } });
+}
+
+export function beginMfaEnrollment(mfaTicket: string): Promise<MfaEnrollmentResponse> {
+  return request("/auth/mfa/enroll", { method: "POST", body: { mfaTicket, label: "Munna Gas Connect authenticator" } });
+}
+
+export function confirmMfaEnrollment(mfaTicket: string, factorPublicId: string, code: string): Promise<MfaAuthenticationResponse> {
+  return request("/auth/mfa/enroll/verify", { method: "POST", body: { mfaTicket, factorPublicId, code } });
+}
+
+export function verifyMfa(mfaTicket: string, code: string): Promise<MfaAuthenticationResponse> {
+  return request("/auth/mfa/verify", { method: "POST", body: { mfaTicket, code } });
 }
 
 export function restoreTenantSession(): Promise<TenantSessionResponse> {

@@ -14,10 +14,10 @@
       "channel": "preview",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_PLATFORM_API_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app",
+        "EXPO_PUBLIC_PLATFORM_API_URL": "https://munnauniteddistributions.com",
         "EXPO_PUBLIC_DEMO_MODE": "false",
         "EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED": "true",
-        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app/privacy"
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://munnauniteddistributions.com/privacy"
       }
     },
     "production": {
@@ -25,10 +25,10 @@
       "channel": "production",
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_PLATFORM_API_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app",
+        "EXPO_PUBLIC_PLATFORM_API_URL": "https://munnauniteddistributions.com",
         "EXPO_PUBLIC_DEMO_MODE": "false",
         "EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED": "true",
-        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://commercial-lpg-staging-67i9v.ondigitalocean.app/privacy"
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://munnauniteddistributions.com/privacy"
       }
     }
   },
