@@ -59,3 +59,22 @@ test("redirects an unauthenticated operations request to the operations login", 
     assert.equal(response.headers.get("location"), "https://example.test/operations/login");
   });
 });
+
+test("redirects an unauthenticated nested operations route before rendering its client shell", async () => {
+  await withProductionEnvironment(() => {
+    const response = proxy(new NextRequest("https://example.test/operations/dashboard"));
+
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "https://example.test/operations/login");
+  });
+});
+
+test("keeps authentication and BFF API routes public", async () => {
+  await withProductionEnvironment(() => {
+    const loginResponse = proxy(new NextRequest("https://example.test/operations/login"));
+    const apiResponse = proxy(new NextRequest("https://example.test/operations/api/auth/otp/request"));
+
+    assert.equal(loginResponse.headers.get("x-middleware-next"), "1");
+    assert.equal(apiResponse.headers.get("x-middleware-next"), "1");
+  });
+});

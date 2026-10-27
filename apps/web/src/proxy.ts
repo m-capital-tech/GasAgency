@@ -28,8 +28,15 @@ export function proxy(request: NextRequest) {
   // against the API. Proxy only makes the optimistic routing decision needed
   // to let an authenticated browser reach those pages in production.
   const pathname = request.nextUrl.pathname;
+  const publicAuthenticationPath = pathname === "/control/login"
+    || pathname === "/operations/login"
+    || pathname.startsWith("/operations/api/");
+  if (publicAuthenticationPath) return NextResponse.next();
+
   const protectedDashboard = pathname === "/control"
+    || pathname.startsWith("/control/")
     || pathname === "/operations"
+    || pathname.startsWith("/operations/")
     || pathname.startsWith("/admin")
     || pathname.startsWith("/agency");
   if (protectedDashboard && request.cookies.has(operationsSessionCookie)) return NextResponse.next();
@@ -45,5 +52,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/control", "/operations", "/review/:path*", "/admin/:path*", "/agency/:path*", "/login"],
+  matcher: ["/control/:path*", "/operations/:path*", "/review/:path*", "/admin/:path*", "/agency/:path*", "/login"],
 };
