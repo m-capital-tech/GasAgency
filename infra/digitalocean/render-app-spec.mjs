@@ -59,6 +59,19 @@ if (objectStorageSecrets.OBJECT_STORAGE_ACCESS_KEY === objectStorageSecrets.OBJE
   throw new Error("OBJECT_STORAGE_ACCESS_KEY and OBJECT_STORAGE_SECRET_KEY must differ");
 }
 
+const messageIndiaConfig = {
+  MESSAGEINDIA_SEND_URL: required("MESSAGEINDIA_SEND_URL", (value) => {
+    try { return new URL(value).protocol === "https:"; } catch { return false; }
+  }),
+  MESSAGEINDIA_USERNAME: required("MESSAGEINDIA_USERNAME"),
+  MESSAGEINDIA_API_KEY: required("MESSAGEINDIA_API_KEY", (value) => value.length >= 16),
+  MESSAGEINDIA_SENDER_NAME: required("MESSAGEINDIA_SENDER_NAME", (value) => /^[A-Z0-9]{6}$/.test(value)),
+  MESSAGEINDIA_ENTITY_ID: required("MESSAGEINDIA_ENTITY_ID", (value) => /^[0-9]{6,30}$/.test(value)),
+  MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID: required("MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID", (value) => /^[0-9]{6,30}$/.test(value)),
+  MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT: required("MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT", (value) => value.length <= 1000 && value.includes("{{code}}")),
+  MESSAGEINDIA_RELAY_SIGNING_SECRET: required("MESSAGEINDIA_RELAY_SIGNING_SECRET", (value) => value.length >= 32),
+};
+
 const values = new Map([
   ["__GITHUB_REPOSITORY__", required("DO_GITHUB_REPOSITORY", (value) => /^[^/\s]+\/[^/\s]+$/.test(value))],
   ["__GITHUB_BRANCH__", optional("DO_GITHUB_BRANCH", "main", (value) => /^[A-Za-z0-9._/-]+$/.test(value))],
@@ -74,6 +87,14 @@ const values = new Map([
   ["__MFA_TICKET_PEPPER__", authenticationSecrets.MFA_TICKET_PEPPER],
   ["__OBJECT_STORAGE_ACCESS_KEY__", objectStorageSecrets.OBJECT_STORAGE_ACCESS_KEY],
   ["__OBJECT_STORAGE_SECRET_KEY__", objectStorageSecrets.OBJECT_STORAGE_SECRET_KEY],
+  ["__MESSAGEINDIA_SEND_URL__", messageIndiaConfig.MESSAGEINDIA_SEND_URL],
+  ["__MESSAGEINDIA_USERNAME__", messageIndiaConfig.MESSAGEINDIA_USERNAME],
+  ["__MESSAGEINDIA_API_KEY__", messageIndiaConfig.MESSAGEINDIA_API_KEY],
+  ["__MESSAGEINDIA_SENDER_NAME__", messageIndiaConfig.MESSAGEINDIA_SENDER_NAME],
+  ["__MESSAGEINDIA_ENTITY_ID__", messageIndiaConfig.MESSAGEINDIA_ENTITY_ID],
+  ["__MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID__", messageIndiaConfig.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID],
+  ["__MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT__", messageIndiaConfig.MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT],
+  ["__MESSAGEINDIA_RELAY_SIGNING_SECRET__", messageIndiaConfig.MESSAGEINDIA_RELAY_SIGNING_SECRET],
 ]);
 
 let rendered = await readFile(templatePath, "utf8");

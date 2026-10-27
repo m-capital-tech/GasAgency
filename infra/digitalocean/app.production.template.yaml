@@ -284,7 +284,47 @@ workers:
       - key: MESSAGE_PROVIDER
         scope: RUN_TIME
         type: GENERAL
-        value: disabled
+        value: messageindia
+      - key: MESSAGEINDIA_SEND_URL
+        scope: RUN_TIME
+        type: GENERAL
+        value: __MESSAGEINDIA_SEND_URL__
+      - key: MESSAGEINDIA_TRANSPORT
+        scope: RUN_TIME
+        type: GENERAL
+        value: post
+      - key: MESSAGEINDIA_USERNAME
+        scope: RUN_TIME
+        type: SECRET
+        value: __MESSAGEINDIA_USERNAME__
+      - key: MESSAGEINDIA_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __MESSAGEINDIA_API_KEY__
+      - key: MESSAGEINDIA_SENDER_NAME
+        scope: RUN_TIME
+        type: GENERAL
+        value: __MESSAGEINDIA_SENDER_NAME__
+      - key: MESSAGEINDIA_ENTITY_ID
+        scope: RUN_TIME
+        type: GENERAL
+        value: __MESSAGEINDIA_ENTITY_ID__
+      - key: MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID
+        scope: RUN_TIME
+        type: GENERAL
+        value: __MESSAGEINDIA_LOGIN_OTP_TEMPLATE_ID__
+      - key: MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT
+        scope: RUN_TIME
+        type: GENERAL
+        value: __MESSAGEINDIA_LOGIN_OTP_TEMPLATE_TEXT__
+      - key: MESSAGEINDIA_REQUEST_TIMEOUT_MS
+        scope: RUN_TIME
+        type: GENERAL
+        value: "10000"
+      - key: MESSAGEINDIA_RELAY_SIGNING_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: __MESSAGEINDIA_RELAY_SIGNING_SECRET__
       - key: PUSH_PROVIDER
         scope: RUN_TIME
         type: GENERAL

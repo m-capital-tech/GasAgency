@@ -46,7 +46,7 @@ Values marked secret are configured through encrypted App Platform environment v
 | `OBJECT_STORAGE_SECRET_KEY` | API | Secret | Dedicated bucket-scoped application credential |
 | `OBJECT_STORAGE_MAX_BYTES` | API | General | Per-file limit; production schema and API currently cap uploads at 10 MiB |
 | `LOG_LEVEL` | API, worker | General | Structured-log verbosity |
-| `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in the planned production integration |
+| `MESSAGE_PROVIDER` | Worker | General | Provider adapter selector; `messageindia` in production |
 | `MESSAGEINDIA_SEND_URL` | Worker | General | Provider-issued HTTPS submission endpoint; plaintext HTTP is rejected |
 | `MESSAGEINDIA_TRANSPORT` | Worker | General | Must be `post` in staging/production so credentials are never placed in URLs |
 | `MESSAGEINDIA_USERNAME` | Worker | Secret | MessageIndia account identifier |
@@ -65,7 +65,7 @@ Values marked secret are configured through encrypted App Platform environment v
 | `STANDING_ORDER_REMINDER_LOCAL_HOUR` | Worker | General | Local hour for the day-before weekly requirement reminder |
 | `BUSINESS_TIME_ZONE` | Worker | General | IANA time zone used for business reminder schedules; `Asia/Kolkata` for launch |
 
-The MessageIndia adapter is implemented behind the provider-neutral contract. Its credentials and DLT configuration are intentionally absent from the version-controlled production specification until the provider supplies a working HTTPS endpoint and all three templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
+The MessageIndia adapter is implemented behind the provider-neutral contract. The production specification includes only secret placeholders and the approved login-OTP configuration contract; real credentials and the exact DLT values are supplied at render time and remain outside Git. Tenant-registration and platform-access SMS stay disabled until their separate DLT templates are approved. WhatsApp variables remain absent until that fallback provider is selected.
 
 The business-document adapter is also provider-neutral. Production uses the private `munna-gas-connect-production-documents` Space in `sgp1` with a dedicated bucket-scoped credential. The credential values are supplied only through encrypted App Platform variables. Run the storage smoke test before enabling `features.document_uploads` in Super Admin controls. The local adapter is rejected in staging and production.
 
@@ -84,7 +84,7 @@ Production OTPs use a 10-minute server validity window and a two-minute resend d
 - an existing managed PostgreSQL 16 cluster attached through separate runtime and migration bindings, with its public TLS endpoint restricted to the app as the only trusted source;
 - Bangalore App Platform region `blr`, Node.js 22 from the root engine declaration, and the root pnpm workspace build context.
 
-The production specification includes one background events worker for Expo push delivery. It runs with `MESSAGE_PROVIDER=disabled`, so no local or incomplete SMS provider can execute in production. Once MessageIndia supplies an operational HTTPS endpoint, the three DLT templates, encrypted credentials, and a delivery smoke-test plan, the same worker can be switched to `MESSAGE_PROVIDER=messageindia` without adding another paid component.
+The production specification includes one background events worker for Expo push delivery and MessageIndia login OTP delivery through the HTTPS POST relay. The renderer fails closed unless the relay URL, encrypted credentials, approved sender/entity/template values, and an independent relay-signing secret are provided. Tenant-registration and platform-access SMS remain unavailable until their own DLT templates are approved; they do not require another paid worker when enabled later.
 
 ## Production budget guardrail
 
