@@ -99,12 +99,12 @@ test("rejects a different production Expo owner or project", () => {
   assert.ok(errors.some((error) => error.includes('project must remain "4843ac47-13e9-4126-9874-77d49dc47aa2"')));
 });
 
-test("requires the Android Firebase client file when push registration is enabled", () => {
+test("requires the Android Firebase client file for native builds but not OTA updates", () => {
   const errors = collectReleaseConfigurationErrors({
     profile: "production",
     config: validConfig,
     easConfig: validEasConfig,
-    env: { ...validEnv, EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true" },
+    env: { ...validEnv, EAS_BUILD: "true", EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true" },
   });
   assert.ok(errors.some((error) => error.includes("GOOGLE_SERVICES_JSON")));
 
@@ -115,9 +115,20 @@ test("requires the Android Firebase client file when push registration is enable
       easConfig: validEasConfig,
       env: {
         ...validEnv,
+        EAS_BUILD: "true",
         EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true",
         GOOGLE_SERVICES_JSON: "/eas/files/google-services.json",
       },
+    }),
+    [],
+  );
+
+  assert.deepEqual(
+    collectReleaseConfigurationErrors({
+      profile: "production",
+      config: validConfig,
+      easConfig: validEasConfig,
+      env: { ...validEnv, EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED: "true" },
     }),
     [],
   );

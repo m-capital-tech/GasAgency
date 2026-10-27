@@ -5,6 +5,8 @@ const { assertReleaseConfiguration } = require("./scripts/release-config.cjs");
 const projectId = process.env.EXPO_EAS_PROJECT_ID?.trim() || base.expo.extra?.eas?.projectId;
 const buildProfile = process.env.EAS_BUILD_PROFILE?.trim();
 const googleServicesFile = process.env.GOOGLE_SERVICES_JSON?.trim();
+const profileEnvironment = buildProfile ? easConfig.build?.[buildProfile]?.env ?? {} : {};
+const releaseEnvironment = { ...profileEnvironment, ...process.env };
 
 if (process.env.EAS_BUILD === "true" && !projectId) {
   throw new Error("EXPO_EAS_PROJECT_ID is required for EAS builds and updates.");
@@ -48,7 +50,7 @@ module.exports = ({ config }) => {
   };
 
   if (buildProfile) {
-    assertReleaseConfiguration({ profile: buildProfile, config: resolvedConfig, easConfig, env: process.env });
+    assertReleaseConfiguration({ profile: buildProfile, config: resolvedConfig, easConfig, env: releaseEnvironment });
   }
 
   return resolvedConfig;

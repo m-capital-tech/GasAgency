@@ -81,7 +81,7 @@ function collectReleaseConfigurationErrors({ profile, config, easConfig, env = p
   if (!["true", "false"].includes(env.EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED ?? "")) {
     errors.push("EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED must be explicitly set to either \"true\" or \"false\".");
   }
-  if (env.EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED === "true" && !env.GOOGLE_SERVICES_JSON?.trim()) {
+  if (env.EAS_BUILD === "true" && env.EXPO_PUBLIC_PUSH_REGISTRATION_ENABLED === "true" && !env.GOOGLE_SERVICES_JSON?.trim()) {
     errors.push("GOOGLE_SERVICES_JSON must point to the EAS file variable used to register the Android app with FCM.");
   }
 
