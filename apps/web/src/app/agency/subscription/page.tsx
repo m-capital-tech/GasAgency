@@ -37,7 +37,7 @@ export default function SubscriptionPage() {
   const plans = PLANS.map((p) => ({ ...p, price: config.data?.plans?.[p.key]?.monthlyFee ?? p.price }));
   return (
     <>
-      <PageHeader title="Subscription" subtitle="Agency SaaS plan — one of GasSetu's revenue streams alongside commission and fees." />
+      <PageHeader title="Subscription" subtitle="Agency SaaS plan — one of Munna Gas Connect's revenue streams alongside commission and fees." />
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((p) => (
           <Card key={p.key} className={cn(p.key === current && "border-primary ring-2 ring-primary/20")}>

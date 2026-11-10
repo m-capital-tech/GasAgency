@@ -2,7 +2,7 @@
 
 > Historical prototype specification. The active product is commercial/B2B only. `PRD_PRODUCTION_V1.md` is the canonical production specification; the `b2c-prototype` Git tag preserves the earlier implementation.
 
-**Working name:** GasSetu (placeholder — replace with final brand)
+**Historical working name:** GasSetu. The approved commercial name is **Munna Gas Connect**.
 **Owner:** Pranav Aditya
 **Version:** 1.0 (Prototype) · **Date:** 16 Sep 2026
 **Audience:** Claude Code (builder) and the investor demo team

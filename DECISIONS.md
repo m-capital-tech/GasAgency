@@ -1,4 +1,4 @@
-# DECISIONS.md — judgment calls made while building the GasSetu prototype
+# DECISIONS.md — judgment calls made while building Munna Gas Connect
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
@@ -21,7 +21,7 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 - **Configuration is a closed, versioned catalogue.** Super Admin can govern six transaction workflows, two operational thresholds, and two infrastructure-dependent feature gates. Unknown keys and invalid types/ranges are rejected; optimistic versions prevent one administrator from silently overwriting another.
 - **Workflow gates are enforced by APIs.** Tenant onboarding, ordering, COD, credit, agency fulfilment, collection recording, and push registration consult PostgreSQL before executing. The dashboard is an operating surface, not the security boundary.
 - **Every configuration change requires fresh MFA, a reason, and before/after audit values.** Ordinary Platform Admin roles cannot obtain reserved `configuration.manage` authority through delegation ceilings.
-- **Infrastructure-dependent features default off.** Push registration and document uploads remain disabled until their production services are connected and acceptance-tested. Disabling push registration never prevents a user from revoking an existing device.
+- **Infrastructure-dependent features default off until their prerequisites are connected.** Push registration is enabled only in preview and production after the server route, permanent Expo project, Firebase Android app, client configuration, and FCM V1 credential are present; remote delivery still requires a signed-device acceptance test. Document uploads remain disabled until object storage is connected and acceptance-tested. Disabling push registration never prevents a user from revoking an existing device.
 - **Internal audit routing is explicit configuration.** `INTERNAL_AUDIT_MODE=true` preserves fictional read-only client review entry points; setting it to `false` restores authenticated `/control` and `/operations` dashboards without deleting the review pages.
 
 ## Production Operations command centre (21 Oct 2026)
@@ -40,7 +40,7 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 - **Push registrations are tenant-authenticated and installation-unique.** Expo tokens are encrypted with a dedicated production key, never logged or returned, and atomically reassigned on an account switch so a physical installation cannot keep receiving notifications for a previous user. Logout independently attempts push-token and session revocation.
 - **Push delivery reuses the transactional outbox.** Order, invoice, and payment events fan out only to active devices owned by active members of the affected active tenant. Each event/device result is idempotent and inspectable, transient failures have a bounded retry ceiling, and an Expo `DeviceNotRegistered` result makes the installation stale.
 - **The production worker can be push-only.** `MESSAGE_PROVIDER=disabled` keeps incomplete SMS delivery fail-closed while `PUSH_PROVIDER=expo` processes commercial notifications. The same worker will add MessageIndia later rather than introducing a second paid component.
-- **The final commercial identity precedes EAS project creation.** The working GasSetu label and `com.gassetu.demo` identifiers remain review-only. A permanent Expo project, bundle IDs, Apple/FCM credentials, and production OTA publishing wait for the approved final name and ownership account.
+- **The permanent mobile identity and Android notification credentials are approved and linked.** On 24 October 2026 the commercial name became Munna Gas Connect, with Expo project `@m-capital/munna-gas-connect` (`4843ac47-13e9-4126-9874-77d49dc47aa2`), deep-link scheme `munnagasconnect`, and Android/iOS identifier `com.munnagas.connect`. Development, preview, and production OTA channels point to like-named branches. Firebase project `munna-gas-connect`, the EAS-hosted `google-services.json`, and a dedicated least-privilege FCM V1 key now cover Android notification credentials; a signed physical-device build and end-to-end push smoke test remain activation gates.
 
 ## Production Phase 1 commercial-account and tenant self-service slice (16 Oct 2026)
 - **Agency controls stop at the commercial boundary.** Agency users may globally pause new credit ordering, maintain lower negotiated account prices, and record collections. Credit approval, account limits, and net terms remain platform-admin decisions and have separate permissions and endpoints.
@@ -117,7 +117,7 @@ Each entry: what the PRD said (or didn't), what was chosen, why.
 
 ## Production Phase 0 (29 Sep 2026)
 - **Phase 0 approved and closed.** `PRD_PRODUCTION_V1.md` version 1.0 is the locked product baseline for Phase 1 architecture and implementation.
-- **DigitalOcean is the production cloud baseline.** Phase 1 will target DigitalOcean App Platform for the web/API/worker workloads, Managed PostgreSQL for transactional data, a private VPC for service-to-database traffic, and private Spaces object storage for business documents. Bangalore (`blr1`; App Platform region `blr`) is the confirmed primary region. The commercial product name and custom domain are intentionally deferred; GasSetu remains a working name and must not become a deployment dependency.
+- **DigitalOcean is the production cloud baseline.** Phase 1 targets DigitalOcean App Platform for the web/API/worker workloads, Managed PostgreSQL for transactional data, a private VPC for service-to-database traffic, and private Spaces object storage for business documents. Bangalore (`blr1`; App Platform region `blr`) is the confirmed primary region. `https://munnauniteddistributions.com` is the canonical production domain; legacy neutral resource names remain internal labels only.
 - **Team-led tenant creation replaces self-registration.** An authorized platform team member registers the business, mandatory GSTIN, initial outlet, LPG requirement, user phone, serving agency, and proposed commercial terms. A Platform Admin activates the tenant; an unknown phone cannot create an account from the app.
 - **Maker–checker approval is mandatory.** Ordinary team members cannot approve tenants or credit. The tenant creator cannot approve their own submission. A Platform Admin approves team submissions; a Platform Admin's own submission requires another Platform Admin or a Super Admin override. Invitation delivery starts only after approval.
 - **Agency selection is explicit.** The authorized creator must select an approved serving agency. Production onboarding does not use nearest-agency auto-assignment.
@@ -182,5 +182,5 @@ Palette: charcoal `#1D1D1E`, maroon `#620A1A`, gold `#C6953F`, red `#A31E21`, sa
 - **Auto-assign** still uses fewest current drops, so it picks Ramesh in the demo seed.
 - **Linking a commercial connection counts as KYC** for a new business (status → verified); auto-assign does too, so a new sign-up can order prepaid immediately. Credit still needs the admin.
 - **Standing orders** don't run on a real scheduler in the prototype; "Run now" performs exactly what the 7 AM job would.
-- **Session key** changed to `gassetu.b2b.session`, so devices with the old B2C session start logged-out after the pivot.
+- **Session key** changed to `munna-gas-connect.b2b.session` when the permanent identity was applied, so prototype sessions start logged-out under the final brand.
 - **Simulator note:** two simulators booted at once made `xcrun simctl … booted` target an iPhone with an old Expo Go; installed the cached SDK-57 Expo Go on the iPhone 17 Pro explicitly (ERRORS.md).

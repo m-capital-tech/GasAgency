@@ -47,7 +47,7 @@ export function Shell({ nav, title, children, mode }: { nav: NavItem[]; title: s
             <Flame className="size-4" />
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-bold">GasSetu</p>
+            <p className="text-sm font-bold">Munna Gas Connect</p>
             <p className="text-[11px] text-muted-foreground">{title}</p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function Shell({ nav, title, children, mode }: { nav: NavItem[]; title: s
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
           <div className="md:hidden flex items-center gap-2">
             <Flame className="size-4 text-primary" />
-            <span className="text-sm font-bold">GasSetu</span>
+            <span className="text-sm font-bold">Munna Gas Connect</span>
           </div>
           <nav className="md:hidden flex gap-1 overflow-x-auto">
             {nav.slice(0, 5).map((n) => (

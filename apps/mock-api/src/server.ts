@@ -46,5 +46,5 @@ engine.on((event: LiveEvent) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n  GasSetu mock API  →  http://localhost:${PORT}\n  Live events       →  ws://localhost:${PORT}/live\n  Seed: ${engine.state.bookings.length} bookings, ${engine.state.businesses.length} businesses, ${engine.state.agencies.length} agencies\n`);
+  console.log(`\n  Munna Gas Connect mock API  →  http://localhost:${PORT}\n  Live events                 →  ws://localhost:${PORT}/live\n  Seed: ${engine.state.bookings.length} bookings, ${engine.state.businesses.length} businesses, ${engine.state.agencies.length} agencies\n`);
 });

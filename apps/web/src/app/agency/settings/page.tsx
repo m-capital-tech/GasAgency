@@ -130,7 +130,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
                 <p className="text-sm font-medium">Offer credit accounts</p>
-                <p className="text-xs text-muted-foreground">Verified businesses can order on invoice within the limit GasSetu sets; you collect on net terms.</p>
+                <p className="text-xs text-muted-foreground">Verified businesses can order on invoice within the limit Munna Gas Connect sets; you collect on net terms.</p>
               </div>
               <Switch checked={settings.creditEnabled} onCheckedChange={(v) => setSettings({ ...settings, creditEnabled: v })} aria-label="Offer credit" />
             </div>

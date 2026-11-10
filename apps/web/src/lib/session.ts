@@ -18,6 +18,6 @@ export const useSession = create<SessionState>()(
       login: (user, agency) => set({ user, agency }),
       logout: () => set({ user: null, agency: null }),
     }),
-    { name: "gassetu.web.session" },
+    { name: "munna-gas-connect.web.session" },
   ),
 );

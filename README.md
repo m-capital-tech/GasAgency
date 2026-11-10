@@ -1,4 +1,4 @@
-# Commercial LPG Platform — B2B operations
+# Munna Gas Connect — B2B commercial LPG operations
 
 > **Production direction:** [`PRD_PRODUCTION_V1.md`](./PRD_PRODUCTION_V1.md) is the canonical specification. The repository contains an isolated PostgreSQL-backed production path alongside the investor prototype described below; the prototype's self-registration, automatic verification, mock authentication, and in-memory persistence are not production behavior.
 
@@ -6,9 +6,9 @@ The active product is a **B2B commercial LPG platform** for restaurants, cloud k
 
 | App | Who | Where |
 |---|---|---|
-| **Tenant mobile app (production path)** | Registered restaurant/hotel users | Expo Go for UI review; native development build for remote push |
-| **Platform Control (production path)** | Super Admin, Platform Admin, scoped platform team | `http://localhost:3000/control/login` |
-| **Agency Operations (production path)** | Authorized serving-agency users | `http://localhost:3000/operations/login` → `/operations/dashboard` |
+| **Tenant mobile app (production path)** | Registered restaurant/hotel users | Signed Android build; Expo Go remains available for UI review |
+| **Platform Control (production path)** | Super Admin, Platform Admin, scoped platform team | `https://munnauniteddistributions.com/control/login` |
+| **Agency Operations (production path)** | Authorized serving-agency users | `https://munnauniteddistributions.com/operations/login` → `/operations/dashboard` |
 | **Demo Admin / Agency** | Seeded investor walkthrough only | `http://localhost:3000/admin` / `http://localhost:3000/agency` |
 | **Mock API** | Demo-only in-memory store + WebSocket events | `http://localhost:4000` |
 
@@ -16,7 +16,15 @@ The production path consists of `apps/api`, `apps/worker`, forward-only PostgreS
 
 The explicit demo mode runs locally with **no API keys, no real payments, and no SMS**. It is isolated from the PostgreSQL-backed production routes and is never linked from the production landing page.
 
-For the temporary client audit, `INTERNAL_AUDIT_MODE=true` redirects only the exact `/control` and `/operations` entry points to fictional read-only review pages. Secure login routes and protected APIs remain active. Set it to `false` when the audit closes so the authenticated production dashboards become the default entry points.
+The temporary client-audit mode is closed in production. `INTERNAL_AUDIT_MODE=false` keeps the authenticated `/control` and `/operations` dashboards as the default entry points; the review pages remain code-isolated and redirect to commercial login routes.
+
+### Current operating documents
+
+- [`docs/google-play/PLAY_CONSOLE_SUBMISSION.md`](./docs/google-play/PLAY_CONSOLE_SUBMISSION.md) — Android release and Play submission checklist.
+- [`docs/google-play/PRIVACY_POLICY.md`](./docs/google-play/PRIVACY_POLICY.md) — published privacy-policy source.
+- [`docs/qa/PRODUCTION_FLOW_TESTER_ASSIGNMENT.md`](./docs/qa/PRODUCTION_FLOW_TESTER_ASSIGNMENT.md) — independent production SDET role and 79-case test plan.
+- [`docs/qa/PRODUCTION_FLOW_TEST_REPORT_INITIAL.md`](./docs/qa/PRODUCTION_FLOW_TEST_REPORT_INITIAL.md) — initial production QA baseline and blocked-input register.
+- [`deliverables/client-guide/Commercial LPG Platform Client Guide.docx`](./deliverables/client-guide/Commercial%20LPG%20Platform%20Client%20Guide.docx) — client-facing platform guide.
 
 ---
 

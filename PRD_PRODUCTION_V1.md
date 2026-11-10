@@ -1,4 +1,4 @@
-# GasSetu production product specification
+# Munna Gas Connect production product specification
 
 **Status:** Approved — Phase 1 implementation in progress  
 **Version:** 1.0 approved  
@@ -9,7 +9,7 @@ This document is the canonical product specification for the production build. I
 
 ## 1. Product scope
 
-GasSetu is a multi-agency commercial LPG ordering and account-management platform. Its primary tenants are restaurants and hotels. Cloud kitchens, canteens, bakeries, cafes, tea stalls, hospitals, hostels, and similar commercial buyers are supported secondary segments.
+Munna Gas Connect is a multi-agency commercial LPG ordering and account-management platform. Its primary tenants are restaurants and hotels. Cloud kitchens, canteens, bakeries, cafes, tea stalls, hospitals, hostels, and similar commercial buyers are supported secondary segments.
 
 There is no domestic LPG customer journey in the active product.
 
@@ -286,7 +286,7 @@ Requirements:
 
 Registration message content:
 
-- Confirmation that the named business was registered on GasSetu.
+- Confirmation that the named business was registered on Munna Gas Connect.
 - App/deep link.
 - Instruction to sign in with the registered number and OTP.
 - Assigned agency name.
@@ -544,7 +544,7 @@ No external connection was required to complete Phase 0. DigitalOcean is now the
 
 - The DigitalOcean team/project owner and the people who require infrastructure access.
 
-The commercial product name and custom domain are intentionally undecided. GasSetu is a working name only. Development and early staging may use local addresses and DigitalOcean-generated application domains. Custom domains are attached later without changing application identity, authorization, storage keys, or database records.
+The commercial product name is Munna Gas Connect. `https://munnauniteddistributions.com` is the canonical production domain; local addresses and the DigitalOcean-generated hostname remain development or recovery endpoints. Domain changes do not alter application identity, authorization, storage keys, or database records.
 
 Messaging-provider selection and Indian sender/template approval should begin during Phase 0 because approval lead time may extend beyond the Phase 2 integration work. Credentials are not required until the integration checkpoint.
 
@@ -587,10 +587,10 @@ The API remains the authorization boundary. The browser and mobile app never rec
 
 ### 16.4 DigitalOcean connection sequence
 
-1. The account owner creates the DigitalOcean team and a GasSetu staging project, enables MFA, and adds named operators with least-privilege access.
-2. Use Bangalore (`blr1`; App Platform region `blr`) and provider-generated staging domains until the product name and custom domain are finalized.
-3. Create the regional VPC and staging Managed PostgreSQL cluster.
-4. Create private staging Spaces storage and dedicated application credentials; verify the provider's credential scope and use stronger account/team isolation if bucket-level isolation is not sufficient.
+1. The account owner maintains the DigitalOcean team and Munna Gas Connect production project, enables MFA, and adds named operators with least-privilege access.
+2. Use Bangalore (`blr1`; App Platform region `blr`) and the canonical `munnauniteddistributions.com` production domain; retain the provider-generated hostname as an operational fallback.
+3. Maintain the regional VPC and the production-in-place Managed PostgreSQL cluster.
+4. Maintain private Spaces storage and dedicated application credentials; verify the provider's credential scope and use stronger account/team isolation if bucket-level isolation is not sufficient.
 5. Create the App Platform application from the repository using an infrastructure specification maintained in version control.
 6. Connect the API and worker to PostgreSQL over the VPC, run migrations as a controlled release job, and verify backup/restore.
 7. Configure custom domains, TLS, health checks, deployment alerts, application monitoring, and audit retention.

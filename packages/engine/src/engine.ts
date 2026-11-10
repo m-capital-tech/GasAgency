@@ -451,8 +451,8 @@ export class DemoEngine {
       } else if (input.credit.status === "suspended") this.notify(userId, "Credit suspended", "Please clear outstanding invoices to restore credit ordering.", "billing");
       else if (input.credit.status === "none") this.notify(userId, "Credit request declined", "You can keep ordering with online payment or cash on delivery.", "billing");
     }
-    if (input.status === "verified" && !input.credit) this.notify(userId, "Business verified ✅", "Your GasSetu account is active. Order commercial cylinders from your agency now.", "system");
-    if (input.status === "suspended") this.notify(userId, "Account suspended", "Please contact GasSetu support.", "system");
+    if (input.status === "verified" && !input.credit) this.notify(userId, "Business verified ✅", "Your Munna Gas Connect account is active. Order commercial cylinders from your agency now.", "system");
+    if (input.status === "suspended") this.notify(userId, "Account suspended", "Please contact Munna Gas Connect support.", "system");
     this.emit({ type: "business.updated", businessId: userId });
     return this.expandBusiness(biz);
   }
@@ -1165,7 +1165,7 @@ export class DemoEngine {
     const a = this.agency(agencyId);
     a.status = status;
     if (status === "approved" && a.rating === 0) a.rating = 4.2;
-    this.notify(a.ownerUserId, status === "approved" ? "Agency approved 🎉" : status === "suspended" ? "Agency suspended" : "Agency status updated", status === "approved" ? "You can now receive commercial orders on GasSetu." : "Please contact platform support.", "system");
+    this.notify(a.ownerUserId, status === "approved" ? "Agency approved 🎉" : status === "suspended" ? "Agency suspended" : "Agency status updated", status === "approved" ? "You can now receive commercial orders on Munna Gas Connect." : "Please contact platform support.", "system");
     this.emit({ type: "agency.updated", agencyId });
     return a;
   }

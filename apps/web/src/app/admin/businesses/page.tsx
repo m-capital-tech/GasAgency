@@ -138,7 +138,7 @@ export default function AdminBusinessesPage() {
 
               <section className="rounded-xl border border-gold/40 bg-gold-soft/50 p-4">
                 <h4 className="text-sm font-semibold">Onboarding decision</h4>
-                <p className="mb-3 text-xs text-muted-foreground">Verify the business and set its credit terms in one go. Credit is what lets the account order on invoice; the agency collects, GasSetu earns the {"1%"} facilitation fee.</p>
+                <p className="mb-3 text-xs text-muted-foreground">Verify the business and set its credit terms in one go. Credit is what lets the account order on invoice; the agency collects, Munna Gas Connect earns the {"1%"} facilitation fee.</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Field label="Credit">
                     <NativeSelect value={credit.status} onChange={(e) => setCredit({ ...credit, status: e.target.value })}>

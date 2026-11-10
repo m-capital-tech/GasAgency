@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Commercial LPG Platform — Operations",
+  title: "Munna Gas Connect — Operations",
   description: "Commercial LPG tenant, agency, and platform operations",
 };
 

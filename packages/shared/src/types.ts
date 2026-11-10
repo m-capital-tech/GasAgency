@@ -1,4 +1,4 @@
-// Core domain types for GasSetu — B2B commercial LPG marketplace
+// Core domain types for Munna Gas Connect — B2B commercial LPG marketplace
 // Tenants are businesses (restaurants, hotels, cloud kitchens, canteens…) buying 19 kg / 47.5 kg cylinders.
 
 export type Role = "business" | "agency_owner" | "agency_staff" | "delivery" | "admin";

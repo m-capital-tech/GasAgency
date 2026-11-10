@@ -33,7 +33,7 @@ export function checkOrderRules(
   config: PlatformConfig,
   now: Date = new Date(),
 ): RuleViolation | null {
-  if (business.status === "suspended") return { code: "BUSINESS_SUSPENDED", message: "This account is suspended. Please contact GasSetu support." };
+  if (business.status === "suspended") return { code: "BUSINESS_SUSPENDED", message: "This account is suspended. Please contact Munna Gas Connect support." };
   const qty = items.reduce((s, i) => s + i.qty, 0);
   if (qty > config.maxCylindersPerOrder) {
     return { code: "QTY_CAP", message: `Orders are limited to ${config.maxCylindersPerOrder} cylinders. For bulk supply, place a second order or call your agency.` };

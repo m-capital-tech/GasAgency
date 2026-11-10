@@ -40,7 +40,7 @@ function LoginForm() {
               <Flame className="size-4" />
             </span>
             <div>
-              <p className="font-bold leading-tight">GasSetu {as === "admin" ? "Admin" : "Agency LMS"}</p>
+              <p className="font-bold leading-tight">Munna Gas Connect {as === "admin" ? "Admin" : "Agency LMS"}</p>
               <p className="text-xs text-muted-foreground">Sign in to continue</p>
             </div>
           </div>

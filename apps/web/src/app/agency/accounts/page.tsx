@@ -199,10 +199,10 @@ export default function AccountsPage() {
                         <Input value={payAmt} onChange={(e) => setPayAmt(e.target.value.replace(/\D/g, ""))} placeholder="Amount received" className="h-8" />
                         <Button size="sm" loading={busy} onClick={recordPayment} disabled={!payAmt}>Record payment</Button>
                       </div>
-                      <p className="mt-1 text-[11px] text-faint">Oldest invoices are cleared first. Terms are set by GasSetu admin.</p>
+                      <p className="mt-1 text-[11px] text-faint">Oldest invoices are cleared first. Terms are set by Munna Gas Connect admin.</p>
                     </>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{acct.credit.status === "requested" ? "Credit requested — awaiting GasSetu approval." : "Prepaid account (no credit)."}</p>
+                    <p className="text-sm text-muted-foreground">{acct.credit.status === "requested" ? "Credit requested — awaiting Munna Gas Connect approval." : "Prepaid account (no credit)."}</p>
                   )}
                 </div>
                 <div className="rounded-xl border p-3">
