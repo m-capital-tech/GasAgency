@@ -6,7 +6,7 @@ import { z } from "zod";
 import { platformReportingParams, platformReportingScope, scopedTenantsSql } from "../domain/platform-reporting";
 import { enqueueTenantPushEvent } from "../domain/tenant-notifications";
 import { HttpError } from "../http/error";
-import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized, hasPermission, hasRoleType } from "../security/rbac";
 
 const publicId = z.string().uuid();
@@ -98,14 +98,13 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The revenue entry is invalid.", parsed.error.flatten());
       const principal = authenticatedPrincipal(response);
       requireSuperAdmin(principal);
-      assertFreshMfa(principal);
       const entry = await withTransaction(options.pool, async (client) => {
         let tenantId: string | null = null;
         let agencyId: string | null = null;
         let orderId: string | null = null;
         if (parsed.data.tenantPublicId) {
           tenantId = (await client.query<{ id: string }>("select id::text from app.tenants where public_id = $1", [parsed.data.tenantPublicId])).rows[0]?.id ?? null;
-          if (!tenantId) throw new HttpError(404, "tenant_not_found", "The linked tenant was not found.");
+          if (!tenantId) throw new HttpError(404, "tenant_not_found", "The linked vendor was not found.");
         }
         if (parsed.data.agencyPublicId) {
           agencyId = (await client.query<{ id: string }>("select id::text from app.agencies where public_id = $1", [parsed.data.agencyPublicId])).rows[0]?.id ?? null;
@@ -114,7 +113,7 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
         if (parsed.data.orderPublicId) {
           const order = (await client.query<{ id: string; tenant_id: string; agency_id: string }>("select id::text, tenant_id::text, agency_id::text from app.orders where public_id = $1", [parsed.data.orderPublicId])).rows[0];
           if (!order) throw new HttpError(404, "order_not_found", "The linked order was not found.");
-          if (tenantId && tenantId !== order.tenant_id) throw new HttpError(422, "revenue_link_mismatch", "The order does not belong to the selected tenant.");
+          if (tenantId && tenantId !== order.tenant_id) throw new HttpError(422, "revenue_link_mismatch", "The order does not belong to the selected vendor.");
           if (agencyId && agencyId !== order.agency_id) throw new HttpError(422, "revenue_link_mismatch", "The order does not belong to the selected agency.");
           orderId = order.id; tenantId ??= order.tenant_id; agencyId ??= order.agency_id;
         }
@@ -197,11 +196,11 @@ export function dashboardDataRouter(options: { pool: pg.Pool; tokenPepper: strin
             limit 1`,
           [parsed.data.tenantPublicId ?? null, parsed.data.agencyPublicId ?? null],
         )).rows[0]!;
-        if (parsed.data.tenantPublicId && !context.tenant_id) throw new HttpError(404, "tenant_not_found", "The linked tenant was not found.");
+        if (parsed.data.tenantPublicId && !context.tenant_id) throw new HttpError(404, "tenant_not_found", "The linked vendor was not found.");
         if (parsed.data.agencyPublicId && !context.agency_id) throw new HttpError(404, "agency_not_found", "The linked agency was not found.");
         if (context.tenant_id && context.agency_id) {
           const linked = await client.query("select 1 from app.agency_assignments where tenant_id = $1 and agency_id = $2 and ends_at is null", [context.tenant_id, context.agency_id]);
-          if (!linked.rowCount) throw new HttpError(422, "support_scope_mismatch", "The tenant is not served by the selected agency.");
+          if (!linked.rowCount) throw new HttpError(422, "support_scope_mismatch", "The vendor is not served by the selected agency.");
         }
         assertAuthorized(principal, "support_case.create", target(context));
         const slaHours = { critical: 1, high: 4, normal: 8, low: 24 }[parsed.data.priority];

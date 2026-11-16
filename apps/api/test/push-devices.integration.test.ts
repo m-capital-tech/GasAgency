@@ -82,8 +82,8 @@ integrationTest("tenant push-device registration is encrypted, scoped, idempoten
     [uuidV7(), tenantUser.id, hashSessionToken(tenantToken, tokenPepper)],
   );
   await pool.query(
-    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-     values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+     values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
     [uuidV7(), superAdmin.id, hashSessionToken(platformToken, tokenPepper)],
   );
 

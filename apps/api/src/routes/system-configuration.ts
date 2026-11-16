@@ -5,7 +5,7 @@ import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import { isPlatformSettingKey, validatePlatformSettingValue } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
-import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { hasPermission, hasRoleType } from "../security/rbac";
 
 const updateSchema = z.object({
@@ -66,7 +66,6 @@ export function systemConfigurationRouter(options: { pool: pg.Pool; tokenPepper:
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The configuration update is invalid.", parsed.error.flatten());
       const principal = authenticatedPrincipal(response);
       requireSuperAdmin(principal, "configuration.manage");
-      assertFreshMfa(principal);
       const changes = parsed.data.changes.map((change) => {
         if (!isPlatformSettingKey(change.key)) throw new HttpError(422, "unknown_setting", `The setting ${change.key} is not governed by this release.`);
         return { ...change, value: validatePlatformSettingValue(change.key, change.value) };

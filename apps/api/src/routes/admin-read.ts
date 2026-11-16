@@ -152,7 +152,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
   router.get("/admin/tenants", async (request, response, next) => {
     try {
       const parsed = tenantListSchema.safeParse(request.query);
-      if (!parsed.success) throw new HttpError(400, "invalid_request", "The tenant-list filters are invalid.", parsed.error.flatten());
+      if (!parsed.success) throw new HttpError(400, "invalid_request", "The vendor-list filters are invalid.", parsed.error.flatten());
       const principal = authenticatedPrincipal(response);
       const scope = requirePermissionScope(principal, "tenant.view");
       const cursor = decodeCursor(parsed.data.cursor);
@@ -203,7 +203,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
   router.get("/admin/tenants/:tenantPublicId", async (request, response, next) => {
     try {
       const id = publicId.safeParse(request.params.tenantPublicId);
-      if (!id.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!id.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       requirePermissionScope(principal, "tenant.view");
       const row = (await options.pool.query<{
@@ -315,9 +315,9 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
           where tenant.public_id = $1`,
         [id.data],
       )).rows[0];
-      if (!row) throw new HttpError(404, "tenant_not_found", "The tenant was not found.");
+      if (!row) throw new HttpError(404, "tenant_not_found", "The vendor was not found.");
       const target = { city: row.city, region: row.state_code, agencyPublicId: row.agency_public_id, tenantPublicId: row.public_id };
-      if (!isAuthorized(principal, "tenant.view", target)) throw new HttpError(403, "permission_denied", "You do not have permission to view this tenant.");
+      if (!isAuthorized(principal, "tenant.view", target)) throw new HttpError(403, "permission_denied", "You do not have permission to view this vendor.");
       const canViewCredit = isAuthorized(principal, "credit.view", target)
         || isAuthorized(principal, "credit.approve", target)
         || isAuthorized(principal, "credit.suspend", target);
@@ -421,10 +421,10 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
       const principal = authenticatedPrincipal(response);
       requirePermissionScope(principal, "user.view");
       const superAdmin = hasRoleType(principal, "super_admin");
-      const rows = await options.pool.query<{ assignment_public_id: string; user_public_id: string; full_name: string; phone_e164: string; email: string | null; user_status: string; mfa_required: boolean; role_public_id: string; role_name: string; role_type: string; scope_kind: string; scope_value: string | null; assignment_status: string; created_at: Date; agencies: unknown[] }>(
+      const rows = await options.pool.query<{ assignment_public_id: string; user_public_id: string; full_name: string; phone_e164: string; email: string | null; user_status: string; role_public_id: string; role_name: string; role_type: string; scope_kind: string; scope_value: string | null; assignment_status: string; created_at: Date; agencies: unknown[] }>(
         `select assignment.public_id::text as assignment_public_id,
                 user_row.public_id::text as user_public_id, user_row.full_name, user_row.phone_e164,
-                user_row.email, user_row.status as user_status, user_row.mfa_required,
+                user_row.email, user_row.status as user_status,
                 role_row.public_id::text as role_public_id, role_row.name as role_name, role_row.role_type, assignment.scope_kind, assignment.scope_value,
                 assignment.status as assignment_status, assignment.created_at,
                 coalesce(scoped_agencies.value, '[]'::jsonb) as agencies
@@ -441,7 +441,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
           order by assignment.created_at desc, assignment.id desc limit 200`,
         [superAdmin, principal.userId],
       );
-      response.status(200).json({ teamMembers: rows.rows.map((row) => ({ assignmentPublicId: row.assignment_public_id, publicId: row.user_public_id, fullName: row.full_name, phoneE164: row.phone_e164, email: row.email, status: row.user_status, mfaRequired: row.mfa_required, rolePublicId: row.role_public_id, roleName: row.role_name, roleType: row.role_type, scope: { kind: row.scope_kind, value: row.scope_value, agencies: row.agencies }, assignmentStatus: row.assignment_status, assignedAt: row.created_at.toISOString() })) });
+      response.status(200).json({ teamMembers: rows.rows.map((row) => ({ assignmentPublicId: row.assignment_public_id, publicId: row.user_public_id, fullName: row.full_name, phoneE164: row.phone_e164, email: row.email, status: row.user_status, rolePublicId: row.role_public_id, roleName: row.role_name, roleType: row.role_type, scope: { kind: row.scope_kind, value: row.scope_value, agencies: row.agencies }, assignmentStatus: row.assignment_status, assignedAt: row.created_at.toISOString() })) });
     } catch (error) { next(error); }
   });
 

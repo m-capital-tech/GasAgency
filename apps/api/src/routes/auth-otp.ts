@@ -1,13 +1,13 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import type pg from "pg";
 import { Router } from "express";
-import { withTransaction } from "@platform/database";
+import { loadPrincipalBySessionHash, withTransaction } from "@platform/database";
 import { decryptSecret, encryptSecret, uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import type { ApiConfig } from "../config";
 import { activeAgencyAccess } from "../domain/agency-access";
 import { HttpError } from "../http/error";
-import { hashMfaValue } from "../security/mfa";
+import { platformAccessFromAssignments } from "../domain/platform-access";
 import { hashOtpCode, hashRateKey, maskPhone, otpMatches } from "../security/otp";
 import { hashSessionToken } from "../security/token";
 
@@ -26,12 +26,13 @@ interface EligibleUserRow {
   full_name: string;
   phone_e164: string;
   last_login_at: Date | null;
-  mfa_required: boolean;
+  privileged: boolean;
   has_tenant_access: boolean;
   has_platform_access: boolean;
 }
 
 function demoCodeFor(config: ApiConfig, phoneE164: string): string | undefined {
+  if (config.appEnv === "staging" || config.appEnv === "production") return undefined;
   return phoneE164 === config.otpDemoPhoneE164 ? config.otpDemoCode : undefined;
 }
 
@@ -65,7 +66,14 @@ async function eligibleUser(client: pg.PoolClient, phoneE164: string, lock = fal
             user_row.full_name,
             user_row.phone_e164,
             user_row.last_login_at,
-            user_row.mfa_required,
+            exists (
+              select 1 from app.role_assignments assignment
+              join app.roles role_row on role_row.id = assignment.role_id
+              where assignment.user_id = user_row.id and assignment.status = 'active'
+                and (assignment.expires_at is null or assignment.expires_at > now())
+                and role_row.status = 'active'
+                and role_row.role_type in ('super_admin', 'platform_admin', 'platform_team', 'agency_owner', 'agency_staff')
+            ) as privileged,
             exists (
               select 1 from app.tenant_memberships membership
               join app.tenants tenant on tenant.id = membership.tenant_id
@@ -289,8 +297,8 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
         }
         await client.query("update app.otp_challenges set consumed_at = now() where id = $1", [challenge.id]);
         await client.query(
-          "update app.users set status = 'active', last_login_at = case when $2::boolean then last_login_at else now() end, updated_at = now() where id = $1",
-          [user.id, user.mfa_required],
+          "update app.users set status = 'active', last_login_at = now(), updated_at = now() where id = $1",
+          [user.id],
         );
         await client.query(
           `update app.tenant_memberships membership
@@ -307,50 +315,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
           ? createHash("sha256").update(parsed.data.deviceIdentifier, "utf8").digest()
           : null;
 
-        if (user.mfa_required) {
-          const hasActiveFactor = (await client.query(
-            "select 1 from app.mfa_factors where user_id = $1 and status = 'active'",
-            [user.id],
-          )).rowCount === 1;
-          const mfaTicket = randomBytes(32).toString("base64url");
-          const mfaTicketPublicId = uuidV7();
-          await client.query(
-            "update app.mfa_login_tickets set consumed_at = coalesce(consumed_at, now()) where user_id = $1 and consumed_at is null",
-            [user.id],
-          );
-          await client.query(
-            `insert into app.mfa_login_tickets (
-               public_id, user_id, token_hash, phone_verified_at, expires_at,
-               attempts_remaining, device_name, device_identifier_hash, created_ip
-             ) values ($1, $2, $3, now(), now() + make_interval(secs => $4), $5, $6, $7, $8)`,
-            [
-              mfaTicketPublicId,
-              user.id,
-              hashMfaValue(mfaTicket, config.mfaTicketPepper),
-              config.mfaTicketTtlSeconds,
-              config.mfaMaxAttempts,
-              parsed.data.deviceName ?? null,
-              deviceHash,
-              ip,
-            ],
-          );
-          const status = hasActiveFactor ? "mfa_verification_required" as const : "mfa_enrollment_required" as const;
-          await client.query(
-            `insert into app.audit_events (
-               public_id, actor_user_id, action, entity_type, entity_public_id,
-               after_values, request_id, correlation_id, source_ip, user_agent
-             ) values ($1, $2, 'auth.phone_verified', 'user', $3, $4::jsonb, $5, $6, $7, $8)`,
-            [uuidV7(), user.id, user.public_id, JSON.stringify({ mfaEnrollmentRequired: !hasActiveFactor, mfaVerificationRequired: hasActiveFactor, mfaTicketPublicId }), uuidV7(), uuidV7(), ip, request.header("user-agent")?.slice(0, 500) ?? null],
-          );
-          return {
-            kind: "mfa_required" as const,
-            status,
-            mfaTicket,
-            expiresInSeconds: config.mfaTicketTtlSeconds,
-            user: { publicId: user.public_id, fullName: user.full_name, phoneE164: user.phone_e164 },
-          };
-        }
-
+        const ttl = user.privileged ? config.privilegedSessionTtlSeconds : config.sessionTtlSeconds;
         const sessionToken = randomBytes(32).toString("base64url");
         const sessionPublicId = uuidV7();
         await client.query(
@@ -358,7 +323,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
              public_id, user_id, token_hash, device_identifier_hash, device_name,
              expires_at, auth_method, created_ip
            ) values ($1, $2, $3, $4, $5, now() + make_interval(secs => $6), 'otp', $7)`,
-          [sessionPublicId, user.id, hashSessionToken(sessionToken, config.sessionTokenPepper), deviceHash, parsed.data.deviceName ?? null, config.sessionTtlSeconds, ip],
+          [sessionPublicId, user.id, hashSessionToken(sessionToken, config.sessionTokenPepper), deviceHash, parsed.data.deviceName ?? null, ttl, ip],
         );
         const memberships = await client.query<{ tenant_public_id: string; display_name: string; membership_type: string }>(
           `select tenant.public_id::text as tenant_public_id, tenant.display_name, membership.membership_type
@@ -379,7 +344,7 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
         return {
           kind: "authenticated" as const,
           accessToken: sessionToken,
-          expiresInSeconds: config.sessionTtlSeconds,
+          expiresInSeconds: ttl,
           user: { publicId: user.public_id, fullName: user.full_name, phoneE164: user.phone_e164 },
           firstLogin: user.last_login_at === null,
           tenants: memberships.rows.map((membership) => ({ publicId: membership.tenant_public_id, displayName: membership.display_name, membershipType: membership.membership_type })),
@@ -390,11 +355,9 @@ export function authOtpRouter(options: { pool: pg.Pool; config: ApiConfig }): Ro
       if (outcome.kind === "invalid") {
         throw new HttpError(422, "invalid_otp", "The OTP is invalid, expired, or already used.", "remainingAttempts" in outcome ? { remainingAttempts: outcome.remainingAttempts } : undefined);
       }
-      if (outcome.kind === "mfa_required") {
-        response.status(200).json({ status: outcome.status, mfaTicket: outcome.mfaTicket, expiresInSeconds: outcome.expiresInSeconds, user: outcome.user });
-        return;
-      }
-      response.status(200).json({ status: "authenticated", accessToken: outcome.accessToken, tokenType: "Bearer", expiresInSeconds: outcome.expiresInSeconds, firstLogin: outcome.firstLogin, user: outcome.user, tenants: outcome.tenants, agencies: outcome.agencies });
+      const principal = await loadPrincipalBySessionHash(pool, hashSessionToken(outcome.accessToken, config.sessionTokenPepper));
+      if (!principal) throw new HttpError(401, "invalid_session", "The session is no longer active.");
+      response.status(200).json({ status: "authenticated", accessToken: outcome.accessToken, tokenType: "Bearer", expiresInSeconds: outcome.expiresInSeconds, firstLogin: outcome.firstLogin, user: outcome.user, tenants: outcome.tenants, agencies: outcome.agencies, platformAccess: platformAccessFromAssignments(principal.assignments), session: { publicId: principal.sessionPublicId, authMethod: principal.authMethod } });
     } catch (error) {
       next(error);
     }

@@ -84,7 +84,7 @@ export function authPushDevicesRouter(options: { pool: pg.Pool; tokenPepper: str
           [principal.userId, registration.provider, tokenDigest],
         );
         if (!revoked.rows[0]?.tenant_access) {
-          throw new HttpError(403, "tenant_access_required", "An active tenant membership is required to manage push notifications.");
+          throw new HttpError(403, "tenant_access_required", "An active vendor membership is required to manage push notifications.");
         }
         response.status(200).json({ status: "revoked" });
         return;
@@ -132,7 +132,7 @@ export function authPushDevicesRouter(options: { pool: pg.Pool; tokenPepper: str
       );
       const device = result.rows[0];
       if (!device) {
-        throw new HttpError(403, "tenant_access_required", "An active tenant membership is required to register push notifications.");
+        throw new HttpError(403, "tenant_access_required", "An active vendor membership is required to register push notifications.");
       }
       response.status(200).json({
         status: "registered",

@@ -99,13 +99,13 @@ async function tenantAccess(client: pg.Pool | pg.PoolClient, userId: string, ten
       where membership.user_id = $1 and membership.status = 'active' and tenant.public_id = $2`,
     [userId, tenantPublicId],
   )).rows[0];
-  if (!row) throw new HttpError(404, "tenant_not_found", "The tenant or its serving account is unavailable.");
+  if (!row) throw new HttpError(404, "tenant_not_found", "The vendor or its serving account is unavailable.");
   return row;
 }
 
 function assertCanManageTenant(access: TenantAccessRow): void {
   if (access.membership_type === "staff") {
-    throw new HttpError(403, "tenant_management_required", "Only a tenant owner or manager can update outlet and requirement details.");
+    throw new HttpError(403, "tenant_management_required", "Only a vendor owner or manager can update outlet and requirement details.");
   }
 }
 
@@ -144,7 +144,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
   router.get("/tenants/:tenantPublicId/profile", async (request, response, next) => {
     try {
       const tenant = publicId.safeParse(request.params.tenantPublicId);
-      if (!tenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenant.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       const access = await tenantAccess(options.pool, principal.userId, tenant.data);
       const [outlets, cylinderTypes] = await Promise.all([options.pool.query<{
@@ -301,7 +301,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
         };
         await auditTenantAction(client, principal.userId, access, {
           action: "tenant.outlet_self_service_updated", entityType: "outlet", entityPublicId: current.public_id,
-          reason: "Tenant owner or manager updated permitted outlet fields", before, after,
+          reason: "Vendor owner or manager updated permitted outlet fields", before, after,
           requestId: response.locals.requestId ?? uuidV7(),
         });
         return { publicId: current.public_id, ...after };
@@ -314,7 +314,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
     try {
       const tenant = publicId.safeParse(request.params.tenantPublicId);
       const parsedPeriod = periodSchema.safeParse(request.query.period ?? "daily");
-      if (!tenant.success || !parsedPeriod.success) throw new HttpError(400, "invalid_request", "The tenant dashboard request is invalid.");
+      if (!tenant.success || !parsedPeriod.success) throw new HttpError(400, "invalid_request", "The vendor dashboard request is invalid.");
       const principal = authenticatedPrincipal(response);
       const access = await tenantAccess(options.pool, principal.userId, tenant.data);
       const unit = parsedPeriod.data === "daily" ? "day" : parsedPeriod.data === "weekly" ? "week" : "month";
@@ -458,7 +458,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
         definitions: {
           bookedValue: "Accepted order value in the selected period, excluding rejected, cancelled, and failed-payment orders.",
           deliveredValue: "Value of orders marked delivered in the selected period.",
-          stockEstimate: "Operational estimate from tenant-maintained stock and requirement quantities; not an accounting record.",
+          stockEstimate: "Operational estimate from vendor-maintained stock and requirement quantities; not an accounting record.",
         },
       });
     } catch (error) { next(error); }
@@ -467,7 +467,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
   router.get("/tenants/:tenantPublicId/support-cases", async (request, response, next) => {
     try {
       const tenant = publicId.safeParse(request.params.tenantPublicId);
-      if (!tenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenant.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       const access = await tenantAccess(options.pool, principal.userId, tenant.data);
       const cases = await options.pool.query<{
@@ -510,7 +510,7 @@ export function tenantSelfServiceRouter(options: { pool: pg.Pool; tokenPepper: s
         const access = await tenantAccess(client, principal.userId, tenant.data);
         if (parsed.data.orderPublicId) {
           const linked = await client.query("select 1 from app.orders where tenant_id = $1 and public_id = $2", [access.tenant_id, parsed.data.orderPublicId]);
-          if (!linked.rowCount) throw new HttpError(422, "support_order_mismatch", "The selected order does not belong to this tenant.");
+          if (!linked.rowCount) throw new HttpError(422, "support_order_mismatch", "The selected order does not belong to this vendor.");
         }
         const category = parsed.data.kind === "change_request"
           ? parsed.data.changeField === "serving_agency" ? "agency" : "onboarding"

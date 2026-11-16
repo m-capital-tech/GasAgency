@@ -16,11 +16,9 @@ export interface AuthPrincipal {
   userPublicId: string;
   fullName: string;
   phoneE164: string;
-  mfaRequired: boolean;
   sessionId: string;
   sessionPublicId: string;
   authMethod: string;
-  mfaVerifiedAt: Date | null;
   assignments: PrincipalAssignment[];
 }
 
@@ -29,11 +27,9 @@ interface PrincipalRow {
   user_public_id: string;
   full_name: string;
   phone_e164: string;
-  mfa_required: boolean;
   session_id: string;
   session_public_id: string;
   auth_method: string;
-  mfa_verified_at: Date | null;
   assignments: PrincipalAssignment[] | null;
 }
 
@@ -43,11 +39,9 @@ export async function loadPrincipalBySessionHash(pool: pg.Pool, tokenHash: Buffe
             user_row.public_id::text as user_public_id,
             user_row.full_name,
             user_row.phone_e164,
-            user_row.mfa_required,
             session_row.id::text as session_id,
             session_row.public_id::text as session_public_id,
             session_row.auth_method,
-            session_row.mfa_verified_at,
             coalesce(assignments.value, '[]'::jsonb) as assignments
        from app.device_sessions session_row
        join app.users user_row on user_row.id = session_row.user_id
@@ -106,11 +100,9 @@ export async function loadPrincipalBySessionHash(pool: pg.Pool, tokenHash: Buffe
     userPublicId: row.user_public_id,
     fullName: row.full_name,
     phoneE164: row.phone_e164,
-    mfaRequired: row.mfa_required,
     sessionId: row.session_id,
     sessionPublicId: row.session_public_id,
     authMethod: row.auth_method,
-    mfaVerifiedAt: row.mfa_verified_at,
     assignments: row.assignments ?? [],
   };
 }

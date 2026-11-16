@@ -30,11 +30,8 @@ Values marked secret are configured through encrypted App Platform environment v
 | `SESSION_TOKEN_PEPPER` | API | Secret | Server-side session-token hashing pepper |
 | `OTP_HASH_PEPPER` | API, worker | Secret | Server-side OTP hashing pepper |
 | `OTP_DELIVERY_KEY` | API, worker | Secret | Independent base64 AES-256 key for OTP delivery envelopes |
-| `MFA_ENCRYPTION_KEY` | API | Secret | Independent base64 AES-256 key for TOTP secret envelopes |
-| `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker | Secret | Independent base64 AES-256 key for Expo push-token envelopes; never reuse an OTP or MFA key |
-| `MFA_TICKET_PEPPER` | API | Secret | Independent HMAC pepper for MFA tickets and recovery codes |
-| `MFA_ISSUER` | API | General | Neutral product label shown by authenticator apps |
-| `PRIVILEGED_SESSION_TTL_SECONDS` | API | General | MFA-verified privileged session lifetime; default 8 hours, maximum 24 hours |
+| `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker | Secret | Independent base64 AES-256 key for Expo push-token envelopes; never reuse an OTP key |
+| `PRIVILEGED_SESSION_TTL_SECONDS` | API | General | Privileged session lifetime; default 8 hours, maximum 24 hours |
 | `PUBLIC_APP_ORIGIN` | API | General | Admin dashboard origin; provider URL until a domain exists |
 | `PUBLIC_API_ORIGIN` | Dashboard/mobile builds | General | Public API base URL |
 | `PLATFORM_API_URL` | Dashboard server | General | Server-side production API origin used by the `/operations` gateway; never exposed to browser code |
@@ -69,7 +66,7 @@ The MessageIndia adapter is implemented behind the provider-neutral contract. Th
 
 The business-document adapter is also provider-neutral. Production uses the private `munna-gas-connect-production-documents` Space in `sgp1` with a dedicated bucket-scoped credential. The credential values are supplied only through encrypted App Platform variables. Run the storage smoke test before enabling `features.document_uploads` in Super Admin controls. The local adapter is rejected in staging and production.
 
-Production OTPs use a 10-minute server validity window and a two-minute resend delay. Privileged phone-to-authenticator handoff tickets use the maximum supported 15-minute window. These settings accommodate observed carrier latency and first-login authenticator setup while retaining the existing per-phone/IP rate limits, five-attempt ceilings, single-use challenges, and newest-request invalidation behavior. Users must enter the newest SMS after requesting another code.
+Production SMS OTPs use a 10-minute server validity window and a two-minute resend delay. These settings accommodate observed carrier latency while retaining the existing per-phone/IP rate limits, five-attempt ceilings, single-use challenges, and newest-request invalidation behavior. Users must enter the newest SMS after requesting another code.
 
 ## Version-controlled production specification
 
@@ -113,9 +110,7 @@ export DO_DATABASE_MIGRATION_USER='platform_migrator'
 export SESSION_TOKEN_PEPPER='independent-random-secret-at-least-32-characters'
 export OTP_HASH_PEPPER='another-independent-random-secret-at-least-32-characters'
 export OTP_DELIVERY_KEY='canonical-base64-encoded-32-byte-key'
-export MFA_ENCRYPTION_KEY='another-canonical-base64-encoded-32-byte-key'
 export PUSH_TOKEN_ENCRYPTION_KEY='a-third-canonical-base64-encoded-32-byte-key'
-export MFA_TICKET_PEPPER='another-independent-random-secret-at-least-32-characters'
 export OBJECT_STORAGE_ACCESS_KEY='dedicated-bucket-scoped-access-key'
 export OBJECT_STORAGE_SECRET_KEY='matching-secret-key'
 

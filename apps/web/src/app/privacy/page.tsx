@@ -82,7 +82,7 @@ export default function PrivacyPolicyPage() {
           </PolicySection>
 
           <PolicySection title="6. Security">
-            <p>We use role-based access controls, tenant and agency scoping, encryption in transit, protected device storage for sessions, encrypted storage for selected server-side secrets, audit logging, monitoring, and controlled administrative workflows. No online service can guarantee absolute security, but we review and improve safeguards as the platform develops.</p>
+            <p>We use role-based access controls, vendor and agency scoping, encryption in transit, protected device storage for sessions, encrypted storage for selected server-side secrets, audit logging, monitoring, and controlled administrative workflows. No online service can guarantee absolute security, but we review and improve safeguards as the platform develops.</p>
           </PolicySection>
 
           <PolicySection title="7. Your choices and requests">

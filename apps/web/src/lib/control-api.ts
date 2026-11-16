@@ -84,7 +84,7 @@ export interface TenantDetail extends TenantSummary {
 }
 export interface AdminRole { publicId: string; name: string; roleType: string; status: string; managedByName: string | null; permissionKeys: string[]; }
 export interface AdminPermission { key: string; resource: string; action: string; description: string; reserved: boolean; }
-export interface TeamMember { assignmentPublicId: string; publicId: string; fullName: string; phoneE164: string; email: string | null; status: string; mfaRequired: boolean; rolePublicId: string; roleName: string; roleType: string; scope: { kind: string; value: string | null; agencies: Array<{ publicId: string; displayName: string }> }; assignmentStatus: string; assignedAt: string; }
+export interface TeamMember { assignmentPublicId: string; publicId: string; fullName: string; phoneE164: string; email: string | null; status: string; rolePublicId: string; roleName: string; roleType: string; scope: { kind: string; value: string | null; agencies: Array<{ publicId: string; displayName: string }> }; assignmentStatus: string; assignedAt: string; }
 export interface PlatformSetting {
   key: string;
   category: "workflow" | "operations" | "feature";
@@ -166,5 +166,4 @@ export const controlApi = {
   updateRole: (publicId: string, body: Record<string, unknown>) => request<{ role: AdminRole & { revokedSessions: number } }>(`admin/roles/${publicId}`, { method: "POST", body }),
   createTeamMember: (body: Record<string, unknown>) => request<{ user: { publicId: string }; invitation: { status: string } }>("admin/team-members", { method: "POST", body }),
   changeTeamMemberAccess: (assignmentPublicId: string, body: { action: "suspend" | "reinstate" | "revoke"; reason: string }) => request<{ assignment: { assignmentPublicId: string; userPublicId: string; status: string; revokedSessions: number } }>(`admin/team-members/${assignmentPublicId}/lifecycle`, { method: "POST", body }),
-  stepUpMfa: (code: string) => request<{ verified: true; verifiedAt: string; validForSeconds: number }>("auth/mfa/step-up", { method: "POST", body: { code } }),
 };

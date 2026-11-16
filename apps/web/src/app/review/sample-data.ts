@@ -80,8 +80,8 @@ export const sampleTenants = [
 
 export const sampleRoles = [
   { role: "Super Admin", members: 1, scope: "Global", permissions: "All platform, security, finance and reporting controls" },
-  { role: "Platform Admin", members: 3, scope: "Assigned regions", permissions: "Tenant approval, agency oversight and analytics" },
-  { role: "Onboarding Executive", members: 7, scope: "Assigned agencies", permissions: "Create and submit tenant registrations" },
+  { role: "Platform Admin", members: 3, scope: "Assigned regions", permissions: "Vendor approval, agency oversight and analytics" },
+  { role: "Onboarding Executive", members: 7, scope: "Assigned agencies", permissions: "Create and submit vendor registrations" },
 ];
 
 export const sampleOrders = [

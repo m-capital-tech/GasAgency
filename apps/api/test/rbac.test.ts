@@ -8,11 +8,9 @@ const base: AuthPrincipal = {
   userPublicId: "00000000-0000-7000-8000-000000000001",
   fullName: "Test User",
   phoneE164: "+919999999999",
-  mfaRequired: true,
   sessionId: "1",
   sessionPublicId: "00000000-0000-7000-8000-000000000002",
-  authMethod: "otp_mfa",
-  mfaVerifiedAt: new Date(),
+  authMethod: "otp",
   assignments: [],
 };
 
