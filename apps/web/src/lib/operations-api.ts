@@ -29,6 +29,12 @@ export interface OperationsStaff { publicId: string; fullName: string; phoneE164
 export interface OperationsInventory { publicId: string; cylinderTypeCode: string; displayName: string; fullOnHand: number; reservedFull: number; availableFull: number; emptyOnHand: number; withAccounts: number; lowStockThreshold: number; }
 export interface OperationsDocument { publicId: string; documentType: string; version: number; status: "available" | "quarantined" | "archived" | "failed"; originalFileName: string; mediaType: string; byteSize: number; retentionClass: string; legalHold: boolean; uploadedByName: string; createdAt: string; archivedAt: string | null; }
 
+export interface OperationsCylinderPrice {
+  cylinderTypeCode: string;
+  displayName: string;
+  baseUnitPrice: string | null;
+}
+
 export interface OperationsAccountPrice {
   cylinderTypeCode: string;
   displayName: string;
@@ -117,6 +123,9 @@ export const operationsApi = {
   session: () => request<OperationsSession>("auth/session"),
   logout: () => request<void>("auth/logout", { method: "POST" }),
   dashboard: (agencyPublicId: string, period: OperationsDashboardPeriod) => request<OperationsDashboard>(`agencies/${agencyPublicId}/dashboard?period=${period}`),
+  cylinderPrices: (agencyPublicId: string) => request<{ prices: OperationsCylinderPrice[] }>(`agencies/${agencyPublicId}/cylinder-prices`),
+  setCylinderPrice: (agencyPublicId: string, body: { cylinderTypeCode: string; baseUnitPrice: string; expectedBaseUnitPrice: string | null; reason: string }) =>
+    request<{ price: OperationsCylinderPrice }>(`agencies/${agencyPublicId}/cylinder-prices`, { method: "POST", body }),
   orders: (agencyPublicId: string, status?: string) => request<{ agency: OperationsAgency; orders: OperationsOrder[] }>(`agencies/${agencyPublicId}/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
   staff: (agencyPublicId: string) => request<{ staff: OperationsStaff[] }>(`agencies/${agencyPublicId}/delivery-staff`),
   createStaff: (agencyPublicId: string, body: { fullName: string; phoneE164: string; email?: string; vehicleType: string; vehicleNumber: string; reason: string }) => request<{ staff: OperationsStaff }>(`agencies/${agencyPublicId}/delivery-staff`, { method: "POST", body }),

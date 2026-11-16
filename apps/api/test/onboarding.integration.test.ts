@@ -394,7 +394,7 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(homeResponse.status, 200);
     const home = await homeResponse.json() as {
       outlets: Array<{ publicId: string; stock: { inUse: number; spareFull: number; empty: number } }>;
-      catalog: Array<{ cylinderTypeCode: string; baseUnitPrice: string; negotiatedUnitPrice: string | null }>;
+      catalog: Array<{ cylinderTypeCode: string; baseUnitPrice: string; negotiatedUnitPrice: string | null; slabs: Array<{ minQuantity: number; unitPrice: string }> }>;
       paymentMethods: string[];
       credit: { limit: string; available: string; netTermDays: number; eligible: boolean };
       deliverySlots: Array<{ code: string }>;
@@ -748,6 +748,70 @@ integrationTest("delegated creator submits and a separate administrator activate
       assert.equal(retired.status, 404);
     }
 
+    const pricesUrl = `${origin}/agencies/${agencyPublicId}/cylinder-prices`;
+    const vendorUrl = `${origin}/tenants/${createdBody.tenant.publicId}`;
+    const largeCylinder = "commercial_47_5kg";
+    const changeRate = (code: string, amount: string, expected: string | null, url = pricesUrl, headers = agencyJsonHeaders) =>
+      fetch(url, { method: "POST", headers, body: JSON.stringify({
+        cylinderTypeCode: code, baseUnitPrice: amount, expectedBaseUnitPrice: expected, reason: "Pricing integration check",
+      }) });
+    const readCatalogue = async () => {
+      const result = await fetch(`${vendorUrl}/home`, { headers: tenantAuthorization });
+      assert.equal(result.status, 200);
+      return (await result.json() as typeof home).catalog;
+    };
+    const newQuote = async () => {
+      const response = await fetch(`${vendorUrl}/quotes`, { method: "POST", headers: tenantJsonHeaders, body: JSON.stringify({
+        outletPublicId: home.outlets[0]!.publicId, deliverySlot: "standard", paymentMethod: "cod",
+        items: [{ cylinderTypeCode: largeCylinder, quantity: 2 }],
+      }) });
+      assert.equal(response.status, 201);
+      return (await response.json() as { quote: typeof quote }).quote;
+    };
+    const confirmQuote = (quoteId: string) => fetch(orderEndpoint, { method: "POST",
+      headers: { ...tenantJsonHeaders, "idempotency-key": `pricing-test:${quoteId}` },
+      body: JSON.stringify({ quotePublicId: quoteId, emptiesExpected: 0 }),
+    });
+    const list = await fetch(pricesUrl, { headers: agencyAuthorization });
+    assert.equal(list.status, 200);
+    const ownerPrices = (await list.json() as { prices: Array<{ cylinderTypeCode: string; baseUnitPrice: string | null }> }).prices;
+    assert.equal(ownerPrices.find((row) => row.cylinderTypeCode === largeCylinder)?.baseUnitPrice, null);
+    assert.equal((await readCatalogue()).some((row) => row.cylinderTypeCode === largeCylinder), false);
+    assert.equal((await changeRate(largeCylinder, "1200", null, pricesUrl, tenantJsonHeaders)).status, 403);
+    assert.equal((await changeRate(largeCylinder, "1200", null, pricesUrl, jsonHeaders(superToken))).status, 403);
+    assert.equal((await changeRate(largeCylinder, "1200", null, pricesUrl.replace(agencyPublicId, uuidV7()))).status, 403);
+    for (const invalid of ["0", "-2", "5.001", "10000000000"]) assert.equal((await changeRate(largeCylinder, invalid, null)).status, 400);
+    assert.equal((await changeRate("unlisted_type", "1200", null)).status, 422);
+    assert.equal((await changeRate(largeCylinder, "2150", null)).status, 200);
+    assert.equal((await readCatalogue()).find((row) => row.cylinderTypeCode === largeCylinder)?.baseUnitPrice, "2150.00");
+    const originalQuote = await newQuote();
+    assert.equal(originalQuote.items[0]?.unitPrice, "2150.00");
+    const update = await changeRate(largeCylinder, "2100.25", "2150");
+    assert.equal(update.status, 200);
+    assert.equal((await changeRate(largeCylinder, "2100.25", "2150")).status, 200);
+    assert.equal((await changeRate(largeCylinder, "1900", "2150")).status, 409);
+    const outdated = await confirmQuote(originalQuote.publicId);
+    assert.equal(outdated.status, 409);
+    assert.equal((await outdated.json() as { error: { code: string } }).error.code, "quote_changed");
+    const updatedQuote = await newQuote();
+    assert.equal(updatedQuote.items[0]?.unitPrice, "2100.25");
+    assert.equal(updatedQuote.items[0]?.priceSource, "base");
+    assert.equal(updatedQuote.subtotal, "4200.50");
+    const orderAtNewRate = await confirmQuote(updatedQuote.publicId);
+    assert.equal(orderAtNewRate.status, 201);
+    const newOrder = (await orderAtNewRate.json() as { order: { totalAmount: string } }).order;
+    assert.equal(newOrder.totalAmount, updatedQuote.totalAmount);
+    const audits = await pool.query(`select before_values->>'baseUnitPrice' as previous, after_values->>'baseUnitPrice' as current
+      from app.audit_events where action = 'agency.cylinder_price_updated' and after_values->>'agencyPublicId' = $1
+      and after_values->>'cylinderTypeCode' = $2 order by id`, [agencyPublicId, largeCylinder]);
+    assert.deepEqual(audits.rows, [{ previous: null, current: "2150.00" }, { previous: "2150.00", current: "2100.25" }]);
+    assert.equal((await changeRate("commercial_19kg", "1495", "1800")).status, 200);
+    const cheaperCylinder = (await readCatalogue()).find((row) => row.cylinderTypeCode === "commercial_19kg");
+    assert.equal(cheaperCylinder?.baseUnitPrice, "1495.00");
+    assert.equal(cheaperCylinder?.negotiatedUnitPrice, null);
+    assert.deepEqual(cheaperCylinder?.slabs, []);
+    assert.equal((await changeRate("commercial_19kg", "1800", "1495")).status, 200);
+
     const logout = await fetch(`${origin}/auth/logout`, {
       method: "POST",
       headers: { authorization: `Bearer ${authenticated.accessToken}` },
@@ -789,7 +853,7 @@ integrationTest("delegated creator submits and a separate administrator activate
          (select count(*) from app.agency_inventory_events event join app.orders order_row on order_row.id = event.order_id join app.tenants tenant on tenant.id = order_row.tenant_id where tenant.public_id = $1)::text as inventory_events`,
       [createdBody.tenant.publicId],
     );
-    assert.deepEqual(stored.rows[0], { tenants: "1", proposals: "1", assignments: "1", invitations: "1", outbox: "1", credit_accounts: "1", active_memberships: "1", otp_sessions: "0", revoked_sessions: "1", audit_events: "3", orders: "1", order_items: "1", order_events: "1", fulfillment_events: "4", order_outbox: "1", status_outbox: "4", invoice_outbox: "1", order_audits: "1", fulfillment_audits: "4", invoices: "1", empty_collections: "1", inventory_events: "3" });
+    assert.deepEqual(stored.rows[0], { tenants: "1", proposals: "1", assignments: "1", invitations: "1", outbox: "1", credit_accounts: "1", active_memberships: "1", otp_sessions: "0", revoked_sessions: "1", audit_events: "3", orders: "1", order_items: "2", order_events: "2", fulfillment_events: "4", order_outbox: "2", status_outbox: "4", invoice_outbox: "1", order_audits: "2", fulfillment_audits: "4", invoices: "1", empty_collections: "1", inventory_events: "3" });
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await pool.end();

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import {
   loadTenantHome,
+  PlatformApiError,
   placeTenantOrder,
   requestTenantQuote,
   type TenantDeliverySlot,
@@ -84,7 +85,12 @@ export default function TenantOrderScreen() {
     try {
       setOrder((await placeTenantOrder(activeTenantPublicId, quote.publicId, `mobile-order:${quote.publicId}`, { emptiesExpected: Number(emptiesExpected), deliveryInstructions: deliveryInstructions.trim() || undefined })).order);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The order could not be placed.");
+      if (cause instanceof PlatformApiError && (cause.code === "quote_changed" || cause.code === "quote_expired")) {
+        setQuote(null);
+        setError("Your previous quote is no longer current. Tap Review price to see the latest total.");
+      } else {
+        setError(cause instanceof Error ? cause.message : "The order could not be placed.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +138,7 @@ export default function TenantOrderScreen() {
                 <Row between>
                   <View style={{ flex: 1 }}>
                     <Text variant="h3">{item.displayName}</Text>
-                    <Text variant="small" tone="muted">From {rupees(item.negotiatedUnitPrice ?? item.baseUnitPrice)} before GST</Text>
+                    <Text variant="small" tone="muted">{rupees(quote?.items.find((line) => line.cylinderTypeCode === item.cylinderTypeCode)?.unitPrice ?? item.negotiatedUnitPrice ?? item.baseUnitPrice)} per cylinder before GST</Text>
                   </View>
                   <Row>
                     <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${item.displayName}`} onPress={() => changeQuantity(item.cylinderTypeCode, -1)} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: t.colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={20} color={t.colors.ink} /></Pressable>
@@ -171,7 +177,7 @@ export default function TenantOrderScreen() {
               <KeyValue k={`GST (${quote.gstRate}%)`} v={rupees(quote.gstAmount)} />
               <Divider />
               <KeyValue k="Order total" v={rupees(quote.totalAmount)} strong tone="primary" />
-              <Text variant="caption" tone="muted" style={{ marginTop: 8 }}>Price is reserved for 10 minutes and rechecked when the order is placed.</Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: 8 }}>This quote expires in 10 minutes. We check the price again when you confirm.</Text>
             </Card>
           ) : null}
 

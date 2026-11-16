@@ -416,7 +416,8 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
              join app.cylinder_types cylinder on cylinder.id = price.cylinder_type_id and cylinder.active
              left join app.commercial_account_prices negotiated
                on negotiated.commercial_account_id = $2 and negotiated.cylinder_type_id = cylinder.id and negotiated.active
-             left join app.agency_price_slabs slab on slab.agency_price_id = price.id
+              and negotiated.unit_price <= price.base_unit_price
+             left join app.agency_price_slabs slab on slab.agency_price_id = price.id and slab.unit_price <= price.base_unit_price
             where price.agency_id = $1 and price.active
             group by cylinder.id, price.id, negotiated.unit_price
             order by cylinder.weight_kg`,
