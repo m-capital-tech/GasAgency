@@ -107,7 +107,7 @@ async function activeTenant(
       [userId, tenantPublicId],
     )
   ).rows[0];
-  if (!row) throw new HttpError(404, "tenant_not_found", "The tenant or its serving account is unavailable.");
+  if (!row) throw new HttpError(404, "tenant_not_found", "The vendor or its serving account is unavailable.");
   return row;
 }
 
@@ -256,7 +256,7 @@ export function tenantAccountRouter(options: { pool: pg.Pool; tokenPepper: strin
     try {
       const tenantPublicId = publicIdSchema.safeParse(request.params.tenantPublicId);
       const query = orderListSchema.safeParse(request.query);
-      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!query.success) throw new HttpError(400, "invalid_request", "The order-list filters are invalid.", query.error.flatten());
       const principal = authenticatedPrincipal(response);
       const tenant = await activeTenant(options.pool, principal.userId, tenantPublicId.data);
@@ -287,7 +287,7 @@ export function tenantAccountRouter(options: { pool: pg.Pool; tokenPepper: strin
     try {
       const tenantPublicId = publicIdSchema.safeParse(request.params.tenantPublicId);
       const orderPublicId = publicIdSchema.safeParse(request.params.orderPublicId);
-      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!orderPublicId.success) throw new HttpError(400, "invalid_order_id", "The order identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       const tenant = await activeTenant(options.pool, principal.userId, tenantPublicId.data);
@@ -441,7 +441,7 @@ export function tenantAccountRouter(options: { pool: pg.Pool; tokenPepper: strin
     try {
       const tenantPublicId = publicIdSchema.safeParse(request.params.tenantPublicId);
       const query = invoiceListSchema.safeParse(request.query);
-      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!query.success) throw new HttpError(400, "invalid_request", "The billing filters are invalid.", query.error.flatten());
       const principal = authenticatedPrincipal(response);
       const tenant = await activeTenant(options.pool, principal.userId, tenantPublicId.data);
@@ -535,7 +535,7 @@ export function tenantAccountRouter(options: { pool: pg.Pool; tokenPepper: strin
     try {
       const tenantPublicId = publicIdSchema.safeParse(request.params.tenantPublicId);
       const invoicePublicId = publicIdSchema.safeParse(request.params.invoicePublicId);
-      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!tenantPublicId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!invoicePublicId.success) throw new HttpError(400, "invalid_invoice_id", "The invoice identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       const tenant = await activeTenant(options.pool, principal.userId, tenantPublicId.data);

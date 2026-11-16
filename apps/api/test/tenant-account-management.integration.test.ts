@@ -159,11 +159,11 @@ integrationTest("platform tenant lifecycle and post-activation credit decisions 
     [uuidV7(), restrictedUser.id, restrictedRole.id, superAdmin.id],
   );
   await pool.query(
-    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
+    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
      values
-       ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now()),
-       ($4, $5, $6, now() + interval '1 hour', 'bootstrap_test', now()),
-       ($7, $8, $9, now() + interval '1 hour', 'otp', null)`,
+       ($1, $2, $3, now() + interval '1 hour', 'otp'),
+       ($4, $5, $6, now() + interval '1 hour', 'otp'),
+       ($7, $8, $9, now() + interval '1 hour', 'otp')`,
     [
       uuidV7(), superAdmin.id, hashSessionToken(superToken, tokenPepper),
       uuidV7(), restrictedUser.id, hashSessionToken(restrictedToken, tokenPepper),

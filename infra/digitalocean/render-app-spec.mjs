@@ -43,9 +43,7 @@ const authenticationSecrets = {
   SESSION_TOKEN_PEPPER: required("SESSION_TOKEN_PEPPER", (value) => value.length >= 32),
   OTP_HASH_PEPPER: required("OTP_HASH_PEPPER", (value) => value.length >= 32),
   OTP_DELIVERY_KEY: required("OTP_DELIVERY_KEY", canonicalBase64Key),
-  MFA_ENCRYPTION_KEY: required("MFA_ENCRYPTION_KEY", canonicalBase64Key),
   PUSH_TOKEN_ENCRYPTION_KEY: required("PUSH_TOKEN_ENCRYPTION_KEY", canonicalBase64Key),
-  MFA_TICKET_PEPPER: required("MFA_TICKET_PEPPER", (value) => value.length >= 32),
 };
 if (new Set(Object.values(authenticationSecrets)).size !== Object.keys(authenticationSecrets).length) {
   throw new Error("authentication secrets and encryption keys must all be independent values");
@@ -82,9 +80,7 @@ const values = new Map([
   ["__SESSION_TOKEN_PEPPER__", authenticationSecrets.SESSION_TOKEN_PEPPER],
   ["__OTP_HASH_PEPPER__", authenticationSecrets.OTP_HASH_PEPPER],
   ["__OTP_DELIVERY_KEY__", authenticationSecrets.OTP_DELIVERY_KEY],
-  ["__MFA_ENCRYPTION_KEY__", authenticationSecrets.MFA_ENCRYPTION_KEY],
   ["__PUSH_TOKEN_ENCRYPTION_KEY__", authenticationSecrets.PUSH_TOKEN_ENCRYPTION_KEY],
-  ["__MFA_TICKET_PEPPER__", authenticationSecrets.MFA_TICKET_PEPPER],
   ["__OBJECT_STORAGE_ACCESS_KEY__", objectStorageSecrets.OBJECT_STORAGE_ACCESS_KEY],
   ["__OBJECT_STORAGE_SECRET_KEY__", objectStorageSecrets.OBJECT_STORAGE_SECRET_KEY],
   ["__MESSAGEINDIA_SEND_URL__", messageIndiaConfig.MESSAGEINDIA_SEND_URL],

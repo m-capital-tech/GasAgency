@@ -15,7 +15,7 @@ export default function ReviewHome() {
         <Link href="/control/login" className="text-sm font-semibold text-primary">Open secure login →</Link>
       </div>
       <div className="mt-8 grid gap-5 md:grid-cols-2">{dashboards.map(({ href, title, description, icon: Icon }) => <Link href={href} key={href} className="group"><Card className="h-full transition-all group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-md"><CardContent className="p-7"><span className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary"><Icon /></span><h2 className="mt-5 text-xl font-bold">{title}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p><span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">Open dashboard <ArrowRight className="size-4" /></span></CardContent></Card></Link>)}</div>
-      <div className="mt-6 flex gap-3 rounded-2xl border bg-card p-5 text-sm"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" /><div><p className="font-semibold">Production data remains protected</p><p className="mt-1 text-muted-foreground">The real Platform Control and Agency Operations dashboards still require OTP, MFA where applicable, and permission-scoped access.</p></div></div>
+      <div className="mt-6 flex gap-3 rounded-2xl border bg-card p-5 text-sm"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" /><div><p className="font-semibold">Production data remains protected</p><p className="mt-1 text-muted-foreground">The real Platform Control and Agency Operations dashboards still require SMS OTP and permission-scoped access.</p></div></div>
     </div>
   </main>;
 }

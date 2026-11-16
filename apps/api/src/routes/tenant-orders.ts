@@ -184,7 +184,7 @@ async function tenantContext(
       [userId, tenantPublicId, outletPublicId],
     )
   ).rows[0];
-  if (!row) throw new HttpError(404, "tenant_ordering_context_not_found", "This tenant, outlet, or serving account is unavailable.");
+  if (!row) throw new HttpError(404, "tenant_ordering_context_not_found", "This vendor, outlet, or serving account is unavailable.");
   if (lockAccount && row.credit_account_id) {
     await client.query("select id from app.credit_accounts where id = $1 for update", [row.credit_account_id]);
   }
@@ -217,7 +217,7 @@ async function calculateQuote(
     throw new HttpError(422, "cod_disabled", "Cash on delivery is disabled by the serving agency.");
   }
   if (request.paymentMethod === "credit" && (!context.credit_enabled || context.payment_mode !== "credit" || context.credit_status !== "approved")) {
-    throw new HttpError(422, "credit_unavailable", "Credit is not active for this tenant and serving agency.");
+    throw new HttpError(422, "credit_unavailable", "Credit is not active for this vendor and serving agency.");
   }
 
   const items: QuoteLine[] = [];
@@ -370,7 +370,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
   router.get("/tenants/:tenantPublicId/home", async (request, response, next) => {
     try {
       const parsedTenant = tenantId.safeParse(request.params.tenantPublicId);
-      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const principal = authenticatedPrincipal(response);
       const base = (
         await options.pool.query<{
@@ -398,7 +398,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
           [principal.userId, parsedTenant.data],
         )
       ).rows[0];
-      if (!base) throw new HttpError(404, "tenant_not_found", "The tenant or its serving account is unavailable.");
+      if (!base) throw new HttpError(404, "tenant_not_found", "The vendor or its serving account is unavailable.");
 
       const [outlets, catalog, slots, orderingEnabled, codEnabled, creditEnabled] = await Promise.all([
         options.pool.query<{ public_id: string; label: string; address_line_1: string; city: string; pincode: string; delivery_instructions: string | null; in_use_count: number; spare_full_count: number; empty_count: number }>(
@@ -466,7 +466,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
     try {
       const parsedTenant = tenantId.safeParse(request.params.tenantPublicId);
       const parsed = quoteRequestSchema.safeParse(request.body);
-      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The quotation request is invalid.", parsed.error.flatten());
       const principal = authenticatedPrincipal(response);
       await assertPlatformWorkflowEnabled(options.pool, "workflows.ordering", "Order placement is temporarily paused by a Super Admin.");
@@ -515,7 +515,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
     try {
       const parsedTenant = tenantId.safeParse(request.params.tenantPublicId);
       const parsed = orderRequestSchema.safeParse(request.body);
-      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!parsedTenant.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The order request is invalid.", parsed.error.flatten());
       const idempotencyKey = request.header("idempotency-key")?.trim();
       if (!idempotencyKey || !safeIdempotencyKey.test(idempotencyKey)) {

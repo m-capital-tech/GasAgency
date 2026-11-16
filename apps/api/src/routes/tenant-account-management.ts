@@ -117,7 +117,7 @@ async function lockTenantAccount(client: pg.PoolClient, tenantPublicId: string):
       [tenantPublicId],
     )
   ).rows[0];
-  if (!context) throw new HttpError(404, "tenant_account_not_found", "The active commercial tenant account was not found.");
+  if (!context) throw new HttpError(404, "tenant_account_not_found", "The active commercial vendor account was not found.");
 
   if (context.credit_account_id) {
     await client.query("select id from app.credit_accounts where id = $1 for update", [context.credit_account_id]);
@@ -183,9 +183,9 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
   router.post("/admin/tenants/:tenantPublicId/lifecycle", async (request, response, next) => {
     try {
       const parsedTenantId = tenantId.safeParse(request.params.tenantPublicId);
-      if (!parsedTenantId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!parsedTenantId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const parsed = lifecycleSchema.safeParse(request.body);
-      if (!parsed.success) throw new HttpError(400, "invalid_request", "The tenant lifecycle request is invalid.", parsed.error.flatten());
+      if (!parsed.success) throw new HttpError(400, "invalid_request", "The vendor lifecycle request is invalid.", parsed.error.flatten());
 
       const principal = authenticatedPrincipal(response);
       const sourceIp = request.ip || null;
@@ -197,10 +197,10 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
         const expectedStatus = parsed.data.action === "suspend" ? "active" : "suspended";
         const nextStatus = parsed.data.action === "suspend" ? "suspended" : "active";
         if (context.tenant_status !== expectedStatus) {
-          throw new HttpError(409, "invalid_tenant_state", `A tenant in ${context.tenant_status} cannot be ${parsed.data.action === "suspend" ? "suspended" : "reinstated"}.`);
+          throw new HttpError(409, "invalid_tenant_state", `A vendor in ${context.tenant_status} cannot be ${parsed.data.action === "suspend" ? "suspended" : "reinstated"}.`);
         }
         if (parsed.data.action === "reinstate" && context.agency_status !== "approved") {
-          throw new HttpError(422, "agency_unavailable", "The tenant cannot be reinstated while its serving agency is unavailable.");
+          throw new HttpError(422, "agency_unavailable", "The vendor cannot be reinstated while its serving agency is unavailable.");
         }
 
         await client.query(
@@ -280,7 +280,7 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
   router.post("/admin/tenants/:tenantPublicId/credit-decisions", async (request, response, next) => {
     try {
       const parsedTenantId = tenantId.safeParse(request.params.tenantPublicId);
-      if (!parsedTenantId.success) throw new HttpError(400, "invalid_tenant_id", "The tenant identifier is invalid.");
+      if (!parsedTenantId.success) throw new HttpError(400, "invalid_tenant_id", "The vendor identifier is invalid.");
       const parsed = creditDecisionSchema.safeParse(request.body);
       if (!parsed.success) throw new HttpError(400, "invalid_request", "The credit decision is invalid.", parsed.error.flatten());
 
@@ -290,7 +290,7 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
       const result = await withTransaction(options.pool, async (client) => {
         const context = await lockTenantAccount(client, parsedTenantId.data);
         if (!["active", "suspended"].includes(context.tenant_status)) {
-          throw new HttpError(409, "invalid_tenant_state", "Credit can be managed only after the tenant has been activated.");
+          throw new HttpError(409, "invalid_tenant_state", "Credit can be managed only after the vendor has been activated.");
         }
         const permission = parsed.data.action === "suspend" || parsed.data.action === "reinstate"
           ? "credit.suspend"
@@ -373,7 +373,7 @@ export function tenantAccountManagementRouter(options: { pool: pg.Pool; tokenPep
         }
 
         if (!context.credit_account_id || !context.credit_account_public_id || !context.credit_status || !context.credit_limit || !context.net_term_days) {
-          throw new HttpError(409, "credit_account_not_found", "This tenant does not have a credit account.");
+          throw new HttpError(409, "credit_account_not_found", "This vendor does not have a credit account.");
         }
         if (context.credit_status === "closed") {
           throw new HttpError(409, "credit_account_closed", "A closed credit account cannot be changed.");

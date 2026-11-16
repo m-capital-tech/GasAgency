@@ -1,31 +1,12 @@
 export interface OperationsAgency { publicId: string; displayName: string; roleTypes: string[]; }
 export interface OperationsSession {
   user: { publicId: string; fullName: string; phoneE164: string };
-  session: { publicId: string; authMethod: string; mfaVerifiedAt: string | null };
+  session: { publicId: string; authMethod: string };
   agencies: OperationsAgency[];
   platformAccess?: null | { roleTypes: string[]; permissions: string[]; scopes: Array<{ roleType: string; roleName: string; kind: string; value: string | null; agencyPublicIds: string[] }> };
 }
 
-export type OtpVerification =
-  | ({ status: "authenticated" } & OperationsSession)
-  | { status: "mfa_enrollment_required" | "mfa_verification_required"; mfaTicket: string; expiresInSeconds: number; user: OperationsSession["user"] };
-
-export interface MfaEnrollment {
-  factorPublicId: string;
-  factorType: "totp";
-  manualKey: string;
-  otpauthUri: string;
-  issuer: string;
-  algorithm: "SHA1";
-  digits: 6;
-  periodSeconds: 30;
-}
-
-export interface MfaAuthentication extends OperationsSession {
-  status: "authenticated";
-  recoveryCodes?: string[];
-  recoveryCodeUsed?: boolean;
-}
+export type OtpVerification = OperationsSession & { status: "authenticated" };
 
 export interface OperationsOrder {
   publicId: string;
@@ -133,9 +114,6 @@ async function uploadDocument(path: string, file: File, documentType: string, re
 export const operationsApi = {
   requestOtp: (phoneE164: string) => request<{ accepted: true; challengePublicId: string; destination: string; expiresInSeconds: number; resendAfterSeconds: number; localDebugCode?: string }>("auth/otp/request", { method: "POST", body: { phoneE164 } }),
   verifyOtp: (challengePublicId: string, code: string) => request<OtpVerification>("auth/otp/verify", { method: "POST", body: { challengePublicId, code, deviceName: "Commercial LPG web" } }),
-  beginMfaEnrollment: (mfaTicket: string) => request<MfaEnrollment>("auth/mfa/enroll", { method: "POST", body: { mfaTicket, label: "Authenticator app" } }),
-  confirmMfaEnrollment: (mfaTicket: string, factorPublicId: string, code: string) => request<MfaAuthentication>("auth/mfa/enroll/verify", { method: "POST", body: { mfaTicket, factorPublicId, code } }),
-  verifyMfa: (mfaTicket: string, code: string) => request<MfaAuthentication>("auth/mfa/verify", { method: "POST", body: { mfaTicket, code } }),
   session: () => request<OperationsSession>("auth/session"),
   logout: () => request<void>("auth/logout", { method: "POST" }),
   dashboard: (agencyPublicId: string, period: OperationsDashboardPeriod) => request<OperationsDashboard>(`agencies/${agencyPublicId}/dashboard?period=${period}`),

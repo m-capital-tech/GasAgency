@@ -4,7 +4,7 @@ import { withTransaction, type AuthPrincipal } from "@platform/database";
 import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import { HttpError } from "../http/error";
-import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized, hasPermission, hasRoleType, type AuthorizationTarget } from "../security/rbac";
 
 const permissionKey = z.string().regex(/^[a-z_]+\.[a-z_]+$/);
@@ -95,7 +95,6 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
       }
       requirePermission(principal, "role.create");
       requirePermission(principal, "role.manage");
-      assertFreshMfa(principal);
       const superAdmin = hasRoleType(principal, "super_admin");
       if (parsed.data.roleType === "platform_admin" && !superAdmin) {
         throw new HttpError(403, "permission_denied", "Only a Super Admin can create a Platform Admin role.");
@@ -161,7 +160,6 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
         throw new HttpError(403, "permission_denied", "Only a Super Admin or Platform Admin can add platform team members.");
       }
       assertCanAssignScope(principal, parsed.data.scope);
-      assertFreshMfa(principal);
       const superAdmin = hasRoleType(principal, "super_admin");
 
       const assigned = await withTransaction(options.pool, async (client) => {
@@ -192,12 +190,12 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
         }
         if (parsed.data.scope.kind === "tenant") {
           const tenant = await client.query("select 1 from app.tenants where public_id = $1 and status <> 'archived'", [parsed.data.scope.tenantPublicId]);
-          if (!tenant.rowCount) throw new HttpError(422, "tenant_unavailable", "The selected tenant is unavailable.");
+          if (!tenant.rowCount) throw new HttpError(422, "tenant_unavailable", "The selected vendor is unavailable.");
         }
 
         const insertedUser = await client.query<{ id: string; public_id: string; status: string }>(
-          `insert into app.users (public_id, phone_e164, full_name, email, status, mfa_required)
-           values ($1, $2, $3, $4, 'invited', true)
+          `insert into app.users (public_id, phone_e164, full_name, email, status)
+           values ($1, $2, $3, $4, 'invited')
            on conflict (phone_e164) do nothing
            returning id::text, public_id::text, status`,
           [uuidV7(), parsed.data.phoneE164, parsed.data.fullName, parsed.data.email ?? null],
@@ -211,7 +209,6 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
         if (!user || ["suspended", "archived"].includes(user.status)) {
           throw new HttpError(409, "user_unavailable", "The phone belongs to a suspended or archived user.");
         }
-        await client.query("update app.users set mfa_required = true, updated_at = now() where id = $1 and not mfa_required", [user.id]);
 
         const scopeValue = parsed.data.scope.kind === "global" || parsed.data.scope.kind === "selected_agencies"
           ? null
@@ -279,7 +276,6 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
       if (!hasRoleType(principal, "super_admin") && !hasRoleType(principal, "platform_admin")) throw new HttpError(403, "permission_denied", "Only a Super Admin or Platform Admin can manage platform roles.");
       requirePermission(principal, "role.edit");
       requirePermission(principal, "role.manage");
-      assertFreshMfa(principal);
       const superAdmin = hasRoleType(principal, "super_admin");
       const actorPermissions = new Set(principal.assignments.flatMap((assignment) => assignment.permissions));
 
@@ -351,7 +347,6 @@ export function platformTeamRouter(options: { pool: pg.Pool; tokenPepper: string
       if (!hasRoleType(principal, "super_admin") && !hasRoleType(principal, "platform_admin")) throw new HttpError(403, "permission_denied", "Only a Super Admin or Platform Admin can manage team access.");
       requirePermission(principal, "user.edit");
       requirePermission(principal, "role.manage");
-      assertFreshMfa(principal);
       const superAdmin = hasRoleType(principal, "super_admin");
 
       const outcome = await withTransaction(options.pool, async (client) => {

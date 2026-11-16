@@ -2,33 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import express from "express";
 import { createDatabasePool } from "@platform/database";
-import { encryptSecret, uuidV7 } from "@platform/runtime";
+import { uuidV7 } from "@platform/runtime";
 import { adminDashboardRouter } from "../src/routes/admin-dashboard";
 import { dashboardDataRouter } from "../src/routes/dashboard-data";
 import { platformTeamRouter } from "../src/routes/platform-team";
 import { systemConfigurationRouter } from "../src/routes/system-configuration";
-import { authMfaRouter } from "../src/routes/auth-mfa";
-import { loadApiConfig } from "../src/config";
 import { gstinCheckDigit } from "../src/domain/gstin";
 import { HttpError } from "../src/http/error";
-import { totpCode } from "../src/security/mfa";
 import { hashSessionToken } from "../src/security/token";
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const integrationTest = connectionString ? test : test.skip;
 
-integrationTest("Super Admin reporting and Platform Admin access lifecycle are global, MFA-protected, and audited", async () => {
+integrationTest("Super Admin reporting and Platform Admin access lifecycle are scoped and audited after SMS sign-in", async () => {
   const tokenPepper = "admin-governance-test-pepper-32-characters";
-  const mfaEncryptionKey = Buffer.alloc(32, 41).toString("base64");
-  const config = loadApiConfig({
-    APP_ENV: "test",
-    DATABASE_URL: connectionString!,
-    DATABASE_SSL_MODE: "disable",
-    CORS_ORIGINS: "http://127.0.0.1",
-    SESSION_TOKEN_PEPPER: tokenPepper,
-    MFA_ENCRYPTION_KEY: mfaEncryptionKey,
-    MFA_TICKET_PEPPER: "admin-governance-mfa-ticket-pepper-32-characters",
-  });
   const pool = createDatabasePool({
     connectionString: connectionString!,
     applicationName: "admin-governance-integration-test",
@@ -48,26 +35,12 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
 
   const token = `super-${uuidV7()}-governance-token`;
   await pool.query(
-    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-     values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now() - interval '15 minutes')`,
+    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+     values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
     [uuidV7(), superAdmin.id, hashSessionToken(token, tokenPepper)],
   );
-  const mfaSecret = "JBSWY3DPEHPK3PXP";
-  const existingFactor = (await pool.query<{ id: string; public_id: string }>("select id::text, public_id::text from app.mfa_factors where user_id = $1 and status = 'active'", [superAdmin.id])).rows[0];
-  if (existingFactor) {
-    await pool.query("update app.mfa_factors set secret_envelope = $2, last_used_step = null, updated_at = now() where id = $1", [existingFactor.id, encryptSecret(mfaSecret, mfaEncryptionKey, existingFactor.public_id)]);
-  } else {
-    const factorPublicId = uuidV7();
-    await pool.query(
-      `insert into app.mfa_factors (public_id, user_id, label, secret_envelope, status, verified_at)
-       values ($1, $2, 'Integration test authenticator', $3, 'active', now())`,
-      [factorPublicId, superAdmin.id, encryptSecret(mfaSecret, mfaEncryptionKey, factorPublicId)],
-    );
-  }
-
   const app = express();
   app.use(express.json());
-  app.use("/v1", authMfaRouter({ pool, config }));
   app.use("/v1", adminDashboardRouter({ pool, tokenPepper }));
   app.use("/v1", dashboardDataRouter({ pool, tokenPepper }));
   app.use("/v1", platformTeamRouter({ pool, tokenPepper }));
@@ -97,23 +70,12 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
     const ordering = configurationBody.settings.find((setting) => setting.key === "workflows.ordering");
     assert.ok(ordering);
     const configurationUpdate = { changes: [{ key: ordering.key, value: false, expectedVersion: ordering.version }], reason: "Integration test workflow pause" };
-    const blockedConfiguration = await fetch(`${base}/admin/configuration`, { method: "POST", headers, body: JSON.stringify(configurationUpdate) });
-    assert.equal(blockedConfiguration.status, 403);
-    assert.equal((await blockedConfiguration.json() as { error: { code: string } }).error.code, "step_up_required");
-
     const roleBody = {
       name: `Platform Admin ${suffix}`,
       roleType: "platform_admin",
       permissionKeys: ["report.view", "user.view", "user.create", "user.edit", "role.view", "role.create", "role.edit", "role.manage"],
       reason: "Integration test Platform Admin permission ceiling",
     };
-    const blockedRole = await fetch(`${base}/admin/roles`, { method: "POST", headers, body: JSON.stringify(roleBody) });
-    assert.equal(blockedRole.status, 403);
-    assert.equal((await blockedRole.json() as { error: { code: string } }).error.code, "step_up_required");
-    const step = Math.floor(Date.now() / 30_000);
-    const stepUp = await fetch(`${base}/auth/mfa/step-up`, { method: "POST", headers, body: JSON.stringify({ code: totpCode(mfaSecret, step) }) });
-    assert.equal(stepUp.status, 200);
-
     const revenue = await fetch(`${base}/admin/revenue-entries`, { method: "POST", headers, body: JSON.stringify({
       revenueType: "commission", amount: "1250.00", sourceType: "manual", externalReference: `integration-${suffix}`,
       description: "Integration test posted commission", occurredAt: new Date().toISOString(),
@@ -205,8 +167,8 @@ integrationTest("Super Admin reporting and Platform Admin access lifecycle are g
     const target = (await pool.query<{ id: string }>("select id::text from app.users where public_id = $1", [member.user.publicId])).rows[0]!;
     await pool.query("update app.users set status = 'active' where id = $1", [target.id]);
     await pool.query(
-      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-       values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+       values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
       [uuidV7(), target.id, hashSessionToken(`target-${suffix}-session-token-123456789`, tokenPepper)],
     );
 

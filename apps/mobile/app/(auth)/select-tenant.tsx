@@ -44,7 +44,7 @@ export default function SelectTenantScreen() {
         {tenants.length === 0 ? (
           <Card tone="alt">
             <Text variant="h3">No active business access</Text>
-            <Text variant="small" tone="muted" style={{ marginTop: 6 }}>Ask your platform administrator to activate your tenant membership.</Text>
+            <Text variant="small" tone="muted" style={{ marginTop: 6 }}>Ask your platform administrator to activate your vendor membership.</Text>
           </Card>
         ) : null}
       </View>

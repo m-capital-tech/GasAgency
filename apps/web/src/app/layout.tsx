@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Munna Gas Connect — Operations",
-  description: "Commercial LPG tenant, agency, and platform operations",
+  description: "Commercial LPG vendor, agency, and platform operations",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

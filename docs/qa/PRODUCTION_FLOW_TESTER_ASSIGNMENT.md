@@ -13,13 +13,13 @@ Role: Independent Senior Software Engineering Tester / SDET
 
 | Role | Responsibilities | Must not do |
 |---|---|---|
-| Super Admin | Global governance, platform analytics, role creation, agency visibility, tenant approval, credit-limit and net-term authority, audit visibility | Bypass maker/checker controls or mutate non-QA records |
-| Onboarding Maker | Create and submit tenant drafts | Approve their own submission |
-| Approval Checker | Approve, reject, or return tenant submissions | Create or self-approve beyond granted permissions |
+| Super Admin | Global governance, platform analytics, role creation, agency visibility, vendor approval, credit-limit and net-term authority, audit visibility | Bypass maker/checker controls or mutate non-QA records |
+| Onboarding Maker | Create and submit vendor drafts | Approve their own submission |
+| Approval Checker | Approve, reject, or return vendor submissions | Create or self-approve beyond granted permissions |
 | Audit Analyst | Read dashboards, reports, and audit events | Perform any mutation |
 | Agency Operations Manager | Agency-scoped orders, negotiated prices, payment recording, and global agency credit disable | Change platform-set credit limits or net terms |
-| Tenant Owner | Tenant-scoped login, catalog, quote, COD order, credit request, and order/invoice visibility | Approve credit or access another tenant |
-| Unauthorized/Cross-tenant actor | Negative authorization testing using QA records only | Access or mutate real customer data |
+| Vendor Owner | Vendor-scoped login, catalog, quote, COD order, credit request, and order/invoice visibility | Approve credit or access another vendor |
+| Unauthorized/Cross-vendor actor | Negative authorization testing using QA records only | Access or mutate real customer data |
 
 ## Scenario groups
 
@@ -28,10 +28,10 @@ Role: Independent Senior Software Engineering Tester / SDET
 | P0 | Production/API/dashboard preflight and baseline metrics |
 | SA | Super Admin analytics, navigation, audit and session boundaries |
 | AG | Agency creation, validation, duplicate protection and persistence |
-| TN | Tenant draft, mandatory GSTIN/address/requirement/agency, maker/checker and approval |
+| TN | Vendor draft, mandatory GSTIN/address/requirement/agency, maker/checker and approval |
 | RB | Role creation, assignment, login, least privilege and forbidden actions |
-| AU | OTP, MFA handoff, replay rejection, session restoration and logout boundaries |
-| TE | Tenant login, catalog, pricing, quote, COD order, idempotency and credit request |
+| AU | SMS OTP, replay rejection, session restoration and logout boundaries |
+| TE | Vendor login, catalog, pricing, quote, COD order, idempotency and credit request |
 | CR | Credit-limit/net-term authority, suspension, reinstatement and exposure |
 | OP | Operations order acceptance, transition validation, invoice and scoped metrics |
 | NT | Notification/outbox events for orders, credit, invoices, support and standing orders |
@@ -48,10 +48,10 @@ You are the independent Senior Software Engineering Tester / SDET for Munna Gas 
 - Super Admin dashboard: `/control`
 - Operations dashboard: `/operations`
 - Production API: `/v1`
-- Expected deployed commit: `6301f837279bb5408fdf31301e9a208a7b5f7cb8`
+- Record the deployed commit for the run.
 - Existing Super Admin: Pranav Aditya, phone `+919100117027`
-- Approved demo OTP for that phone only: `246810`
-- Never ask for, read, copy, store, or expose TOTP codes, recovery codes, cookies, bearer tokens, passwords, API keys, signed URLs, or secrets. The human performs any TOTP step.
+- Use a fresh SMS OTP sent to the approved registered phone.
+- Never ask for, read, copy, store, or expose SMS codes, cookies, bearer tokens, passwords, API keys, signed URLs, or secrets. The human enters the SMS code.
 
 ### Responsibilities
 
@@ -73,11 +73,11 @@ You are the independent Senior Software Engineering Tester / SDET for Munna Gas 
 - Do not delete, disable, revoke, or suspend existing users or records.
 - Do not create cloud credentials, edit environment variables, deploy, or modify infrastructure.
 - Do not run load, stress, or brute-force tests. Limit negative checks to one or two requests.
-- If an additional phone number, TOTP entry, or external credential is required, stop that scenario and state the exact user input needed.
+- If an additional phone number, SMS OTP entry, or external credential is required, stop that scenario and state the exact user input needed.
 
 ### Fixed test data limit
 
-Use one QA agency, one QA tenant, one QA outlet, one QA COD order, one QA credit request, and only the minimum additional QA users. Reuse this chain across scenarios and document any exception.
+Use one QA agency, one QA vendor, one QA outlet, one QA COD order, one QA credit request, and only the minimum additional QA users. Reuse this chain across scenarios and document any exception.
 
 ### Ordered test cases
 
@@ -91,9 +91,9 @@ Use one QA agency, one QA tenant, one QA outlet, one QA COD order, one QA credit
 #### SA — Super Admin dashboard
 
 - `SA-01`: Verify Daily, Weekly, and Monthly analytics selectors and refresh.
-- `SA-02`: Verify Super Admin, Agencies, Tenant accounts, Register tenant, and Team & RBAC navigation.
+- `SA-02`: Verify Super Admin, Agencies, Vendor accounts, Register vendor, and Team & RBAC navigation.
 - `SA-03`: Verify analytics-boundary copy, empty states, currency/date formatting, and refresh behavior.
-- `SA-04`: Verify audit events for the current OTP/MFA login.
+- `SA-04`: Verify audit events for the current SMS OTP login.
 - `SA-05`: Verify unauthenticated protected redirects without signing out the active user.
 
 #### AG — Agency administration
@@ -104,9 +104,9 @@ Use one QA agency, one QA tenant, one QA outlet, one QA COD order, one QA credit
 - `AG-04`: Verify missing fields and malformed values do not create partial records.
 - `AG-05`: Verify agency status and scoped visibility.
 
-#### TN — Tenant onboarding
+#### TN — Vendor onboarding
 
-- `TN-01`: Create one QA tenant with mandatory name, GSTIN, phone, full address, requirement, and explicitly selected agency.
+- `TN-01`: Create one QA vendor with mandatory name, GSTIN, phone, full address, requirement, and explicitly selected agency.
 - `TN-02`: Verify saved data and selected agency after an independent read.
 - `TN-03`: Submit for approval and verify `pending_approval` plus audit evidence.
 - `TN-04`: Verify the maker cannot approve their own submission.
@@ -124,31 +124,31 @@ Use one QA agency, one QA tenant, one QA outlet, one QA COD order, one QA credit
 - `RB-05`: Verify one allowed operation per role.
 - `RB-06`: Verify one forbidden direct API operation returns `403` per role.
 - `RB-07`: Verify maker/checker separation and prevention of self-approval.
-- `RB-08`: Verify Audit Analyst cannot mutate agency, tenant, credit, role, or order state.
+- `RB-08`: Verify Audit Analyst cannot mutate agency, vendor, credit, role, or order state.
 - `RB-09`: Never suspend or revoke the real Super Admin.
 
 #### AU — Authentication
 
-- `AU-01`: Verify the approved demo-number OTP request and masked destination.
-- `AU-02`: Verify `246810` works only for the approved number and requires MFA.
+- `AU-01`: Verify the approved registered phone’s OTP request and masked destination.
+- `AU-02`: Verify a fresh SMS OTP signs the user in directly.
 - `AU-03`: Verify controlled OTP replay rejection.
-- `AU-04`: After human TOTP entry, verify the role and audit event.
+- `AU-04`: After a successful SMS sign-in, verify the role and audit event.
 - `AU-05`: Verify session restoration after reload.
 - `AU-06`: Test logout only in a separate test session.
 - `AU-07`: Make only one invalid-OTP attempt; do not trigger lockout.
 
-#### TE — Tenant app/API journey
+#### TE — Vendor app/API journey
 
-- `TE-01`: Login with the approved QA tenant phone.
-- `TE-02`: Verify registration summary, active tenant/outlet, and tenant-scoped session.
+- `TE-01`: Login with the approved QA vendor phone.
+- `TE-02`: Verify registration summary, active vendor/outlet, and vendor-scoped session.
 - `TE-03`: Read the cylinder catalog and price source.
 - `TE-04`: Request a COD quote and verify quantity, GST, subtotal, fees, and total.
 - `TE-05`: Place one COD order with a unique idempotency key.
 - `TE-06`: Replay the same request/key and verify idempotency.
 - `TE-07`: Reuse the key with a changed payload and verify conflict rejection.
-- `TE-08`: Verify order persistence and cross-tenant denial using QA records only.
+- `TE-08`: Verify order persistence and cross-vendor denial using QA records only.
 - `TE-09`: Request credit and verify pending state, requested terms, and audit evidence.
-- `TE-10`: Verify a tenant cannot approve credit or alter limits/net terms.
+- `TE-10`: Verify a vendor cannot approve credit or alter limits/net terms.
 - `TE-11`: Test credit-order eligibility after approval without creating an unnecessary second order.
 
 #### CR — Credit governance
@@ -185,7 +185,7 @@ Use one QA agency, one QA tenant, one QA outlet, one QA COD order, one QA credit
 
 - `SE-01`: Unauthenticated UI redirect and API `401`.
 - `SE-02`: Role-forbidden mutation returns `403`.
-- `SE-03`: Cross-tenant access is denied using QA records.
+- `SE-03`: Cross-vendor access is denied using QA records.
 - `SE-04`: Missing/invalid GSTIN, address, requirement, or agency is rejected.
 - `SE-05`: Duplicate GSTIN and agency identifiers are rejected.
 - `SE-06`: Idempotency-key misuse is rejected.

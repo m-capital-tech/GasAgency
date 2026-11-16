@@ -16,8 +16,6 @@ const documentArchivePath = /^documents\/[0-9a-f-]{36}\/archive$/;
 function allowed(path: string, method: string) {
   if (path === "auth/otp/request" && method === "POST") return true;
   if (path === "auth/otp/verify" && method === "POST") return true;
-  if (["auth/mfa/enroll", "auth/mfa/enroll/verify", "auth/mfa/verify"].includes(path) && method === "POST") return true;
-  if (path === "auth/mfa/step-up" && method === "POST") return true;
   if (path === "auth/session" && method === "GET") return true;
   if (path === "auth/logout" && method === "POST") return true;
   if (path === "admin/configuration" && ["GET", "POST"].includes(method)) return true;
@@ -81,7 +79,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   }
   const payload = await upstream.json().catch(() => ({}));
 
-  const completesAuthentication = ["auth/otp/verify", "auth/mfa/enroll/verify", "auth/mfa/verify"].includes(path);
+  const completesAuthentication = path === "auth/otp/verify";
   if (completesAuthentication && upstream.ok && payload.status === "authenticated" && payload.accessToken) {
     const { accessToken, ...safePayload } = payload;
     const response = NextResponse.json(safePayload, { status: upstream.status });

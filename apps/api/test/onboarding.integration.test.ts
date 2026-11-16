@@ -6,7 +6,6 @@ import { uuidV7, type Logger } from "@platform/runtime";
 import { createApp } from "../src/app";
 import type { ApiConfig } from "../src/config";
 import { gstinCheckDigit } from "../src/domain/gstin";
-import { totpCode } from "../src/security/mfa";
 import { hashSessionToken } from "../src/security/token";
 
 const connectionString = process.env.TEST_DATABASE_URL;
@@ -27,16 +26,11 @@ integrationTest("delegated creator submits and a separate administrator activate
     sessionTokenPepper: tokenPepper,
     otpHashPepper: "integration-test-otp-hash-pepper-more-than-32-characters",
     otpDeliveryKey: Buffer.alloc(32, 7).toString("base64"),
-    mfaEncryptionKey: Buffer.alloc(32, 11).toString("base64"),
     pushTokenEncryptionKey: Buffer.alloc(32, 13).toString("base64"),
     objectStorageProvider: "disabled",
     objectStorageRegion: "blr1",
     objectStorageLocalRoot: ".local-object-storage",
     objectStorageMaxBytes: 10 * 1024 * 1024,
-    mfaTicketPepper: "integration-test-mfa-ticket-pepper-more-than-32-characters",
-    mfaIssuer: "Commercial LPG Platform",
-    mfaTicketTtlSeconds: 600,
-    mfaMaxAttempts: 5,
     privilegedSessionTtlSeconds: 28_800,
     otpLocalCode: "123456",
     otpLocalExposeCode: true,
@@ -81,8 +75,8 @@ integrationTest("delegated creator submits and a separate administrator activate
     [agencyPrice.id],
   );
   await pool.query(
-    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-     values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+     values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
     [uuidV7(), superAdmin.id, hashSessionToken(superToken, tokenPepper)],
   );
   const agencyOperator = (
@@ -115,8 +109,8 @@ integrationTest("delegated creator submits and a separate administrator activate
     [uuidV7(), agencyOperator.id, agencyRole.id, agencyPublicId, superAdmin.id],
   );
   await pool.query(
-    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-     values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+    `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+     values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
     [uuidV7(), agencyOperator.id, hashSessionToken(agencyOperatorToken, tokenPepper)],
   );
   const deliveryUser = (
@@ -187,8 +181,8 @@ integrationTest("delegated creator submits and a separate administrator activate
       await pool.query<{ id: string }>("update app.users set status = 'active' where public_id = $1 returning id::text", [platformAdminBody.user.publicId])
     ).rows[0]!;
     await pool.query(
-      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-       values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+       values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
       [uuidV7(), platformAdmin.id, hashSessionToken(platformAdminToken, tokenPepper)],
     );
 
@@ -229,8 +223,8 @@ integrationTest("delegated creator submits and a separate administrator activate
       await pool.query<{ id: string }>("update app.users set status = 'active' where public_id = $1 returning id::text", [member.publicId])
     ).rows[0]!;
     await pool.query(
-      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method, mfa_verified_at)
-       values ($1, $2, $3, now() + interval '1 hour', 'bootstrap_test', now())`,
+      `insert into app.device_sessions (public_id, user_id, token_hash, expires_at, auth_method)
+       values ($1, $2, $3, now() + interval '1 hour', 'otp')`,
       [uuidV7(), activatedMember.id, hashSessionToken(creatorToken, tokenPepper)],
     );
 
@@ -724,6 +718,8 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(unknownTwo.challengePublicId, unknownOne.challengePublicId);
     assert.equal(unknownOne.localDebugCode, undefined);
 
+    // Existing accounts can retain the old enrollment flag after upgrading.
+    await pool.query("update app.users set mfa_required = true where public_id = $1", [member.publicId]);
     const platformOtpRequest = await fetch(`${origin}/auth/otp/request`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ phoneE164: "+919900000003" }),
@@ -734,74 +730,23 @@ integrationTest("delegated creator submits and a separate administrator activate
       body: JSON.stringify({ challengePublicId: platformChallenge.challengePublicId, code: platformChallenge.localDebugCode }),
     });
     assert.equal(platformVerify.status, 200);
-    const platformHandoff = await platformVerify.json() as { status: string; mfaTicket: string; expiresInSeconds: number; user: { publicId: string } };
-    assert.equal(platformHandoff.status, "mfa_enrollment_required");
-    assert.equal(platformHandoff.expiresInSeconds, 600);
-    assert.equal(platformHandoff.user.publicId, member.publicId);
-
-    const enrollmentResponse = await fetch(`${origin}/auth/mfa/enroll`, {
+    const signedIn = await platformVerify.json() as { status: string; accessToken: string; expiresInSeconds: number; user: { publicId: string }; platformAccess: { roleTypes: string[] } };
+    assert.equal(signedIn.status, "authenticated");
+    assert.equal(signedIn.user.publicId, member.publicId);
+    assert.equal(signedIn.expiresInSeconds, config.privilegedSessionTtlSeconds);
+    assert.ok(signedIn.platformAccess.roleTypes.includes("platform_team"));
+    const restored = await fetch(`${origin}/auth/session`, { headers: { authorization: `Bearer ${signedIn.accessToken}` } });
+    assert.equal(restored.status, 200);
+    assert.equal((await restored.json() as { session: { authMethod: string } }).session.authMethod, "otp");
+    const repeat = await fetch(`${origin}/auth/otp/verify`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mfaTicket: platformHandoff.mfaTicket, label: "Integration authenticator" }),
+      body: JSON.stringify({ challengePublicId: platformChallenge.challengePublicId, code: platformChallenge.localDebugCode }),
     });
-    assert.equal(enrollmentResponse.status, 200);
-    const enrollment = await enrollmentResponse.json() as { factorPublicId: string; manualKey: string; otpauthUri: string };
-    assert.match(enrollment.otpauthUri, /^otpauth:\/\/totp\//);
-    const currentAuthenticatorCode = totpCode(enrollment.manualKey, Math.floor(Date.now() / 30_000));
-    const enrollmentVerification = await fetch(`${origin}/auth/mfa/enroll/verify`, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mfaTicket: platformHandoff.mfaTicket, factorPublicId: enrollment.factorPublicId, code: currentAuthenticatorCode }),
-    });
-    assert.equal(enrollmentVerification.status, 200);
-    const enrolled = await enrollmentVerification.json() as { status: string; accessToken: string; recoveryCodes: string[]; platformAccess: { roleTypes: string[] } };
-    assert.equal(enrolled.status, "authenticated");
-    assert.equal(enrolled.recoveryCodes.length, 10);
-    assert.ok(enrolled.platformAccess.roleTypes.includes("platform_team"));
-    const mfaSession = await fetch(`${origin}/auth/session`, { headers: { authorization: `Bearer ${enrolled.accessToken}` } });
-    assert.equal(mfaSession.status, 200);
-    assert.equal((await mfaSession.json() as { session: { authMethod: string; mfaVerifiedAt: string | null } }).session.authMethod, "otp_mfa");
-
-    const secondPlatformOtp = await fetch(`${origin}/auth/otp/request`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phoneE164: "+919900000003" }),
-    });
-    const secondPlatformChallenge = await secondPlatformOtp.json() as { challengePublicId: string; localDebugCode: string };
-    const secondPlatformVerify = await fetch(`${origin}/auth/otp/verify`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challengePublicId: secondPlatformChallenge.challengePublicId, code: secondPlatformChallenge.localDebugCode }),
-    });
-    const secondHandoff = await secondPlatformVerify.json() as { status: string; mfaTicket: string };
-    assert.equal(secondHandoff.status, "mfa_verification_required");
-    const replayedAuthenticator = await fetch(`${origin}/auth/mfa/verify`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mfaTicket: secondHandoff.mfaTicket, code: currentAuthenticatorCode }),
-    });
-    assert.equal(replayedAuthenticator.status, 422);
-    const recoveryVerification = await fetch(`${origin}/auth/mfa/verify`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mfaTicket: secondHandoff.mfaTicket, code: enrolled.recoveryCodes[0] }),
-    });
-    assert.equal(recoveryVerification.status, 200);
-    assert.equal((await recoveryVerification.json() as { recoveryCodeUsed: boolean }).recoveryCodeUsed, true);
-
-    const thirdPlatformOtp = await fetch(`${origin}/auth/otp/request`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phoneE164: "+919900000003" }),
-    });
-    const thirdPlatformChallenge = await thirdPlatformOtp.json() as { challengePublicId: string; localDebugCode: string };
-    const thirdPlatformVerify = await fetch(`${origin}/auth/otp/verify`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challengePublicId: thirdPlatformChallenge.challengePublicId, code: thirdPlatformChallenge.localDebugCode }),
-    });
-    const thirdHandoff = await thirdPlatformVerify.json() as { mfaTicket: string };
-    const reusedRecoveryCode = await fetch(`${origin}/auth/mfa/verify`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mfaTicket: thirdHandoff.mfaTicket, code: enrolled.recoveryCodes[0] }),
-    });
-    assert.equal(reusedRecoveryCode.status, 422);
-
-    const mfaStored = await pool.query<{ factors: string; recovery_codes: string; consumed_recovery_codes: string; mfa_sessions: string; mfa_audits: string }>(
-      `select
-         (select count(*) from app.mfa_factors where user_id = $1 and status = 'active')::text as factors,
-         (select count(*) from app.mfa_recovery_codes recovery join app.mfa_factors factor on factor.id = recovery.factor_id where factor.user_id = $1)::text as recovery_codes,
-         (select count(*) from app.mfa_recovery_codes recovery join app.mfa_factors factor on factor.id = recovery.factor_id where factor.user_id = $1 and recovery.consumed_at is not null)::text as consumed_recovery_codes,
-         (select count(*) from app.device_sessions where user_id = $1 and auth_method = 'otp_mfa' and mfa_verified_at is not null)::text as mfa_sessions,
-         (select count(*) from app.audit_events where actor_user_id = $1 and action in ('mfa.enrolled', 'mfa.verified'))::text as mfa_audits`,
-      [activatedMember.id],
-    );
-    assert.deepEqual(mfaStored.rows[0], { factors: "1", recovery_codes: "10", consumed_recovery_codes: "1", mfa_sessions: "2", mfa_audits: "2" });
+    assert.equal(repeat.status, 422);
+    for (const path of ["enroll", "verify", "step-up"]) {
+      const retired = await fetch(`${origin}/auth/mfa/${path}`, { method: "POST", headers: { authorization: `Bearer ${signedIn.accessToken}` } });
+      assert.equal(retired.status, 404);
+    }
 
     const logout = await fetch(`${origin}/auth/logout`, {
       method: "POST",

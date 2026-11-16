@@ -25,7 +25,7 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0007_admin_read_models.sql` adds the composite and partial indexes used by scoped Platform Control queues, keyset pagination, time-windowed order analytics, outstanding receivables, active team assignments, and approved-agency selection.
 
-`0008_privileged_mfa.sql` adds encrypted TOTP factor records, short-lived hashed phone-to-MFA handoff tickets, replay state, and individually hashed one-time recovery codes. Partial indexes cover only current factors, live tickets, and unused recovery codes.
+`0008_privileged_mfa.sql` adds encrypted TOTP factor records, short-lived hashed phone-to-MFA handoff tickets, replay state, and individually hashed one-time recovery codes. This schema is retained for historical records. Current logins use SMS OTP. Partial indexes cover only current factors, live tickets, and unused recovery codes.
 
 `0009_agency_commercial_controls.sql` adds an append-only agency payment collection ledger, invoice allocations, cross-account integrity guards, and timeline indexes. Agencies can record collections without receiving authority over platform-owned credit limits or net terms.
 
@@ -35,7 +35,7 @@ It also exports the bounded PostgreSQL pool, short-transaction helper, readiness
 
 `0012_operations_dashboard.sql` adds the agency-and-time reporting index used by the production Operations dashboard. The dashboard reads transactional facts directly and does not introduce an independently drifting aggregate store.
 
-`0013_platform_configuration.sql` adds the closed catalogue of global workflow, operations, and feature controls managed by Super Admins. Values are typed, versioned for optimistic concurrency, MFA-protected at the API boundary, and paired with immutable audit events for every change.
+`0013_platform_configuration.sql` adds the closed catalogue of global workflow, operations, and feature controls managed by Super Admins. Values are typed, versioned for optimistic concurrency, permission-checked at the API boundary, and paired with immutable audit events for every change.
 
 Payment-provider records, supplier replenishment procurement, driver authentication and delivery proof, and durable analytics projections will be added in later migrations. They should not be inferred from the demo store.
 

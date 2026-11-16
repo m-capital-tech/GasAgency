@@ -53,7 +53,7 @@ export default function TenantAnalyticsScreen() {
   if (!tenantPublicId) return <Redirect href="/(auth)/select-tenant" />;
 
   return (
-    <Screen title="Business insights" subtitle="Your tenant only · Asia/Kolkata" tabBar refreshing={loading} onRefresh={() => { void refresh(); }}>
+    <Screen title="Business insights" subtitle="Your vendor only · Asia/Kolkata" tabBar refreshing={loading} onRefresh={() => { void refresh(); }}>
       <Row gap={8} style={{ marginBottom: 14 }}>
         <Chip label="Today" active={period === "daily"} onPress={() => setPeriod("daily")} />
         <Chip label="This week" active={period === "weekly"} onPress={() => setPeriod("weekly")} />

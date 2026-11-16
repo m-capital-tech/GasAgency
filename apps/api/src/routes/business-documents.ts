@@ -6,7 +6,7 @@ import { uuidV7 } from "@platform/runtime";
 import { z } from "zod";
 import { assertPlatformWorkflowEnabled } from "../domain/platform-settings";
 import { HttpError } from "../http/error";
-import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized } from "../security/rbac";
 import { ObjectStorageUnavailableError, type ObjectStorage } from "../storage/object-storage";
 
@@ -65,7 +65,7 @@ async function entityContext(client: pg.Pool | pg.PoolClient, kind: EntityKind, 
     left join app.agency_assignments assignment on assignment.tenant_id=tenant.id and assignment.ends_at is null
     left join app.agencies agency on agency.id=assignment.agency_id
     where tenant.public_id=$1 order by assignment.id desc nulls last limit 1`, [entityPublicId])).rows[0];
-  if (!row) throw new HttpError(404, "tenant_not_found", "The tenant was not found.");
+  if (!row) throw new HttpError(404, "tenant_not_found", "The vendor was not found.");
   return { kind, id: row.id, publicId: row.public_id, city: row.city, stateCode: row.state_code, ...(row.agency_public_id ? { agencyPublicId: row.agency_public_id } : {}) };
 }
 
@@ -122,7 +122,7 @@ export function businessDocumentsRouter(options: { pool: pg.Pool; tokenPepper: s
     try {
       const parsed = publicId.safeParse(request.params.entityPublicId); if (!parsed.success) throw new HttpError(400, "invalid_entity_id", "The document owner identifier is invalid.");
       const principal = authenticatedPrincipal(response); const entity = await entityContext(options.pool, kind, parsed.data);
-      if (tenantSelf) { if (!(await activeTenantMember(options.pool, principal.userId, entity.publicId))) throw new HttpError(404, "tenant_not_found", "The tenant is unavailable."); } else authorize(principal, entity, "view");
+      if (tenantSelf) { if (!(await activeTenantMember(options.pool, principal.userId, entity.publicId))) throw new HttpError(404, "tenant_not_found", "The vendor is unavailable."); } else authorize(principal, entity, "view");
       const ownerColumn = kind === "tenant" ? "tenant_id" : "agency_id";
       const result = await options.pool.query<DocumentRow>(`select document.id::text,document.public_id::text,document.tenant_id::text,document.agency_id::text,null::text as tenant_public_id,null::text as agency_public_id,null::text as tenant_city,null::text as tenant_state_code,null::text as serving_agency_public_id,null::text as agency_city,null::text as agency_state_code,document.document_type,document.version,document.status,document.original_file_name,document.media_type,document.byte_size::text,document.sha256_digest,document.storage_provider,document.storage_key,document.retention_class,document.legal_hold,uploader.full_name as uploader_name,document.created_at,document.archived_at from app.business_documents document join app.users uploader on uploader.id=document.uploaded_by_user_id where document.${ownerColumn}=$1 order by document.document_type,document.version desc,document.id desc`, [entity.id]);
       response.status(200).json({ documents: result.rows.map(documentBody) });
@@ -190,7 +190,7 @@ export function businessDocumentsRouter(options: { pool: pg.Pool; tokenPepper: s
   router.post("/documents/:documentPublicId/archive", async (request, response, next) => {
     try {
       const id = publicId.safeParse(request.params.documentPublicId); const parsed = archiveSchema.safeParse(request.body); if (!id.success || !parsed.success) throw new HttpError(400, "invalid_request", "The document archive request is invalid.");
-      const principal = authenticatedPrincipal(response); assertFreshMfa(principal);
+      const principal = authenticatedPrincipal(response);
       const result = await withTransaction(options.pool, async (client) => {
         const document = await documentRecord(client, id.data); authorizeDocument(principal, document, "edit"); if (document.status === "archived") throw new HttpError(409, "document_already_archived", "The document is already archived."); if (document.legal_hold) throw new HttpError(409, "document_legal_hold", "The document is on legal hold and cannot be archived.");
         const row = (await client.query<DocumentRow>(`update app.business_documents set status='archived',archived_at=now(),archived_by_user_id=$2,archive_reason=$3,updated_at=now() where id=$1 returning id::text,public_id::text,tenant_id::text,agency_id::text,null::text as tenant_public_id,null::text as agency_public_id,null::text as tenant_city,null::text as tenant_state_code,null::text as serving_agency_public_id,null::text as agency_city,null::text as agency_state_code,document_type,version,status,original_file_name,media_type,byte_size::text,sha256_digest,storage_provider,storage_key,retention_class,legal_hold,$4::text as uploader_name,created_at,archived_at`, [document.id, principal.userId, parsed.data.reason, document.uploader_name])).rows[0]!;

@@ -25,7 +25,6 @@ const schema = z
     SESSION_TOKEN_PEPPER: z.string().min(32),
     OTP_HASH_PEPPER: z.string().min(32).optional(),
     OTP_DELIVERY_KEY: z.string().optional(),
-    MFA_ENCRYPTION_KEY: z.string().optional(),
     PUSH_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     OBJECT_STORAGE_PROVIDER: z.enum(["disabled", "local", "spaces"]).default("disabled"),
     OBJECT_STORAGE_ENDPOINT: z.string().url().optional(),
@@ -35,10 +34,6 @@ const schema = z
     OBJECT_STORAGE_SECRET_KEY: z.string().min(16).optional(),
     OBJECT_STORAGE_LOCAL_ROOT: z.string().trim().min(1).default(".local-object-storage"),
     OBJECT_STORAGE_MAX_BYTES: integer(10 * 1024 * 1024, 1024, 10 * 1024 * 1024),
-    MFA_TICKET_PEPPER: z.string().min(32).optional(),
-    MFA_ISSUER: z.string().trim().min(2).max(80).default("Munna Gas Connect"),
-    MFA_TICKET_TTL_SECONDS: integer(900, 300, 900),
-    MFA_MAX_ATTEMPTS: integer(5, 3, 10),
     PRIVILEGED_SESSION_TTL_SECONDS: integer(28_800, 900, 86_400),
     OTP_LOCAL_CODE: z.string().regex(/^[0-9]{6}$/).optional(),
     OTP_LOCAL_EXPOSE_CODE: boolean("false"),
@@ -62,20 +57,11 @@ const schema = z
     if (["staging", "production"].includes(value.APP_ENV) && !value.OTP_DELIVERY_KEY) {
       context.addIssue({ code: "custom", path: ["OTP_DELIVERY_KEY"], message: "a dedicated OTP delivery encryption key is required outside local/test" });
     }
-    if (["staging", "production"].includes(value.APP_ENV) && !value.MFA_ENCRYPTION_KEY) {
-      context.addIssue({ code: "custom", path: ["MFA_ENCRYPTION_KEY"], message: "a dedicated MFA encryption key is required outside local/test" });
-    }
     if (["staging", "production"].includes(value.APP_ENV) && !value.PUSH_TOKEN_ENCRYPTION_KEY) {
       context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "a dedicated push-token encryption key is required outside local/test" });
     }
-    if (["staging", "production"].includes(value.APP_ENV) && !value.MFA_TICKET_PEPPER) {
-      context.addIssue({ code: "custom", path: ["MFA_TICKET_PEPPER"], message: "a dedicated MFA ticket pepper is required outside local/test" });
-    }
     if (value.OTP_DELIVERY_KEY && !isBase64Key(value.OTP_DELIVERY_KEY)) {
       context.addIssue({ code: "custom", path: ["OTP_DELIVERY_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
-    }
-    if (value.MFA_ENCRYPTION_KEY && !isBase64Key(value.MFA_ENCRYPTION_KEY)) {
-      context.addIssue({ code: "custom", path: ["MFA_ENCRYPTION_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
     }
     if (value.PUSH_TOKEN_ENCRYPTION_KEY && !isBase64Key(value.PUSH_TOKEN_ENCRYPTION_KEY)) {
       context.addIssue({ code: "custom", path: ["PUSH_TOKEN_ENCRYPTION_KEY"], message: "must be a canonical base64-encoded 32-byte key" });
@@ -113,7 +99,6 @@ export interface ApiConfig {
   sessionTokenPepper: string;
   otpHashPepper: string;
   otpDeliveryKey: string;
-  mfaEncryptionKey: string;
   pushTokenEncryptionKey: string;
   objectStorageProvider: "disabled" | "local" | "spaces";
   objectStorageEndpoint?: string;
@@ -123,10 +108,6 @@ export interface ApiConfig {
   objectStorageSecretKey?: string;
   objectStorageLocalRoot: string;
   objectStorageMaxBytes: number;
-  mfaTicketPepper: string;
-  mfaIssuer: string;
-  mfaTicketTtlSeconds: number;
-  mfaMaxAttempts: number;
   privilegedSessionTtlSeconds: number;
   otpLocalCode?: string;
   otpLocalExposeCode: boolean;
@@ -158,7 +139,6 @@ export function loadApiConfig(environment: NodeJS.ProcessEnv = process.env): Api
     sessionTokenPepper: value.SESSION_TOKEN_PEPPER,
     otpHashPepper: value.OTP_HASH_PEPPER ?? "local-only-otp-hash-pepper-do-not-deploy",
     otpDeliveryKey: value.OTP_DELIVERY_KEY ?? Buffer.alloc(32, 7).toString("base64"),
-    mfaEncryptionKey: value.MFA_ENCRYPTION_KEY ?? Buffer.alloc(32, 11).toString("base64"),
     pushTokenEncryptionKey: value.PUSH_TOKEN_ENCRYPTION_KEY ?? Buffer.alloc(32, 13).toString("base64"),
     objectStorageProvider: value.OBJECT_STORAGE_PROVIDER,
     objectStorageEndpoint: value.OBJECT_STORAGE_ENDPOINT,
@@ -168,10 +148,6 @@ export function loadApiConfig(environment: NodeJS.ProcessEnv = process.env): Api
     objectStorageSecretKey: value.OBJECT_STORAGE_SECRET_KEY,
     objectStorageLocalRoot: value.OBJECT_STORAGE_LOCAL_ROOT,
     objectStorageMaxBytes: value.OBJECT_STORAGE_MAX_BYTES,
-    mfaTicketPepper: value.MFA_TICKET_PEPPER ?? "local-only-mfa-ticket-pepper-do-not-deploy",
-    mfaIssuer: value.MFA_ISSUER,
-    mfaTicketTtlSeconds: value.MFA_TICKET_TTL_SECONDS,
-    mfaMaxAttempts: value.MFA_MAX_ATTEMPTS,
     privilegedSessionTtlSeconds: value.PRIVILEGED_SESSION_TTL_SECONDS,
     otpLocalCode: value.OTP_LOCAL_CODE,
     otpLocalExposeCode: value.OTP_LOCAL_EXPOSE_CODE,

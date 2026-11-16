@@ -92,7 +92,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
     try {
       const parsed = requestSchema.safeParse(request.body);
       if (!parsed.success) {
-        throw new HttpError(400, "invalid_request", "The tenant draft is invalid.", parsed.error.flatten());
+        throw new HttpError(400, "invalid_request", "The vendor draft is invalid.", parsed.error.flatten());
       }
       const idempotencyKey = request.header("idempotency-key")?.trim();
       if (!idempotencyKey || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
@@ -102,7 +102,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
       const body = parsed.data;
       const principal = authenticatedPrincipal(response);
       assertAuthorized(principal, "tenant.create", { city: body.outlet.city, agencyPublicId: body.agencyPublicId });
-      await assertPlatformWorkflowEnabled(options.pool, "workflows.tenant_onboarding", "Tenant onboarding is temporarily paused by a Super Admin.");
+      await assertPlatformWorkflowEnabled(options.pool, "workflows.tenant_onboarding", "Vendor onboarding is temporarily paused by a Super Admin.");
       const hash = requestHash(body);
       const scope = `tenant.create:${principal.userPublicId}`;
 
@@ -136,7 +136,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
         if (!agency) throw new HttpError(422, "agency_unavailable", "The selected agency is not approved or does not exist.");
 
         const duplicateTenant = await client.query("select 1 from app.tenants where gstin = $1", [body.gstin]);
-        if (duplicateTenant.rowCount) throw new HttpError(409, "tenant_gstin_exists", "A tenant with this GSTIN already exists.");
+        if (duplicateTenant.rowCount) throw new HttpError(409, "tenant_gstin_exists", "A vendor with this GSTIN already exists.");
 
         const insertedOwner = await client.query<{ id: string; public_id: string }>(
           `insert into app.users (public_id, phone_e164, full_name, email, status)
@@ -249,7 +249,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
       if (result.replayed) response.setHeader("idempotent-replayed", "true");
       response.status(result.status).json(result.body);
     } catch (error) {
-      if (databaseCode(error) === "23505") next(new HttpError(409, "resource_conflict", "A conflicting tenant or account record already exists."));
+      if (databaseCode(error) === "23505") next(new HttpError(409, "resource_conflict", "A conflicting vendor or account record already exists."));
       else next(error);
     }
   });

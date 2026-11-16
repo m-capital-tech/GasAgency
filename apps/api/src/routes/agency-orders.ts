@@ -509,7 +509,7 @@ export function agencyOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
                   where id = $1`,
                 [stock.id, collected, accountDelta, principal.userId],
               );
-              await inventoryEvent(client, stock.id, order.id, principal.userId, collected ? "empty_return" : "delivery", { empty: collected, withAccounts: accountDelta }, collected ? "Delivered cylinders and received account empties" : "Delivered cylinders to tenant account");
+              await inventoryEvent(client, stock.id, order.id, principal.userId, collected ? "empty_return" : "delivery", { empty: collected, withAccounts: accountDelta }, collected ? "Delivered cylinders and received account empties" : "Delivered cylinders to vendor account");
               if (collected) await client.query("insert into app.order_empty_collections (order_id, cylinder_type_id, quantity) values ($1, $2, $3)", [order.id, item.cylinder_type_id, collected]);
             }
             await client.query("update app.outlets set spare_full_count = spare_full_count + $2, empty_count = empty_count - $3, updated_at = now() where id = $1", [order.outlet_id, items.reduce((sum, item) => sum + item.quantity, 0), totalCollected]);

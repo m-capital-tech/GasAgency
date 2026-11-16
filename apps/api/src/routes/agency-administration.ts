@@ -7,7 +7,7 @@ import { z } from "zod";
 import { normalizeGstin, isValidGstin } from "../domain/gstin";
 import { platformReportingParams, platformReportingScope } from "../domain/platform-reporting";
 import { HttpError } from "../http/error";
-import { assertFreshMfa, authenticatedPrincipal, requireAuthentication } from "../security/auth";
+import { authenticatedPrincipal, requireAuthentication } from "../security/auth";
 import { assertAuthorized, hasRoleType } from "../security/rbac";
 
 const publicId = z.string().uuid();
@@ -128,7 +128,7 @@ export function agencyAdministrationRouter(options: { pool: pg.Pool; tokenPepper
       const created = await withTransaction(options.pool, async (client) => {
         const claimed = await client.query("insert into app.idempotency_keys (scope,idempotency_key,request_hash,locked_until,expires_at) values ($1,$2,$3,now()+interval '30 seconds',now()+interval '24 hours') on conflict (scope,idempotency_key) do nothing", [scope, idempotencyKey, hash]);
         if (!claimed.rowCount) { const prior = (await client.query<{ same_request: boolean; response_body: unknown }>("select request_hash=$3 as same_request,response_body from app.idempotency_keys where scope=$1 and idempotency_key=$2 for update", [scope, idempotencyKey, hash])).rows[0]; if (!prior?.same_request) throw new HttpError(409, "idempotency_key_reused", "This idempotency key was already used for another agency."); if (prior.response_body) return prior.response_body as { agency: { publicId: string; status: string; displayName: string }; owner: { publicId: string; status: string } }; throw new HttpError(409, "request_in_progress", "This agency registration is still being processed."); }
-        const insertedUser = await client.query<{ id: string; public_id: string; status: string }>("insert into app.users (public_id,phone_e164,full_name,email,status,mfa_required) values ($1,$2,$3,$4,'invited',true) on conflict (phone_e164) do nothing returning id::text,public_id::text,status", [uuidV7(), parsed.data.owner.phoneE164, parsed.data.owner.fullName, parsed.data.owner.email ?? null]);
+        const insertedUser = await client.query<{ id: string; public_id: string; status: string }>("insert into app.users (public_id,phone_e164,full_name,email,status) values ($1,$2,$3,$4,'invited') on conflict (phone_e164) do nothing returning id::text,public_id::text,status", [uuidV7(), parsed.data.owner.phoneE164, parsed.data.owner.fullName, parsed.data.owner.email ?? null]);
         const owner = insertedUser.rows[0] ?? (await client.query<{ id: string; public_id: string; status: string }>("select id::text,public_id::text,status from app.users where phone_e164=$1 for update", [parsed.data.owner.phoneE164])).rows[0];
         if (!owner || ["suspended", "archived"].includes(owner.status)) throw new HttpError(409, "owner_unavailable", "The owner phone belongs to a suspended or archived user.");
         const agencyPublicId = uuidV7(); const inserted = await client.query(`insert into app.agencies (public_id,legal_name,display_name,gstin,distributor_code,omc,phone_e164,city,state_code,status,created_by_user_id,owner_user_id,address_line_1,address_line_2,pincode,latitude,longitude,service_radius_km,submitted_at)
@@ -145,7 +145,7 @@ export function agencyAdministrationRouter(options: { pool: pg.Pool; tokenPepper
   router.post("/admin/agencies/:agencyPublicId/reviews", async (request, response, next) => {
     try {
       const id = publicId.safeParse(request.params.agencyPublicId); const parsed = reviewSchema.safeParse(request.body); if (!id.success || !parsed.success) throw new HttpError(400, "invalid_request", "The agency review is invalid.");
-      const principal = authenticatedPrincipal(response); assertFreshMfa(principal);
+      const principal = authenticatedPrincipal(response);
       const outcome = await withTransaction(options.pool, async (client) => {
         const agency = await agencyContext(client, id.data, true); assertAuthorized(principal, parsed.data.decision === "approved" ? "agency.approve" : "agency.edit", { agencyPublicId: agency.public_id, city: agency.city, region: agency.state_code });
         if (agency.status !== "pending") throw new HttpError(409, "invalid_agency_state", "Only a pending agency can be reviewed.");
@@ -156,8 +156,7 @@ export function agencyAdministrationRouter(options: { pool: pg.Pool; tokenPepper
         if (nextStatus === "approved") {
           if (!agency.owner_user_id) throw new HttpError(409, "owner_required", "An owner is required before agency approval.");
           const owner = (await client.query<{ id: string; public_id: string; phone_e164: string }>("select id::text,public_id::text,phone_e164 from app.users where id=$1 for update", [agency.owner_user_id])).rows[0]!;
-          await client.query("update app.users set mfa_required=true,updated_at=now() where id=$1 and not mfa_required", [owner.id]);
-          await client.query("update app.device_sessions set revoked_at=now(),revoke_reason='agency_owner_mfa_enforced' where user_id=$1 and revoked_at is null", [owner.id]);
+          await client.query("update app.device_sessions set revoked_at=now(),revoke_reason='agency_owner_access_granted' where user_id=$1 and revoked_at is null", [owner.id]);
           const role = await standardRole(client, principal, "agency_owner"); access = await inviteAssignment(client, principal, { userId: owner.id, userPublicId: owner.public_id, phoneE164: owner.phone_e164, role, agencyPublicId: agency.public_id });
           const cylinders = await client.query<{ id: string; weight_kg: string }>("select id::text,weight_kg::text from app.cylinder_types where active order by id");
           for (const cylinder of cylinders.rows) await client.query("insert into app.agency_inventory (public_id,agency_id,cylinder_type_id,low_stock_threshold,updated_by_user_id) values ($1,$2,$3,$4,$5) on conflict (agency_id,cylinder_type_id) do nothing", [uuidV7(), agency.id, cylinder.id, Number(cylinder.weight_kg) <= 19 ? 20 : 5, principal.userId]);
@@ -172,7 +171,7 @@ export function agencyAdministrationRouter(options: { pool: pg.Pool; tokenPepper
   router.post("/admin/agencies/:agencyPublicId/lifecycle", async (request, response, next) => {
     try {
       const id = publicId.safeParse(request.params.agencyPublicId); const parsed = lifecycleSchema.safeParse(request.body); if (!id.success || !parsed.success) throw new HttpError(400, "invalid_request", "The agency lifecycle request is invalid.");
-      const principal = authenticatedPrincipal(response); assertFreshMfa(principal);
+      const principal = authenticatedPrincipal(response);
       const result = await withTransaction(options.pool, async (client) => {
         const agency = await agencyContext(client, id.data, true); assertAuthorized(principal, "agency.suspend", { agencyPublicId: agency.public_id, city: agency.city, region: agency.state_code });
         const expected = parsed.data.action === "suspend" ? "approved" : "suspended"; const nextStatus = parsed.data.action === "suspend" ? "suspended" : "approved";

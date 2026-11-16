@@ -6,7 +6,7 @@ const accessPoints = [
     href: "/control/login",
     icon: ShieldCheck,
     title: "Platform Control",
-    description: "Super Admin and Platform Admin access for tenant onboarding, approvals, credit policy, RBAC, and scoped analytics.",
+    description: "Super Admin and Platform Admin access for vendor onboarding, approvals, credit policy, RBAC, and scoped analytics.",
   },
   {
     href: "/operations/login",
@@ -23,7 +23,7 @@ export default function Landing() {
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Commercial LPG operations</p>
         <h1 className="mt-4 max-w-2xl text-4xl font-bold tracking-tight text-foreground md:text-5xl">Secure business access</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-          Production access for platform teams and serving agencies. Tenant businesses order and manage billing through the mobile app.
+          Production access for platform teams and serving agencies. Vendor businesses order and manage billing through the mobile app.
         </p>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2">
@@ -40,8 +40,8 @@ export default function Landing() {
         <div className="mt-5 flex items-start gap-4 rounded-2xl border bg-card p-6">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gold-soft text-gold"><Smartphone className="size-5" /></span>
           <div>
-            <h2 className="text-lg font-semibold">Tenant business app</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">Registered restaurants and hotels sign in with their approved mobile number and OTP in the tenant app.</p>
+            <h2 className="text-lg font-semibold">Vendor business app</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">Registered restaurants and hotels sign in with their approved mobile number and OTP in the vendor app.</p>
           </div>
         </div>
 

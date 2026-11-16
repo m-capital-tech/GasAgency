@@ -36,25 +36,25 @@ try {
     if (migration.rowCount !== 1) throw new Error("migration 0002_auth_rbac_onboarding must be applied first");
 
     let changed = false;
-    const existingUser = await client.query<{ id: string; public_id: string; status: string; full_name: string; email: string | null; mfa_required: boolean }>(
-      "select id::text, public_id::text, status, full_name, email, mfa_required from app.users where phone_e164 = $1 for update",
+    const existingUser = await client.query<{ id: string; public_id: string; status: string; full_name: string; email: string | null }>(
+      "select id::text, public_id::text, status, full_name, email from app.users where phone_e164 = $1 for update",
       [environment.BOOTSTRAP_SUPER_ADMIN_PHONE],
     );
     let user = existingUser.rows[0];
     if (!user) {
-      const inserted = await client.query<{ id: string; public_id: string; status: string; full_name: string; email: string | null; mfa_required: boolean }>(
-        `insert into app.users (public_id, phone_e164, full_name, email, status, mfa_required)
-         values ($1, $2, $3, $4, 'active', true)
-         returning id::text, public_id::text, status, full_name, email, mfa_required`,
+      const inserted = await client.query<{ id: string; public_id: string; status: string; full_name: string; email: string | null }>(
+        `insert into app.users (public_id, phone_e164, full_name, email, status)
+         values ($1, $2, $3, $4, 'active')
+         returning id::text, public_id::text, status, full_name, email`,
         [uuidV7(), environment.BOOTSTRAP_SUPER_ADMIN_PHONE, environment.BOOTSTRAP_SUPER_ADMIN_NAME, environment.BOOTSTRAP_SUPER_ADMIN_EMAIL ?? null],
       );
       user = inserted.rows[0]!;
       changed = true;
     }
     if (user.status !== "active") throw new Error("the bootstrap phone belongs to a non-active user; resolve that account explicitly");
-    if (user.full_name !== environment.BOOTSTRAP_SUPER_ADMIN_NAME || user.email !== (environment.BOOTSTRAP_SUPER_ADMIN_EMAIL ?? null) || !user.mfa_required) {
+    if (user.full_name !== environment.BOOTSTRAP_SUPER_ADMIN_NAME || user.email !== (environment.BOOTSTRAP_SUPER_ADMIN_EMAIL ?? null)) {
       await client.query(
-        "update app.users set full_name = $2, email = $3, mfa_required = true, updated_at = now() where id = $1",
+        "update app.users set full_name = $2, email = $3, updated_at = now() where id = $1",
         [user.id, environment.BOOTSTRAP_SUPER_ADMIN_NAME, environment.BOOTSTRAP_SUPER_ADMIN_EMAIL ?? null],
       );
       changed = true;
@@ -124,7 +124,7 @@ try {
           user.id,
           user.public_id,
           environment.BOOTSTRAP_REASON,
-          JSON.stringify({ rolePublicId: role.public_id, scope: "global", mfaRequired: true }),
+          JSON.stringify({ rolePublicId: role.public_id, scope: "global", signInMethod: "sms_otp" }),
           uuidV7(),
           uuidV7(),
         ],

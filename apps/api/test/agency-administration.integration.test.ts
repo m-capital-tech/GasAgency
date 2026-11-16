@@ -17,7 +17,7 @@ integrationTest("agency registration, maker-checker approval, owner access, staf
   const superAdmin = (await pool.query<{ id: string }>(`select assignment.user_id::text as id from app.role_assignments assignment join app.roles role_row on role_row.id=assignment.role_id where role_row.role_type='super_admin' and assignment.status='active' limit 1`)).rows[0];
   assert.ok(superAdmin, "test database requires the seeded Super Admin");
   const token = `agency-admin-${uuidV7()}-session-token`;
-  await pool.query("insert into app.device_sessions (public_id,user_id,token_hash,expires_at,auth_method,mfa_verified_at) values ($1,$2,$3,now()+interval '1 hour','bootstrap_test',now())", [uuidV7(), superAdmin.id, hashSessionToken(token, tokenPepper)]);
+  await pool.query("insert into app.device_sessions (public_id,user_id,token_hash,expires_at,auth_method) values ($1,$2,$3,now()+interval '1 hour','otp')", [uuidV7(), superAdmin.id, hashSessionToken(token, tokenPepper)]);
 
   const app = express(); app.use(express.json()); app.use("/v1", agencyAdministrationRouter({ pool, tokenPepper }));
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => { const known = error instanceof HttpError ? error : null; response.status(known?.status ?? 500).json({ error: { code: known?.code ?? "internal_error", message: known?.message ?? (error instanceof Error ? error.message : "failed") } }); });

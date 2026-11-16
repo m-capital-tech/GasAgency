@@ -180,7 +180,7 @@ export default function TenantProfileScreen() {
                   </View>
                 </Row>
               </Card>
-            ))}</View> : <Card tone="alt"><Text variant="small" tone="muted">No tenant documents are available yet. Documents added by authorized administrators will appear here.</Text></Card>}
+            ))}</View> : <Card tone="alt"><Text variant="small" tone="muted">No vendor documents are available yet. Documents added by authorized administrators will appear here.</Text></Card>}
           </View>
 
           <Button title="Sign out" variant="ghost" icon="log-out-outline" onPress={() => Alert.alert("Sign out?", "You can sign in again with an OTP.", [
