@@ -11,6 +11,19 @@ import { authenticatedPrincipal, requireAuthentication } from "../security/auth"
 import { assertAuthorized, hasRoleType } from "../security/rbac";
 
 const publicId = z.string().uuid();
+const cylinderRate = z.string().trim().regex(/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/)
+  .refine((value) => Number(value) > 0).transform((value) => Number(value).toFixed(2));
+const cylinderPriceSchema = z.object({
+  cylinderTypeCode: z.string().trim().min(1).max(64),
+  baseUnitPrice: cylinderRate,
+  expectedBaseUnitPrice: cylinderRate.nullable(),
+  reason: z.string().trim().min(3).max(500),
+}).strict();
+
+function authorizeCylinderPricing(principal: AuthPrincipal, agencyPublicId: string) {
+  const assignments = principal.assignments.filter((assignment) => assignment.roleType === "agency_owner");
+  assertAuthorized({ ...principal, assignments }, "agency.edit", { agencyPublicId });
+}
 const e164 = z.string().regex(/^\+[1-9][0-9]{7,14}$/);
 const gstin = z.string().transform(normalizeGstin).refine(isValidGstin, "GSTIN checksum or format is invalid");
 const agencyCreateSchema = z.object({
@@ -72,6 +85,61 @@ async function inviteAssignment(client: pg.PoolClient, principal: AuthPrincipal,
 
 export function agencyAdministrationRouter(options: { pool: pg.Pool; tokenPepper: string }): Router {
   const router = Router(); router.use(requireAuthentication(options));
+
+  router.get("/agencies/:agencyPublicId/cylinder-prices", async (request, response, next) => {
+    try {
+      const id = publicId.safeParse(request.params.agencyPublicId);
+      if (!id.success) throw new HttpError(400, "invalid_request", "The agency is invalid.");
+      authorizeCylinderPricing(authenticatedPrincipal(response), id.data);
+      const agency = await agencyContext(options.pool, id.data);
+      const result = await options.pool.query(
+        `select cylinder.code as "cylinderTypeCode", cylinder.display_name as "displayName",
+                price.base_unit_price::text as "baseUnitPrice"
+           from app.cylinder_types cylinder
+           left join app.agency_prices price on price.cylinder_type_id = cylinder.id and price.agency_id = $1 and price.active
+          where cylinder.active order by cylinder.weight_kg, cylinder.code`, [agency.id],
+      );
+      response.json({ prices: result.rows });
+    } catch (error) { next(error); }
+  });
+
+  router.post("/agencies/:agencyPublicId/cylinder-prices", async (request, response, next) => {
+    try {
+      const id = publicId.safeParse(request.params.agencyPublicId);
+      const parsed = cylinderPriceSchema.safeParse(request.body);
+      if (!id.success || !parsed.success) throw new HttpError(400, "invalid_request", "Enter a positive rupee price with up to two decimal places and a reason for the change.");
+      const principal = authenticatedPrincipal(response);
+      authorizeCylinderPricing(principal, id.data);
+      const { cylinderTypeCode, baseUnitPrice, expectedBaseUnitPrice, reason } = parsed.data;
+      const price = await withTransaction(options.pool, async (client) => {
+        const agency = await agencyContext(client, id.data, true);
+        if (agency.status !== "approved") throw new HttpError(409, "inactive_agency", "Only an approved agency can change cylinder prices.");
+        const cylinder = (await client.query<{ id: string; display_name: string; current_price: string | null }>(
+          `select cylinder.id::text, cylinder.display_name, price.base_unit_price::text as current_price
+             from app.cylinder_types cylinder
+             left join app.agency_prices price on price.cylinder_type_id = cylinder.id and price.agency_id = $1 and price.active
+            where cylinder.code = $2 and cylinder.active`, [agency.id, cylinderTypeCode],
+        )).rows[0];
+        if (!cylinder) throw new HttpError(422, "cylinder_type_unavailable", "This cylinder type is unavailable.");
+        const result = { cylinderTypeCode, displayName: cylinder.display_name, baseUnitPrice };
+        if (baseUnitPrice === cylinder.current_price) return result;
+        if (expectedBaseUnitPrice !== cylinder.current_price) {
+          throw new HttpError(409, "cylinder_price_changed", "Someone updated this rate. Reload the prices and review the current rate before saving.");
+        }
+        const saved = await client.query<{ public_id: string }>(
+          `insert into app.agency_prices (public_id, agency_id, cylinder_type_id, base_unit_price)
+           values ($1, $2, $3, $4) on conflict (agency_id, cylinder_type_id)
+           do update set base_unit_price = excluded.base_unit_price, active = true, updated_at = now()
+           returning public_id::text`, [uuidV7(), agency.id, cylinder.id, baseUnitPrice],
+        );
+        await audit(client, principal, { action: "agency.cylinder_price_updated", entityType: "agency_price",
+          entityPublicId: saved.rows[0]!.public_id, reason, before: { baseUnitPrice: cylinder.current_price },
+          after: { agencyPublicId: id.data, cylinderTypeCode, baseUnitPrice }, requestId: response.locals.requestId ?? uuidV7() });
+        return result;
+      });
+      response.json({ price });
+    } catch (error) { next(error); }
+  });
 
   router.get("/admin/agency-registry", async (request, response, next) => {
     try {
