@@ -209,7 +209,7 @@ The initial save creates a tenant draft and an audit event. Submission freezes a
 | City | Yes | Initially defaults to Hyderabad but is stored explicitly |
 | State | Yes | Stored explicitly for future multi-city operation |
 | Pincode | Yes | Validated and used for service checks |
-| Latitude/longitude | Yes | Selected or confirmed on a map |
+| Latitude/longitude | No | Enter either coordinate if known. The written delivery address is required. |
 | Outlet contact name | No | Defaults to tenant owner |
 | Outlet contact phone | No | Defaults to registered mobile |
 | Delivery instructions | No | Gate, floor, receiving hours, etc. |

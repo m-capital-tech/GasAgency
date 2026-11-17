@@ -39,8 +39,8 @@ const requestSchema = z
       city: z.string().trim().min(2).max(100),
       stateCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
       pincode: z.string().regex(/^[1-9][0-9]{5}$/),
-      latitude: z.number().min(-90).max(90),
-      longitude: z.number().min(-180).max(180),
+      latitude: z.preprocess(blankToUndefined, z.number().min(-90).max(90).optional()),
+      longitude: z.preprocess(blankToUndefined, z.number().min(-180).max(180).optional()),
       contactName: optionalText(160),
       contactPhoneE164: e164.optional(),
       deliveryInstructions: optionalText(1_000),
@@ -187,7 +187,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
                in_use_count, spare_full_count, empty_count
              ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
              returning id::text`,
-            [outletPublicId, tenant.id, body.outlet.label, body.outlet.addressLine1, body.outlet.addressLine2 ?? null, body.outlet.city, body.outlet.stateCode, body.outlet.pincode, body.outlet.latitude, body.outlet.longitude, body.outlet.contactName ?? null, body.outlet.contactPhoneE164 ?? null, body.outlet.deliveryInstructions ?? null, body.outlet.stock.inUse, body.outlet.stock.spareFull, body.outlet.stock.empty],
+            [outletPublicId, tenant.id, body.outlet.label, body.outlet.addressLine1, body.outlet.addressLine2 ?? null, body.outlet.city, body.outlet.stateCode, body.outlet.pincode, body.outlet.latitude ?? null, body.outlet.longitude ?? null, body.outlet.contactName ?? null, body.outlet.contactPhoneE164 ?? null, body.outlet.deliveryInstructions ?? null, body.outlet.stock.inUse, body.outlet.stock.spareFull, body.outlet.stock.empty],
           )
         ).rows[0]!;
 

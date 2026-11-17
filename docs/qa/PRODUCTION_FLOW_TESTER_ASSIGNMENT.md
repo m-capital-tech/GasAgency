@@ -106,7 +106,7 @@ Use one QA agency, one QA vendor, one QA outlet, one QA COD order, one QA credit
 
 #### TN — Vendor onboarding
 
-- `TN-01`: Create one QA vendor with name, phone, full address, requirement and an explicitly selected agency. Leave GSTIN, FSSAI and both certificates blank and verify submission and approval.
+- `TN-01`: Create one QA vendor with name, phone, full written address, requirement and an explicitly selected agency. Leave latitude, longitude, GSTIN, FSSAI and both certificates blank and verify submission and approval.
 - `TN-02`: Verify saved data and selected agency after an independent read.
 - `TN-03`: Submit for approval and verify `pending_approval` plus audit evidence.
 - `TN-04`: Verify the maker cannot approve their own submission.
