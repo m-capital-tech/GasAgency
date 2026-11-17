@@ -65,7 +65,7 @@ export default function TenantInvoiceDetailScreen() {
           <Text variant="label" tone="faint">Bill to</Text>
           <Text variant="bodyStrong">{invoice.tenant.legalName}</Text>
           <Text variant="small" tone="muted">{invoice.tenant.outletLabel} · {[invoice.tenant.addressLine1, invoice.tenant.addressLine2, invoice.tenant.city, invoice.tenant.stateCode, invoice.tenant.pincode].filter(Boolean).join(", ")}</Text>
-          <Text variant="small" tone="muted">GSTIN {invoice.tenant.gstin}</Text>
+          {invoice.tenant.gstin && <Text variant="small" tone="muted">GSTIN {invoice.tenant.gstin}</Text>}
 
           <Divider />
           <Row between style={{ marginBottom: 7 }}>

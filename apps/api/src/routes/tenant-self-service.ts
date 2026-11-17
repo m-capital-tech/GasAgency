@@ -57,7 +57,7 @@ interface TenantAccessRow {
   legal_name: string;
   display_name: string;
   business_type: string;
-  gstin: string;
+  gstin: string | null;
   fssai_number: string | null;
   alternate_phone_e164: string | null;
   tenant_status: string;

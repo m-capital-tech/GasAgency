@@ -56,7 +56,7 @@ export interface AgencyRegistryDetail {
   reviews: Array<{ publicId: string; decision: string; fromStatus: string; toStatus: string; reason: string; overrideUsed: boolean; reviewerName: string; createdAt: string }>;
 }
 export interface TenantSummary {
-  publicId: string; displayName: string; legalName: string; businessType: string; gstin: string; status: string; createdAt: string; submittedAt: string | null; city: string;
+  publicId: string; displayName: string; legalName: string; businessType: string; gstin: string | null; status: string; createdAt: string; submittedAt: string | null; city: string;
   owner: { fullName: string; phoneE164: string }; agency: { publicId: string; displayName: string }; creatorName: string;
   commercialProposal: { requestedPaymentMode: string; proposedCreditLimit: string | null; proposedNetTermDays: number | null; decisionStatus: string };
 }

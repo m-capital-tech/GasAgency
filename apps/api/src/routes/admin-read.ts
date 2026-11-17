@@ -157,7 +157,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
       const scope = requirePermissionScope(principal, "tenant.view");
       const cursor = decodeCursor(parsed.data.cursor);
       const rows = await options.pool.query<{
-        public_id: string; display_name: string; legal_name: string; business_type: string; gstin: string; status: string;
+        public_id: string; display_name: string; legal_name: string; business_type: string; gstin: string | null; status: string;
         created_at: Date; submitted_at: Date | null; city: string; owner_name: string; owner_phone_e164: string;
         agency_public_id: string; agency_display_name: string; requested_payment_mode: string; proposed_credit_limit: string | null;
         proposed_net_term_days: number | null; proposal_status: string; creator_name: string;
@@ -207,7 +207,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
       const principal = authenticatedPrincipal(response);
       requirePermissionScope(principal, "tenant.view");
       const row = (await options.pool.query<{
-        public_id: string; legal_name: string; display_name: string; business_type: string; gstin: string; fssai_number: string | null;
+        public_id: string; legal_name: string; display_name: string; business_type: string; gstin: string | null; fssai_number: string | null;
         alternate_phone_e164: string | null; internal_notes: string | null; status: string; created_at: Date; submitted_at: Date | null;
         approved_at: Date | null; suspended_at: Date | null; creator_name: string; creator_public_id: string; owner_public_id: string; owner_name: string;
         owner_phone_e164: string; owner_email: string | null; outlet_public_id: string; outlet_label: string; address_line_1: string;

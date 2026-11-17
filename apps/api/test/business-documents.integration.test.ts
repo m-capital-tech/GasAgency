@@ -38,6 +38,18 @@ integrationTest("private agency documents are gated, signature-checked, versione
   try {
     const gated = await fetch(`${base}/admin/agencies/${agencyPublicId}/documents`, { method: "POST", headers, body: pdf }); assert.equal(gated.status, 503); assert.equal((await gated.json() as { error: { code: string } }).error.code, "workflow_paused");
     await pool.query("update app.platform_settings set value='true'::jsonb,version=version+1,updated_by_user_id=$1,updated_at=now() where setting_key='features.document_uploads'", [superAdmin.id]);
+    const vendorPublicId = uuidV7();
+    await pool.query(`with vendor as (
+      insert into app.tenants (public_id, legal_name, display_name, business_type, created_by_user_id)
+      values ($1, 'Document QA vendor', 'Document QA vendor', 'restaurant', $2) returning id)
+      insert into app.outlets (public_id, tenant_id, label, address_line_1, city, state_code, pincode, latitude, longitude)
+      select $3, id, 'Kitchen', 'QA test street', 'Mumbai', 'MH', '400001', 19, 72 from vendor`, [vendorPublicId, superAdmin.id, uuidV7()]);
+    for (const type of ["gst_certificate", "fssai_certificate"]) {
+      const result = await fetch(`${base}/admin/tenants/${vendorPublicId}/documents`, {
+        method: "POST", headers: { ...headers, "x-document-type": type }, body: pdf,
+      });
+      assert.equal(result.status, 201, `vendor can provide ${type} without a licence number`);
+    }
     const spoofed = await fetch(`${base}/admin/agencies/${agencyPublicId}/documents`, { method: "POST", headers, body: Buffer.from("not a pdf") }); assert.equal(spoofed.status, 422); assert.equal((await spoofed.json() as { error: { code: string } }).error.code, "document_signature_mismatch");
 
     const uploaded = await fetch(`${base}/admin/agencies/${agencyPublicId}/documents`, { method: "POST", headers, body: pdf });

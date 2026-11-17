@@ -139,7 +139,7 @@ export interface TenantInvoiceSummary {
 }
 
 export interface TenantBillingResponse {
-  tenant: { publicId: string; displayName: string; gstin: string };
+  tenant: { publicId: string; displayName: string; gstin: string | null };
   account: {
     paymentMode: "prepaid" | "credit";
     credit: null | {
@@ -158,7 +158,7 @@ export interface TenantBillingResponse {
 export interface TenantInvoiceDetail extends TenantInvoiceSummary {
   tenant: {
     legalName: string;
-    gstin: string;
+    gstin: string | null;
     outletLabel: string;
     addressLine1: string;
     addressLine2: string | null;
@@ -178,7 +178,7 @@ export interface TenantInvoiceDetail extends TenantInvoiceSummary {
 }
 
 export interface TenantHomeResponse {
-  tenant: { publicId: string; displayName: string; gstin: string };
+  tenant: { publicId: string; displayName: string; gstin: string | null };
   agency: { publicId: string; displayName: string };
   outlets: Array<{ publicId: string; label: string; address: string; deliveryInstructions: string | null; stock: { inUse: number; spareFull: number; empty: number } }>;
   catalog: Array<{
@@ -216,7 +216,7 @@ export interface TenantProfileResponse {
     legalName: string;
     displayName: string;
     businessType: string;
-    gstin: string;
+    gstin: string | null;
     fssaiNumber: string | null;
     alternatePhoneE164: string | null;
     status: string;

@@ -230,7 +230,7 @@ integrationTest("delegated creator submits and a separate administrator activate
 
     const payload = {
       legalName: "Integration Restaurant Private Limited", displayName: "Integration Restaurant",
-      businessType: "restaurant", gstin: "27AAPFU0939F1ZV", fssaiNumber: "11223344556677",
+      businessType: "restaurant",
       owner: { fullName: "Integration Owner", phoneE164: "+919900000002", email: "owner@example.test" },
       outlet: {
         label: "Main kitchen", addressLine1: "100 Test Market Road", city: "Bengaluru", stateCode: "KA", pincode: "560001",
@@ -253,7 +253,6 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(unauthenticated.status, 401);
 
     const missingRequiredFieldCases: Array<[string, Record<string, unknown>]> = [
-      ["gstin", { ...payload, gstin: undefined }],
       ["address", { ...payload, outlet: { ...payload.outlet, addressLine1: undefined } }],
       ["requirement", { ...payload, requirement: undefined }],
       ["serving-agency", { ...payload, agencyPublicId: undefined }],
@@ -268,11 +267,15 @@ integrationTest("delegated creator submits and a separate administrator activate
       assert.equal((await response.json() as { error: { code: string } }).error.code, "invalid_request");
     }
 
+    const invalidGstin = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify({ ...payload, gstin: "27AAPFU0939F1ZA" }) });
+    assert.equal(invalidGstin.status, 400);
+
     const created = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify(payload) });
     assert.equal(created.status, 201);
-    const createdBody = await created.json() as { tenant: { publicId: string; status: string } };
+    const createdBody = await created.json() as { tenant: { publicId: string; status: string; gstin: string | null } };
     assert.equal(createdBody.tenant.status, "draft");
-    const replayed = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify(payload) });
+    assert.equal(createdBody.tenant.gstin, null);
+    const replayed = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify({ ...payload, gstin: "  ", fssaiNumber: null }) });
     assert.equal(replayed.status, 201);
     assert.equal(replayed.headers.get("idempotent-replayed"), "true");
     assert.deepEqual(await replayed.json(), createdBody);
@@ -305,7 +308,7 @@ integrationTest("delegated creator submits and a separate administrator activate
     const approved = await fetch(`${endpoint}/${createdBody.tenant.publicId}/reviews`, {
       method: "POST", headers: jsonHeaders(platformAdminToken),
       body: JSON.stringify({
-        decision: "approved", reason: "Business, GSTIN, requirement, and agency assignment reviewed",
+        decision: "approved", reason: "Business, requirement, and agency assignment reviewed",
         commercialDecision: { decision: "approved", creditLimit: 50_000, netTermDays: 15, note: "Approved after commercial review" },
       }),
     });
@@ -666,11 +669,13 @@ integrationTest("delegated creator submits and a separate administrator activate
     assert.equal(invoiceDetailResponse.status, 200);
     const invoiceDetail = (await invoiceDetailResponse.json() as {
       invoice: {
+        tenant: { gstin: string | null };
         outstandingAmount: string;
         items: Array<{ cylinderTypeCode: string; quantity: number }>;
         payments: Array<{ amount: string; paymentMethod: string; reference: string }>;
       };
     }).invoice;
+    assert.equal(invoiceDetail.tenant.gstin, null);
     assert.equal(invoiceDetail.outstandingAmount, "6030.00");
     assert.deepEqual(
       invoiceDetail.payments.map((payment) => ({ amount: payment.amount, paymentMethod: payment.paymentMethod, reference: payment.reference })),
@@ -680,8 +685,10 @@ integrationTest("delegated creator submits and a separate administrator activate
 
     const tenantDetailResponse = await fetch(`${origin}/admin/tenants/${createdBody.tenant.publicId}`, { headers: { authorization: `Bearer ${superToken}` } });
     assert.equal(tenantDetailResponse.status, 200);
-    const tenantDetail = (await tenantDetailResponse.json() as { tenant: { status: string; owner: { phoneE164: string }; requirement: { items: Array<{ cylinderTypeCode: string; expectedQuantity: number }> }; capabilities: { canApproveCredit: boolean } } }).tenant;
+    const tenantDetail = (await tenantDetailResponse.json() as { tenant: { gstin: string | null; fssaiNumber: string | null; status: string; owner: { phoneE164: string }; requirement: { items: Array<{ cylinderTypeCode: string; expectedQuantity: number }> }; capabilities: { canApproveCredit: boolean } } }).tenant;
     assert.equal(tenantDetail.status, "active");
+    assert.equal(tenantDetail.gstin, null);
+    assert.equal(tenantDetail.fssaiNumber, null);
     assert.equal(tenantDetail.owner.phoneE164, payload.owner.phoneE164);
     assert.deepEqual(tenantDetail.requirement.items, [{ cylinderTypeCode: "commercial_19kg", displayName: "19 kg commercial cylinder", expectedQuantity: 6 }]);
     assert.equal(tenantDetail.capabilities.canApproveCredit, true);
@@ -854,6 +861,24 @@ integrationTest("delegated creator submits and a separate administrator activate
       [createdBody.tenant.publicId],
     );
     assert.deepEqual(stored.rows[0], { tenants: "1", proposals: "1", assignments: "1", invitations: "1", outbox: "1", credit_accounts: "1", active_memberships: "1", otp_sessions: "0", revoked_sessions: "1", audit_events: "3", orders: "1", order_items: "2", order_events: "2", fulfillment_events: "4", order_outbox: "2", status_outbox: "4", invoice_outbox: "1", order_audits: "2", fulfillment_audits: "4", invoices: "1", empty_collections: "1", inventory_events: "3" });
+    // A second vendor may omit GSTIN; each identifier can also be supplied independently.
+    const cases = [
+      { key: "fssai-only", fields: { gstin: null, fssaiNumber: "11223344556677" }, expected: [null, "11223344556677"] },
+      { key: "gst-only-draft", fields: { gstin: " 27aapfu0939f1zv ", fssaiNumber: "  " }, expected: ["27AAPFU0939F1ZV", null] },
+    ];
+    for (const { key, fields, expected } of cases) {
+      const draft = await fetch(endpoint, { method: "POST", headers: { ...creatorHeaders, "idempotency-key": key },
+        body: JSON.stringify({ ...payload, ...fields, displayName: key }) });
+      assert.equal(draft.status, 201);
+      const { tenant } = await draft.json() as { tenant: { publicId: string } };
+      const details = await fetch(`${endpoint}/${tenant.publicId}`, { headers: jsonHeaders(superToken) });
+      assert.equal(details.status, 200);
+      const saved = (await details.json() as { tenant: { gstin: string | null; fssaiNumber: string | null } }).tenant;
+      assert.deepEqual([saved.gstin, saved.fssaiNumber], expected);
+    }
+    const duplicate = await fetch(endpoint, { method: "POST", headers: { ...creatorHeaders, "idempotency-key": "duplicate-gst" },
+      body: JSON.stringify({ ...payload, gstin: "27AAPFU0939F1ZV" }) });
+    assert.equal(duplicate.status, 409);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await pool.end();

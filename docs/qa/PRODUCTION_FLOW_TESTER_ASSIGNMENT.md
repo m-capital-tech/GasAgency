@@ -28,7 +28,7 @@ Role: Independent Senior Software Engineering Tester / SDET
 | P0 | Production/API/dashboard preflight and baseline metrics |
 | SA | Super Admin analytics, navigation, audit and session boundaries |
 | AG | Agency creation, validation, duplicate protection and persistence |
-| TN | Vendor draft, mandatory GSTIN/address/requirement/agency, maker/checker and approval |
+| TN | Vendor draft, optional identifiers and certificates, required address/requirement/agency, maker/checker and approval |
 | RB | Role creation, assignment, login, least privilege and forbidden actions |
 | AU | SMS OTP, replay rejection, session restoration and logout boundaries |
 | TE | Vendor login, catalog, pricing, quote, COD order, idempotency and credit request |
@@ -106,7 +106,7 @@ Use one QA agency, one QA vendor, one QA outlet, one QA COD order, one QA credit
 
 #### TN — Vendor onboarding
 
-- `TN-01`: Create one QA vendor with mandatory name, GSTIN, phone, full address, requirement, and explicitly selected agency.
+- `TN-01`: Create one QA vendor with name, phone, full address, requirement and an explicitly selected agency. Leave GSTIN, FSSAI and both certificates blank and verify submission and approval.
 - `TN-02`: Verify saved data and selected agency after an independent read.
 - `TN-03`: Submit for approval and verify `pending_approval` plus audit evidence.
 - `TN-04`: Verify the maker cannot approve their own submission.
@@ -186,7 +186,7 @@ Use one QA agency, one QA vendor, one QA outlet, one QA COD order, one QA credit
 - `SE-01`: Unauthenticated UI redirect and API `401`.
 - `SE-02`: Role-forbidden mutation returns `403`.
 - `SE-03`: Cross-vendor access is denied using QA records.
-- `SE-04`: Missing/invalid GSTIN, address, requirement, or agency is rejected.
+- `SE-04`: An invalid supplied GSTIN or missing address, requirement or agency is rejected.
 - `SE-05`: Duplicate GSTIN and agency identifiers are rejected.
 - `SE-06`: Idempotency-key misuse is rejected.
 - `SE-07`: Malformed payloads are rejected without `500` or partial persistence.

@@ -37,7 +37,7 @@ interface TenantContextRow {
   tenant_id: string;
   tenant_public_id: string;
   tenant_display_name: string;
-  tenant_gstin: string;
+  tenant_gstin: string | null;
   outlet_id: string;
   outlet_public_id: string;
   outlet_label: string;
@@ -374,7 +374,7 @@ export function tenantOrdersRouter(options: { pool: pg.Pool; tokenPepper: string
       const principal = authenticatedPrincipal(response);
       const base = (
         await options.pool.query<{
-          tenant_id: string; tenant_public_id: string; display_name: string; gstin: string;
+          tenant_id: string; tenant_public_id: string; display_name: string; gstin: string | null;
           agency_id: string; agency_public_id: string; agency_name: string; account_id: string;
           cod_enabled: boolean; credit_enabled: boolean; payment_mode: "prepaid" | "credit";
           credit_account_id: string | null; credit_status: TenantContextRow["credit_status"];

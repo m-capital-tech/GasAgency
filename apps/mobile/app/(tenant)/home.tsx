@@ -61,7 +61,7 @@ export default function TenantHomeScreen() {
               <Ionicons name="business" size={24} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text variant="h3">Served by {home.agency.displayName}</Text>
-                <Text variant="small" tone="muted" style={{ marginTop: 4 }}>GSTIN {home.tenant.gstin}</Text>
+                {home.tenant.gstin && <Text variant="small" tone="muted" style={{ marginTop: 4 }}>GSTIN {home.tenant.gstin}</Text>}
               </View>
             </Row>
           </Card>

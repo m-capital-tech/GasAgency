@@ -15,7 +15,7 @@ export interface OperationsOrder {
   payment: { method: "cod" | "credit"; status: string };
   delivery: { slot: string; requestedDate: string | null; instructions: string | null; emptiesExpected: number; emptiesCollected: number; emptyCollections: Array<{ cylinderTypeCode: string; quantity: number }> };
   amounts: { subtotal: string; deliveryFee: string; slotSurcharge: string; taxableAmount: string; gstRate: number; gstAmount: string; totalAmount: string; currency: "INR" };
-  tenant: { publicId: string; displayName: string; businessType: string; gstin: string };
+  tenant: { publicId: string; displayName: string; businessType: string; gstin: string | null };
   outlet: { publicId: string; label: string; address: string; contactName: string | null; contactPhoneE164: string | null };
   items: Array<{ cylinderTypeCode: string; displayName: string; quantity: number; unitPrice: number; priceSource: string; lineSubtotal: number }>;
   deliveryStaff: null | { publicId: string; fullName: string; vehicleType: string; vehicleNumber: string };
@@ -47,7 +47,7 @@ export interface OperationsCommercialAccount {
   publicId: string;
   status: "open" | "suspended";
   paymentMode: "prepaid" | "credit";
-  tenant: { publicId: string; displayName: string; legalName: string; gstin: string; businessType: string };
+  tenant: { publicId: string; displayName: string; legalName: string; gstin: string | null; businessType: string };
   credit: null | { status: "approved" | "suspended" | "closed"; limit: string; netTermDays: number };
   receivables: { outstanding: string; overdue: string; openInvoiceCount: number };
   collections: { total: string; lastReceivedAt: string | null };
