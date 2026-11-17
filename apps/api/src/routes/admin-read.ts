@@ -211,7 +211,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
         alternate_phone_e164: string | null; internal_notes: string | null; status: string; created_at: Date; submitted_at: Date | null;
         approved_at: Date | null; suspended_at: Date | null; creator_name: string; creator_public_id: string; owner_public_id: string; owner_name: string;
         owner_phone_e164: string; owner_email: string | null; outlet_public_id: string; outlet_label: string; address_line_1: string;
-        address_line_2: string | null; city: string; state_code: string; pincode: string; latitude: string; longitude: string;
+        address_line_2: string | null; city: string; state_code: string; pincode: string; latitude: number | null; longitude: number | null;
         contact_name: string | null; contact_phone_e164: string | null; delivery_instructions: string | null;
         in_use_count: number; spare_full_count: number; empty_count: number; agency_public_id: string; agency_display_name: string;
         agency_legal_name: string; agency_credit_enabled: boolean; assignment_reason: string; assignment_status: string;
@@ -231,7 +231,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
                 owner_user.phone_e164 as owner_phone_e164, owner_user.email as owner_email,
                 outlet.public_id::text as outlet_public_id, outlet.label as outlet_label,
                 outlet.address_line_1, outlet.address_line_2, outlet.city, outlet.state_code, outlet.pincode,
-                outlet.latitude::text, outlet.longitude::text, outlet.contact_name, outlet.contact_phone_e164,
+                outlet.latitude::double precision, outlet.longitude::double precision, outlet.contact_name, outlet.contact_phone_e164,
                 outlet.delivery_instructions, outlet.in_use_count, outlet.spare_full_count, outlet.empty_count,
                 agency.public_id::text as agency_public_id, agency.display_name as agency_display_name,
                 agency.legal_name as agency_legal_name, agency.credit_enabled as agency_credit_enabled,
@@ -330,7 +330,7 @@ export function adminReadRouter(options: { pool: pg.Pool; tokenPepper: string })
           approvedAt: row.approved_at?.toISOString() ?? null, suspendedAt: row.suspended_at?.toISOString() ?? null,
           creator: { publicId: row.creator_public_id, fullName: row.creator_name },
           owner: { publicId: row.owner_public_id, fullName: row.owner_name, phoneE164: row.owner_phone_e164, email: row.owner_email },
-          outlet: { publicId: row.outlet_public_id, label: row.outlet_label, addressLine1: row.address_line_1, addressLine2: row.address_line_2, city: row.city, stateCode: row.state_code, pincode: row.pincode, latitude: Number(row.latitude), longitude: Number(row.longitude), contactName: row.contact_name, contactPhoneE164: row.contact_phone_e164, deliveryInstructions: row.delivery_instructions, stock: { inUse: row.in_use_count, spareFull: row.spare_full_count, empty: row.empty_count } },
+          outlet: { publicId: row.outlet_public_id, label: row.outlet_label, addressLine1: row.address_line_1, addressLine2: row.address_line_2, city: row.city, stateCode: row.state_code, pincode: row.pincode, latitude: row.latitude, longitude: row.longitude, contactName: row.contact_name, contactPhoneE164: row.contact_phone_e164, deliveryInstructions: row.delivery_instructions, stock: { inUse: row.in_use_count, spareFull: row.spare_full_count, empty: row.empty_count } },
           agency: { publicId: row.agency_public_id, displayName: row.agency_display_name, legalName: row.agency_legal_name, creditEnabled: row.agency_credit_enabled, assignmentReason: row.assignment_reason, assignmentStatus: row.assignment_status },
           requirement: { period: row.requirement_period, preferredDeliveryDays: row.preferred_delivery_days, preferredSlot: row.preferred_slot, items: row.requirement_items },
           commercialProposal: { publicId: row.proposal_public_id, requestedPaymentMode: row.requested_payment_mode, proposedCreditLimit: row.proposed_credit_limit, proposedNetTermDays: row.proposed_net_term_days, proposalNote: row.proposal_note, decisionStatus: row.proposal_status, decisionNote: row.decision_note },

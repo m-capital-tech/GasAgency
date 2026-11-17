@@ -234,7 +234,7 @@ integrationTest("delegated creator submits and a separate administrator activate
       owner: { fullName: "Integration Owner", phoneE164: "+919900000002", email: "owner@example.test" },
       outlet: {
         label: "Main kitchen", addressLine1: "100 Test Market Road", city: "Bengaluru", stateCode: "KA", pincode: "560001",
-        latitude: 12.9716, longitude: 77.5946, stock: { inUse: 2, spareFull: 1, empty: 1 },
+        stock: { inUse: 2, spareFull: 1, empty: 1 },
       },
       requirement: {
         period: "week", preferredDeliveryDays: [1, 4], preferredSlot: "before_opening",
@@ -267,6 +267,16 @@ integrationTest("delegated creator submits and a separate administrator activate
       assert.equal((await response.json() as { error: { code: string } }).error.code, "invalid_request");
     }
 
+    for (const invalidOutlet of [
+      { addressLine1: "   ", latitude: 12.9716, longitude: 77.5946 },
+      { latitude: -90.1 }, { latitude: 90.1 }, { longitude: -180.1 }, { longitude: 180.1 },
+      { longitude: "unknown" },
+    ]) {
+      const response = await fetch(endpoint, { method: "POST", headers: creatorHeaders,
+        body: JSON.stringify({ ...payload, outlet: { ...payload.outlet, ...invalidOutlet } }) });
+      assert.equal(response.status, 400);
+    }
+
     const invalidGstin = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify({ ...payload, gstin: "27AAPFU0939F1ZA" }) });
     assert.equal(invalidGstin.status, 400);
 
@@ -275,7 +285,9 @@ integrationTest("delegated creator submits and a separate administrator activate
     const createdBody = await created.json() as { tenant: { publicId: string; status: string; gstin: string | null } };
     assert.equal(createdBody.tenant.status, "draft");
     assert.equal(createdBody.tenant.gstin, null);
-    const replayed = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify({ ...payload, gstin: "  ", fssaiNumber: null }) });
+    const replayed = await fetch(endpoint, { method: "POST", headers: creatorHeaders, body: JSON.stringify({
+      ...payload, gstin: "  ", fssaiNumber: null, outlet: { ...payload.outlet, latitude: null, longitude: "" },
+    }) });
     assert.equal(replayed.status, 201);
     assert.equal(replayed.headers.get("idempotent-replayed"), "true");
     assert.deepEqual(await replayed.json(), createdBody);
@@ -685,10 +697,13 @@ integrationTest("delegated creator submits and a separate administrator activate
 
     const tenantDetailResponse = await fetch(`${origin}/admin/tenants/${createdBody.tenant.publicId}`, { headers: { authorization: `Bearer ${superToken}` } });
     assert.equal(tenantDetailResponse.status, 200);
-    const tenantDetail = (await tenantDetailResponse.json() as { tenant: { gstin: string | null; fssaiNumber: string | null; status: string; owner: { phoneE164: string }; requirement: { items: Array<{ cylinderTypeCode: string; expectedQuantity: number }> }; capabilities: { canApproveCredit: boolean } } }).tenant;
+    const tenantDetail = (await tenantDetailResponse.json() as { tenant: { gstin: string | null; fssaiNumber: string | null; status: string; owner: { phoneE164: string }; outlet: { addressLine1: string; latitude: number | null; longitude: number | null }; requirement: { items: Array<{ cylinderTypeCode: string; expectedQuantity: number }> }; capabilities: { canApproveCredit: boolean } } }).tenant;
     assert.equal(tenantDetail.status, "active");
     assert.equal(tenantDetail.gstin, null);
     assert.equal(tenantDetail.fssaiNumber, null);
+    assert.equal(tenantDetail.outlet.addressLine1, payload.outlet.addressLine1);
+    assert.equal(tenantDetail.outlet.latitude, null);
+    assert.equal(tenantDetail.outlet.longitude, null);
     assert.equal(tenantDetail.owner.phoneE164, payload.owner.phoneE164);
     assert.deepEqual(tenantDetail.requirement.items, [{ cylinderTypeCode: "commercial_19kg", displayName: "19 kg commercial cylinder", expectedQuantity: 6 }]);
     assert.equal(tenantDetail.capabilities.canApproveCredit, true);
@@ -879,6 +894,21 @@ integrationTest("delegated creator submits and a separate administrator activate
     const duplicate = await fetch(endpoint, { method: "POST", headers: { ...creatorHeaders, "idempotency-key": "duplicate-gst" },
       body: JSON.stringify({ ...payload, gstin: "27AAPFU0939F1ZV" }) });
     assert.equal(duplicate.status, 409);
+
+    for (const [key, coordinates] of Object.entries({
+      "latitude-only": { latitude: 0 },
+      "longitude-only": { longitude: -180 },
+      "both-coordinates": { latitude: 12.9716, longitude: 77.5946 },
+    })) {
+      const draft = await fetch(endpoint, { method: "POST", headers: { ...creatorHeaders, "idempotency-key": key },
+        body: JSON.stringify({ ...payload, outlet: { ...payload.outlet, ...coordinates } }) });
+      assert.equal(draft.status, 201);
+      const { tenant } = await draft.json() as { tenant: { publicId: string } };
+      const details = await fetch(`${endpoint}/${tenant.publicId}`, { headers: jsonHeaders(superToken) });
+      assert.equal(details.status, 200);
+      const { tenant: { outlet } } = await details.json() as { tenant: { outlet: { latitude: number | null; longitude: number | null } } };
+      assert.deepEqual({ latitude: outlet.latitude, longitude: outlet.longitude }, { latitude: null, longitude: null, ...coordinates });
+    }
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await pool.end();

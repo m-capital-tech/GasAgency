@@ -63,7 +63,7 @@ export interface TenantSummary {
 export interface TenantDetail extends TenantSummary {
   fssaiNumber: string | null; alternatePhoneE164: string | null; internalNotes: string | null; approvedAt: string | null; suspendedAt: string | null;
   creator: { publicId: string; fullName: string }; owner: { publicId: string; fullName: string; phoneE164: string; email: string | null };
-  outlet: { publicId: string; label: string; addressLine1: string; addressLine2: string | null; city: string; stateCode: string; pincode: string; latitude: number; longitude: number; contactName: string | null; contactPhoneE164: string | null; deliveryInstructions: string | null; stock: { inUse: number; spareFull: number; empty: number } };
+  outlet: { publicId: string; label: string; addressLine1: string; addressLine2: string | null; city: string; stateCode: string; pincode: string; latitude: number | null; longitude: number | null; contactName: string | null; contactPhoneE164: string | null; deliveryInstructions: string | null; stock: { inUse: number; spareFull: number; empty: number } };
   agency: { publicId: string; displayName: string; legalName: string; creditEnabled: boolean; assignmentReason: string; assignmentStatus: string };
   requirement: { period: string; preferredDeliveryDays: number[]; preferredSlot: string | null; items: Array<{ cylinderTypeCode: string; displayName: string; expectedQuantity: number }> };
   commercialProposal: { publicId: string; requestedPaymentMode: string; proposedCreditLimit: string | null; proposedNetTermDays: number | null; proposalNote: string | null; decisionStatus: string; decisionNote: string | null };
