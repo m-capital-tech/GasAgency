@@ -14,13 +14,17 @@ const e164 = z.string().regex(/^\+[1-9][0-9]{7,14}$/);
 const optionalText = (maximum: number) => z.string().trim().min(1).max(maximum).optional();
 const gstin = z.string().transform(normalizeGstin).refine(isValidGstin, "GSTIN checksum or format is invalid");
 
+function blankToUndefined(value: unknown) {
+  return value === null || (typeof value === "string" && value.trim() === "") ? undefined : value;
+}
+
 const requestSchema = z
   .object({
     legalName: z.string().trim().min(2).max(200),
     displayName: z.string().trim().min(2).max(120),
     businessType: z.enum(["restaurant", "hotel", "tiffin_centre", "cloud_kitchen", "canteen", "bakery", "tea_stall", "hospital", "hostel", "other"]),
-    gstin,
-    fssaiNumber: optionalText(32),
+    gstin: z.preprocess(blankToUndefined, gstin.optional()),
+    fssaiNumber: z.preprocess(blankToUndefined, optionalText(32)),
     alternatePhoneE164: e164.optional(),
     internalNotes: optionalText(2_000),
     owner: z.object({
@@ -69,7 +73,7 @@ const requestSchema = z
 
 type TenantDraftRequest = z.infer<typeof requestSchema>;
 interface TenantDraftResponse {
-  tenant: { publicId: string; status: "draft"; displayName: string; gstin: string };
+  tenant: { publicId: string; status: "draft"; displayName: string; gstin: string | null };
   owner: { publicId: string; phoneE164: string; membershipStatus: "invited" };
   outlet: { publicId: string; city: string };
   agencyAssignment: { publicId: string; agencyPublicId: string; status: "proposed" };
@@ -135,8 +139,10 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
         ).rows[0];
         if (!agency) throw new HttpError(422, "agency_unavailable", "The selected agency is not approved or does not exist.");
 
-        const duplicateTenant = await client.query("select 1 from app.tenants where gstin = $1", [body.gstin]);
-        if (duplicateTenant.rowCount) throw new HttpError(409, "tenant_gstin_exists", "A vendor with this GSTIN already exists.");
+        if (body.gstin) {
+          const duplicateTenant = await client.query("select 1 from app.tenants where gstin = $1", [body.gstin]);
+          if (duplicateTenant.rowCount) throw new HttpError(409, "tenant_gstin_exists", "A vendor with this GSTIN already exists.");
+        }
 
         const insertedOwner = await client.query<{ id: string; public_id: string }>(
           `insert into app.users (public_id, phone_e164, full_name, email, status)
@@ -161,7 +167,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
                alternate_phone_e164, internal_notes, status, created_by_user_id
              ) values ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9)
              returning id::text`,
-            [tenantPublicId, body.legalName, body.displayName, body.businessType, body.gstin, body.fssaiNumber ?? null, body.alternatePhoneE164 ?? null, body.internalNotes ?? null, principal.userId],
+            [tenantPublicId, body.legalName, body.displayName, body.businessType, body.gstin ?? null, body.fssaiNumber ?? null, body.alternatePhoneE164 ?? null, body.internalNotes ?? null, principal.userId],
           )
         ).rows[0]!;
 
@@ -224,7 +230,7 @@ export function tenantDraftRouter(options: { pool: pg.Pool; tokenPepper: string 
         );
 
         const responseBody: TenantDraftResponse = {
-          tenant: { publicId: tenantPublicId, status: "draft", displayName: body.displayName, gstin: body.gstin },
+          tenant: { publicId: tenantPublicId, status: "draft", displayName: body.displayName, gstin: body.gstin ?? null },
           owner: { publicId: owner.public_id, phoneE164: body.owner.phoneE164, membershipStatus: "invited" },
           outlet: { publicId: outletPublicId, city: body.outlet.city },
           agencyAssignment: { publicId: assignmentPublicId, agencyPublicId: agency.public_id, status: "proposed" },

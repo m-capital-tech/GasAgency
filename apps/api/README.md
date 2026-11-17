@@ -90,7 +90,7 @@ The command does not issue credentials or bypass OTP. A second global Super Admi
 - an active SMS-verified session for privileged users;
 - active `tenant.create` permission covering the selected city or agency;
 - `Idempotency-Key` containing 8–128 safe characters;
-- a checksum-valid GSTIN, approved agency, initial outlet, structured LPG requirement, and prepaid or proposed-credit terms.
+- an approved agency, initial outlet, structured LPG requirement, and prepaid or proposed-credit terms. Vendor GSTIN and FSSAI are optional. Supplied GSTINs must pass the checksum and uniqueness checks. Either certificate can be uploaded independently.
 
 Replaying the same key and normalized body returns the original `201` response with `Idempotent-Replayed: true`. Reusing the key for another body returns `409`.
 

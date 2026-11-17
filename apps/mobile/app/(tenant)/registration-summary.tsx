@@ -51,7 +51,7 @@ export default function TenantRegistrationSummaryScreen() {
             <Text variant="h2">{profile.tenant.displayName}</Text>
             <Text variant="small" tone="muted">{profile.tenant.businessType.replaceAll("_", " ")}</Text>
             <KeyValue k="Legal name" v={profile.tenant.legalName} />
-            <KeyValue k="GSTIN" v={profile.tenant.gstin} />
+            <KeyValue k="GSTIN" v={profile.tenant.gstin ?? "Not provided"} />
             {profile.tenant.fssaiNumber ? <KeyValue k="FSSAI" v={profile.tenant.fssaiNumber} /> : null}
           </Card>
           <Card tone="alt">

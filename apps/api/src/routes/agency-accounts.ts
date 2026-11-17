@@ -43,7 +43,7 @@ interface AccountRow {
   tenant_display_name: string;
   sort_name: string;
   tenant_legal_name: string;
-  tenant_gstin: string;
+  tenant_gstin: string | null;
   tenant_business_type: string;
   credit_status: string | null;
   credit_limit: string | null;

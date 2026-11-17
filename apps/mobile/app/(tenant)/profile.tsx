@@ -127,7 +127,7 @@ export default function TenantProfileScreen() {
             </Row>
             <Divider />
             <KeyValue k="Legal name" v={profile.tenant.legalName} />
-            <KeyValue k="GSTIN" v={profile.tenant.gstin} />
+            <KeyValue k="GSTIN" v={profile.tenant.gstin ?? "Not provided"} />
             {profile.tenant.fssaiNumber ? <KeyValue k="FSSAI" v={profile.tenant.fssaiNumber} /> : null}
             <KeyValue k="Registered phone" v={profile.user.phoneE164} />
           </Card>
@@ -180,7 +180,7 @@ export default function TenantProfileScreen() {
                   </View>
                 </Row>
               </Card>
-            ))}</View> : <Card tone="alt"><Text variant="small" tone="muted">No vendor documents are available yet. Documents added by authorized administrators will appear here.</Text></Card>}
+            ))}</View> : <Card tone="alt"><Text variant="small" tone="muted">No documents have been shared. GST and FSSAI certificates are optional.</Text></Card>}
           </View>
 
           <Button title="Sign out" variant="ghost" icon="log-out-outline" onPress={() => Alert.alert("Sign out?", "You can sign in again with an OTP.", [

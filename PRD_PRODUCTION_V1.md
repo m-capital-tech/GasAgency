@@ -106,7 +106,7 @@ Recommended starter roles:
 
 | Role | Intended permissions |
 |---|---|
-| Onboarding Executive | Create/edit tenant drafts, validate GSTIN and phone, select agency, submit for approval; cannot approve |
+| Onboarding Executive | Create/edit tenant drafts, validate phone and any supplied GSTIN, select agency, submit for approval; cannot approve |
 | Credit Analyst | View tenant financial history and recommend terms; cannot approve or modify limits/net terms |
 | Finance Operations | View invoices/ledger and record collections; cannot change limits or net terms |
 | Support Operations | View scoped tenant/order details, handle cases and change requests; sensitive fields masked by default |
@@ -194,8 +194,9 @@ The initial save creates a tenant draft and an audit event. Submission freezes a
 | Owner/contact name | Yes | First tenant owner |
 | Mobile number | Yes | Normalized to E.164; used for invitation and OTP |
 | Alternate mobile number | No | Not an authentication identity unless separately invited |
-| GSTIN | Yes | Validated, normalized, and checked for an existing active tenant |
-| FSSAI number | No | Relevant food-business identifier |
+| GSTIN | No | If supplied, normalized, checksum-validated and checked for duplicates |
+| FSSAI licence number | No | The vendor chooses whether to share it |
+| GST and FSSAI certificates | No | Either file can be shared independently of its number. Registration and approval can proceed without files. |
 | Internal admin notes | No | Never shown to the tenant or agency |
 
 ### Initial outlet and address
@@ -495,7 +496,7 @@ Sensitive personal fields must be masked in lists and analytics. Revealing full 
 - [x] Tenant registration is platform-team-led; public self-registration is excluded.
 - [x] An authorized platform team member explicitly selects the serving agency.
 - [x] A Platform Admin activates a team-created tenant through a maker–checker workflow.
-- [x] GSTIN is mandatory during tenant creation.
+- [x] Vendor GSTIN, FSSAI licence number and both certificates are optional.
 - [x] SMS is primary and WhatsApp is fallback.
 - [x] Registered tenants authenticate with OTP and may order immediately.
 - [x] Credit authority is limited to platform admin.
@@ -516,7 +517,7 @@ The following defaults were approved on 29 Sep 2026 and are part of the producti
 | Can one phone identity access multiple tenant businesses? | Yes; use tenant memberships and require tenant selection after login |
 | Platform Admin/team operating scope | Explicit assignment by city/region and, where needed, selected agencies |
 | Number of Super Admin accounts | Support multiple named accounts for continuity, with a very small authorized set; never share one login |
-| GSTIN verification | Format/checksum at draft time, authoritative verification before approval when an approved integration is available |
+| GSTIN verification | For supplied GSTINs, format/checksum at draft time, authoritative verification before approval when an approved integration is available |
 | SMS-to-WhatsApp fallback window | Configurable, initially 5 minutes |
 | Tenant-editable fields | Outlet contact, delivery instructions, stock, and requirement estimates; controlled fields use change requests |
 | Admin pricing override | Allowed only through a separate permission, reason, and audit event |

@@ -87,7 +87,7 @@ async function orderView(client: pg.Pool | pg.PoolClient, agencyId: string, orde
       delivery_instructions: string | null; subtotal: string; delivery_fee: string; slot_surcharge: string;
       taxable_amount: string; gst_rate: string; gst_amount: string; total_amount: string; placed_at: Date | null;
       accepted_at: Date | null; assigned_at: Date | null; dispatched_at: Date | null; delivered_at: Date | null;
-      failure_reason: string | null; tenant_public_id: string; tenant_display_name: string; business_type: string; gstin: string;
+      failure_reason: string | null; tenant_public_id: string; tenant_display_name: string; business_type: string; gstin: string | null;
       outlet_public_id: string; outlet_label: string; address_line_1: string; address_line_2: string | null; city: string;
       pincode: string; contact_name: string | null; contact_phone_e164: string | null;
       staff_public_id: string | null; staff_name: string | null; vehicle_type: string | null; vehicle_number: string | null;

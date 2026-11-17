@@ -2,6 +2,10 @@
 
 Each entry: what the PRD said (or didn't), what was chosen, why.
 
+## Optional vendor licences (17 Nov 2026)
+
+Vendors can register and receive approval without a GSTIN, FSSAI licence number or either certificate. Vendors can share each number or file independently. A supplied GSTIN is validated and must be unique. This supersedes the earlier mandatory vendor GSTIN decision.
+
 ## Production tenant app completion (22 Oct 2026)
 - **First login confirms the admin-approved record.** The first successful OTP session routes a single-tenant user to a read-only registration summary showing legal identity, GSTIN/FSSAI, serving agency, commercial terms, outlets, and stated LPG requirements. It is an acknowledgement step, not a second onboarding wizard.
 - **Tenant edits stop at the operational boundary.** Owners and managers can update outlet contact, delivery instructions, cylinder stock, and requirements. Tenant staff remain read-only. Legal identity, GSTIN/FSSAI, registered phone, outlet address, and serving agency require an auditable platform change request.

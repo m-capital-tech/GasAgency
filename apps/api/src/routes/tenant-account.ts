@@ -62,7 +62,7 @@ interface ActiveTenantRow {
   tenant_id: string;
   tenant_public_id: string;
   tenant_display_name: string;
-  tenant_gstin: string;
+  tenant_gstin: string | null;
   commercial_account_id: string;
   payment_mode: "prepaid" | "credit";
   credit_status: "approved" | "suspended" | "closed" | null;
