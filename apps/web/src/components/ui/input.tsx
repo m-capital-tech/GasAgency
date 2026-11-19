@@ -2,10 +2,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn("flex h-10 w-full rounded-xl border bg-card px-3 text-sm placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary disabled:opacity-50", className)} {...props} />;
+  return <input className={cn("flex h-10 w-full rounded-md border bg-card px-3 text-sm placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary disabled:opacity-50", className)} {...props} />;
 }
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn("flex min-h-20 w-full rounded-xl border bg-card px-3 py-2 text-sm placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary", className)} {...props} />;
+  return <textarea className={cn("flex min-h-20 w-full rounded-md border bg-card px-3 py-2 text-sm placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary", className)} {...props} />;
 }
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return <label className={cn("text-xs font-medium text-muted-foreground", className)} {...props} />;
@@ -20,5 +20,5 @@ export function Field({ label, children, hint, error }: { label: string; childre
   );
 }
 export function NativeSelect({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn("native-select flex h-10 w-full rounded-xl border bg-card py-0 pl-3 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)} {...props} />;
+  return <select className={cn("native-select flex h-10 w-full rounded-md border bg-card py-0 pl-3 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)} {...props} />;
 }
