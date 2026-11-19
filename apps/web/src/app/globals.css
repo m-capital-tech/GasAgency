@@ -177,3 +177,18 @@ body {
 .dashboard-sidebar .text-primary {
   color: #f6bec0;
 }
+
+/* Desktop icon rail; mobile drawers retain the full navigation labels. */
+.dashboard-sidebar[data-collapsed="true"] .sidebar-label { display: none; }
+.dashboard-sidebar[data-collapsed="true"] .sidebar-brand { justify-content: center; padding-inline: 0; }
+.dashboard-sidebar[data-collapsed="true"] .sidebar-content { padding: 12px 8px; }
+.dashboard-sidebar[data-collapsed="true"] .dashboard-navigation > :is(a, button) {
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  padding: 0;
+}
+.dashboard-sidebar[data-collapsed="true"] [data-slot="sidebar-footer"] { padding: 12px 8px; }
+.dashboard-sidebar[data-collapsed="true"] .sidebar-user { justify-content: center; padding: 0; }
+.dashboard-sidebar[data-collapsed="true"] .sidebar-actions { grid-template-columns: 1fr; }
+.dashboard-sidebar[data-collapsed="true"] .sidebar-actions button { width: 100%; padding: 0; }
