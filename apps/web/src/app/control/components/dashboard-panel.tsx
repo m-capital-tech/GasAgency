@@ -1,7 +1,8 @@
 "use client";
 
+import { useId, useState } from "react";
 import { displayLabel } from "@/lib/display-label";
-import { Activity, ArrowDownRight, ArrowUpRight, Banknote, CheckCircle2, Clock3, Headphones, PackageCheck, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight, Banknote, CheckCircle2, Clock3, ChevronDown, Headphones, PackageCheck, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { DonutChart } from "@/components/charts";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Table, TBody, THead, Tr } from "@/components/ui";
 import type { AdminDashboard, DashboardPeriod } from "@/lib/control-api";
@@ -35,6 +36,8 @@ function Risk({ label, value, danger = false }: { label: string; value: number; 
 }
 
 export function DashboardPanel({ data, period, loading, onPeriod, onRefresh }: { data: AdminDashboard | null; period: DashboardPeriod; loading: boolean; onPeriod: (period: DashboardPeriod) => void; onRefresh: () => void }) {
+  const [activityExpanded, setActivityExpanded] = useState(false);
+  const activityListId = useId();
   if (!data) return <Card><CardContent className="flex min-h-80 items-center justify-center text-sm text-muted-foreground">No reporting data is available for this scope.</CardContent></Card>;
   const current = data.performance.current;
   const previous = data.performance.previous;
@@ -69,11 +72,53 @@ export function DashboardPanel({ data, period, loading, onPeriod, onRefresh }: {
       <Card><CardHeader><div><CardTitle>Credit book</CardTitle><p className="mt-1 text-xs text-muted-foreground">Approved limits, exposure, and aging</p></div></CardHeader><CardContent className="grid gap-3"><div className="grid grid-cols-2 gap-3"><div className="rounded-xl bg-muted p-3"><p className="text-[11px] text-muted-foreground">Approved limit</p><strong>{money(data.credit.approvedLimit)}</strong></div><div className="rounded-xl bg-muted p-3"><p className="text-[11px] text-muted-foreground">Outstanding</p><strong>{money(data.credit.outstanding)}</strong></div></div>{[{ label: "Not due", value: data.credit.aging.current }, { label: "1–30 days", value: data.credit.aging.days_1_30 }, { label: "31–60 days", value: data.credit.aging.days_31_60 }, { label: "61–90 days", value: data.credit.aging.days_61_90 }, { label: "90+ days", value: data.credit.aging.days_90_plus }].map((bucket) => <div key={bucket.label} className="flex items-center justify-between border-b py-2 text-sm last:border-0"><span className="text-muted-foreground">{bucket.label}</span><strong className={bucket.label === "90+ days" && Number(bucket.value) ? "text-danger" : ""}>{money(bucket.value)}</strong></div>)}</CardContent></Card>
     </div>
 
-    <Card><CardHeader><div><CardTitle>Requires attention</CardTitle><p className="mt-1 text-xs text-muted-foreground">Operational exceptions that need a review—not automatic execution</p></div></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Risk label="Approval SLA breaches" value={data.attention.approvalSlaBreaches} danger /><Risk label="Low-stock agencies" value={data.attention.lowStockAgencies} danger /><Risk label="Overdue accounts" value={data.attention.overdueAccounts} danger /><Risk label="Delivery failures" value={data.attention.deliveryFailures} danger /><Risk label="Messaging failures" value={data.attention.messagingFailures} danger /></CardContent></Card>
+    <div className={`grid items-start gap-5 ${data.systemHealth ? "xl:grid-cols-2" : ""}`}>
+      <Card>
+        <CardHeader><CardTitle>Requires attention</CardTitle></CardHeader>
+        <CardContent className={`grid gap-3 sm:grid-cols-2 ${data.systemHealth ? "" : "xl:grid-cols-5"}`}>
+          <Risk label="Approval SLA breaches" value={data.attention.approvalSlaBreaches} danger />
+          <Risk label="Low-stock agencies" value={data.attention.lowStockAgencies} danger />
+          <Risk label="Overdue accounts" value={data.attention.overdueAccounts} danger />
+          <Risk label="Delivery failures" value={data.attention.deliveryFailures} danger />
+          <Risk label="Messaging failures" value={data.attention.messagingFailures} danger />
+        </CardContent>
+      </Card>
+      {data.systemHealth ? <Card>
+        <CardHeader><div className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /><CardTitle>Platform operations</CardTitle></div></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <Risk label="Queued background jobs" value={data.systemHealth.queuedJobs} />
+          <Risk label="Failed background jobs" value={data.systemHealth.failedJobs} danger />
+          <Risk label="Active sessions" value={data.systemHealth.activeSessions} />
+          <Risk label="Suspended users" value={data.systemHealth.suspendedUsers} />
+        </CardContent>
+      </Card> : null}
+    </div>
 
-    {data.systemHealth ? <Card><CardHeader><div><div className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /><CardTitle>Platform operations</CardTitle></div><p className="mt-1 text-xs text-muted-foreground">Super Admin-only service and access indicators</p></div></CardHeader><CardContent className="grid gap-3 sm:grid-cols-4"><Risk label="Queued background jobs" value={data.systemHealth.queuedJobs} /><Risk label="Failed background jobs" value={data.systemHealth.failedJobs} danger /><Risk label="Active sessions" value={data.systemHealth.activeSessions} /><Risk label="Suspended users" value={data.systemHealth.suspendedUsers} /></CardContent></Card> : null}
-
-    {data.recentActivity.length ? <Card><CardHeader><div><CardTitle>Privileged activity</CardTitle><p className="mt-1 text-xs text-muted-foreground">Latest immutable audit events visible in your scope</p></div></CardHeader><CardContent className="grid gap-2">{data.recentActivity.map((event) => <div key={event.publicId} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border p-3"><div><p className="text-sm font-semibold">{displayLabel(event.action.replaceAll("_", " ").replaceAll(".", " · "))}</p><p className="mt-1 text-xs text-muted-foreground">{event.actorName ?? "System"}{event.reason ? ` · ${event.reason}` : ""}</p></div><span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="size-3" />{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: data.timezone }).format(new Date(event.occurredAt))}</span></div>)}</CardContent></Card> : null}
+    {data.recentActivity.length ? <Card>
+      <CardHeader><CardTitle>Privileged activity</CardTitle></CardHeader>
+      <CardContent>
+        <div id={activityListId} className="grid gap-2">
+          {data.recentActivity.slice(0, activityExpanded ? undefined : 5).map((event) => <div key={event.publicId} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border p-3">
+            <div>
+              <p className="text-sm font-semibold">{displayLabel(event.action.replaceAll("_", " ").replaceAll(".", " · "))}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{event.actorName ?? "System"}{event.reason ? ` · ${event.reason}` : ""}</p>
+            </div>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="size-3" />{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: data.timezone }).format(new Date(event.occurredAt))}</span>
+          </div>)}
+        </div>
+        {data.recentActivity.length > 5 ? <Button
+          className="mt-3"
+          variant="ghost"
+          size="sm"
+          aria-expanded={activityExpanded}
+          aria-controls={activityListId}
+          onClick={() => setActivityExpanded((expanded) => !expanded)}
+        >
+          {activityExpanded ? "Read less" : "Read more"}
+          <ChevronDown aria-hidden="true" className={`transition-transform ${activityExpanded ? "rotate-180" : ""}`} />
+        </Button> : null}
+      </CardContent>
+    </Card> : null}
 
     <div className="rounded-xl border bg-muted/35 p-4 text-xs text-muted-foreground"><strong className="text-foreground">Data basis:</strong> operational, support, and permitted revenue figures are source-backed actuals. Run-rate values are labelled estimates and never replace actuals. Revenue is {data.dataCoverage.platformRevenue.status === "available" ? "visible from the append-only ledger" : "restricted to Super Admin"}. Refreshed {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: data.timezone }).format(new Date(data.dataCoverage.generatedAt))}.</div>
   </div>;

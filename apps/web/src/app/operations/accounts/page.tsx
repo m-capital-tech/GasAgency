@@ -199,10 +199,10 @@ export default function OperationsAccountsPage() {
 
   const logout = async () => { try { await operationsApi.logout(); } finally { router.replace("/operations/login"); } };
 
-  if (loading) return <main className="flex min-h-screen items-center justify-center bg-muted/40"><RefreshCw className="size-7 animate-spin text-primary" /><span className="ml-3 text-sm text-muted-foreground">Loading commercial accounts…</span></main>;
+  if (loading) return <main className="flex min-h-screen items-center justify-center bg-background"><RefreshCw className="size-7 animate-spin text-primary" /><span className="ml-3 text-sm text-muted-foreground">Loading commercial accounts…</span></main>;
 
   return (
-    <main className="min-h-screen bg-muted/40">
+    <main className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white"><Flame className="size-5" /></span><div><h1 className="font-bold">Commercial Accounts & Collections</h1><p className="text-xs text-muted-foreground">Agency pricing, receivables, and credit availability</p></div></div>

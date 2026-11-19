@@ -8,7 +8,7 @@ const dashboards = [
 ];
 
 export default function ReviewHome() {
-  return <main className="min-h-screen bg-muted/40 px-5 py-12">
+  return <main className="min-h-screen bg-background px-5 py-12">
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><Badge tone="info"><Eye className="mr-1 size-3" />Team review</Badge><h1 className="mt-4 text-3xl font-bold tracking-tight">Commercial LPG platform preview</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Review the dashboard experience without OTP. Every record on these pages is fictional sample data and every operational control is read-only.</p></div>

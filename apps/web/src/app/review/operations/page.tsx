@@ -21,7 +21,7 @@ export default function OperationsReviewPage() {
   const newOrders = sampleOrders.filter((order) => order.status === "New").length;
   const activeFulfillment = sampleOrders.filter((order) => ["Assigned", "Out for delivery"].includes(order.status)).length;
   const deliveredValue = sampleOrders.filter((order) => order.status === "Delivered").reduce((total, order) => total + order.amount, 0);
-  return <main className="min-h-screen bg-muted/40">
+  return <main className="min-h-screen bg-background">
     <div className="border-b border-info/20 bg-info-soft"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-3 px-5 py-2 text-xs text-info lg:px-8"><span className="flex items-center gap-2 font-semibold"><Eye className="size-4" />Team review mode · fictional sample data · read only</span><Link href="/review/control" className="font-semibold">View Platform Control →</Link></div></div>
     <header className="border-b bg-card"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white"><Flame className="size-5" /></span><div><h1 className="font-bold">Commercial LPG Operations</h1><p className="text-xs text-muted-foreground">Agency fulfillment control</p></div></div><div className="flex items-center gap-2"><Badge tone="primary">Central Commercial Gas</Badge><Link href="/operations/login" className={buttonVariants({ size: "sm", variant: "outline" })}><LockKeyhole />Secure login</Link></div></div></header>
     <div className="mx-auto grid max-w-[1500px] gap-5 px-5 py-6 lg:px-8">
