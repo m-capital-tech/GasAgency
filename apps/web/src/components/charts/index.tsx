@@ -2,7 +2,7 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCompactINR, formatNumber } from "@/lib/format";
 
-const PALETTE = ["#A31E21", "#C6953F", "#1D1D1E", "#620A1A", "#2E7D4F", "#9A918A"];
+const PALETTE = ["#A31E21", "#1D1D1E", "#717175", "#C66D6F", "#48484D", "#A6A6AB"];
 
 function TooltipBox({ active, payload, label, money }: any) {
   if (!active || !payload?.length) return null;
@@ -43,7 +43,7 @@ export function OrdersAreaChart({ data, height = 220, keys = [{ key: "orders", n
   );
 }
 
-export function MoneyBarChart({ data, dataKey = "revenue", name = "Revenue", height = 220, color = "#C6953F" }: { data: any[]; dataKey?: string; name?: string; height?: number; color?: string }) {
+export function MoneyBarChart({ data, dataKey = "revenue", name = "Revenue", height = 220, color = "#A31E21" }: { data: any[]; dataKey?: string; name?: string; height?: number; color?: string }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ left: -10, right: 6, top: 8, bottom: 0 }}>

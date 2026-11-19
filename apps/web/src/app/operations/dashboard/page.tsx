@@ -151,7 +151,7 @@ export default function OperationsDashboardPage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
-          <Card><CardHeader><div><CardTitle>Order flow</CardTitle><p className="mt-1 text-xs text-muted-foreground">Orders booked and deliveries completed during the selected period</p></div></CardHeader><CardContent>{trend.length ? <OrdersAreaChart data={trend} height={245} keys={[{ key: "orders", name: "Orders booked", color: "#A31E21" }, { key: "delivered", name: "Delivered", color: "#2E7D4F" }]} /> : <p className="py-20 text-center text-sm text-muted-foreground">No order activity in this period.</p>}</CardContent></Card>
+          <Card><CardHeader><div><CardTitle>Order flow</CardTitle><p className="mt-1 text-xs text-muted-foreground">Orders booked and deliveries completed during the selected period</p></div></CardHeader><CardContent>{trend.length ? <OrdersAreaChart data={trend} height={245} keys={[{ key: "orders", name: "Orders booked", color: "#A31E21" }, { key: "delivered", name: "Delivered", color: "#1D1D1E" }]} /> : <p className="py-20 text-center text-sm text-muted-foreground">No order activity in this period.</p>}</CardContent></Card>
           <Card><CardHeader><div><CardTitle>Current-period order mix</CardTitle><p className="mt-1 text-xs text-muted-foreground">State of orders booked in {dashboard.periodLabel.toLowerCase()}</p></div></CardHeader><CardContent>{orderMix.length ? <DonutChart data={orderMix} height={190} /> : <p className="py-16 text-center text-sm text-muted-foreground">No orders in this period.</p>}</CardContent></Card>
         </section>
 
