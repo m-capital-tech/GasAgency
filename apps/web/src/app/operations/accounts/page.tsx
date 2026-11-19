@@ -1,4 +1,5 @@
 "use client";
+import { DashboardShell, OperationsNavigation } from "@/components/dashboard-shell";
 
 import {
   ArrowLeft,
@@ -202,19 +203,7 @@ export default function OperationsAccountsPage() {
   if (loading) return <main className="flex min-h-screen items-center justify-center bg-background"><RefreshCw className="size-7 animate-spin text-primary" /><span className="ml-3 text-sm text-muted-foreground">Loading commercial accounts…</span></main>;
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white"><Flame className="size-5" /></span><div><h1 className="font-bold">Commercial Accounts & Collections</h1><p className="text-xs text-muted-foreground">Agency pricing, receivables, and credit availability</p></div></div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/operations/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><ArrowLeft />Dashboard</Link>
-            <Link href="/operations/orders" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Orders</Link>
-            {session && session.agencies.length > 1 ? <NativeSelect className="w-56" value={agency?.publicId ?? ""} onChange={(event) => { const next = session.agencies.find((item) => item.publicId === event.target.value); if (next) void loadAgency(next); }}>{session.agencies.map((item) => <option key={item.publicId} value={item.publicId}>{item.displayName}</option>)}</NativeSelect> : <Badge tone="primary">{agency?.displayName ?? "Agency"}</Badge>}
-            <Button size="sm" variant="outline" onClick={() => agency && void loadAgency(agency, true)} loading={refreshing}><RefreshCw />Refresh</Button>
-            <Button size="sm" variant="ghost" onClick={() => void logout()}><LogOut />Sign out</Button>
-          </div>
-        </div>
-      </header>
+    <DashboardShell title="Operations" section="Accounts & collections" username={session?.user.fullName} role={agency?.roleTypes.join(" · ")} navigation={<OperationsNavigation owner={agency?.roleTypes.includes("agency_owner")} />} context={<div>{session && session.agencies.length > 1 ? <NativeSelect className="w-full" aria-label="Serving agency" value={agency?.publicId ?? ""} onChange={(event) => { const next = session.agencies.find((item) => item.publicId === event.target.value); if (next) void loadAgency(next); }}>{session.agencies.map((item) => <option key={item.publicId} value={item.publicId}>{item.displayName}</option>)}</NativeSelect> : <Badge tone="primary">{agency?.displayName ?? "Agency"}</Badge>}</div>} onRefresh={() => agency && void loadAgency(agency, true)} onSignOut={() => void logout()} refreshing={refreshing}>
 
       <div className="mx-auto grid max-w-[1500px] gap-5 px-5 py-6 lg:px-8">
         {error ? <div className="flex items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger"><span>{error}</span><button className="font-semibold" onClick={() => setError(null)}>Dismiss</button></div> : null}
@@ -250,6 +239,6 @@ export default function OperationsAccountsPage() {
           <CardContent>{payments.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b text-xs text-muted-foreground"><tr><th className="pb-3 font-medium">Received</th><th className="pb-3 font-medium">Vendor</th><th className="pb-3 font-medium">Method</th><th className="pb-3 font-medium">Reference</th><th className="pb-3 font-medium">Allocated invoices</th><th className="pb-3 text-right font-medium">Amount</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.publicId} className="border-b last:border-b-0"><td className="py-3 text-xs text-muted-foreground">{shortDate(payment.receivedAt)}</td><td className="py-3 font-medium">{payment.tenant.displayName}<p className="text-xs font-normal text-muted-foreground">by {payment.recordedBy}</p></td><td className="py-3 capitalize">{payment.paymentMethod.replaceAll("_", " ")}</td><td className="py-3">{payment.reference ?? "—"}</td><td className="py-3 text-xs text-muted-foreground">{payment.allocations.map((allocation) => allocation.invoiceNumber).join(", ")}</td><td className="py-3 text-right font-bold">{money(payment.amount)}</td></tr>)}</tbody></table></div> : <p className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">No collections have been recorded yet.</p>}</CardContent>
         </Card>
       </div>
-    </main>
+    </DashboardShell>
   );
 }
