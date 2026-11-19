@@ -5,7 +5,7 @@
 
 :root {
   /* palette: charcoal #1D1D1E · maroon #620A1A · gold #C6953F · red #A31E21 · sand #E9E3D6 · off-white #F9F7F5 */
-  --background: #e9e3d6;
+  --background: #ffffff;
   --foreground: #1d1d1e;
   --card: #f9f7f5;
   --card-foreground: #1d1d1e;
@@ -103,6 +103,23 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+.native-select:not([multiple]):not([size]) {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position: right 17px center, right 12px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+@media (forced-colors: active) {
+  .native-select:not([multiple]):not([size]) {
+    appearance: auto;
+    background-image: none;
+  }
 }
 
 .leaflet-container {

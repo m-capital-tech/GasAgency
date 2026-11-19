@@ -20,5 +20,5 @@ export function Field({ label, children, hint, error }: { label: string; childre
   );
 }
 export function NativeSelect({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn("flex h-10 w-full rounded-xl border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)} {...props} />;
+  return <select className={cn("native-select flex h-10 w-full rounded-xl border bg-card py-0 pl-3 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)} {...props} />;
 }
