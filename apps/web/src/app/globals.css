@@ -158,3 +158,22 @@ body {
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; border: 2px solid var(--background); }
+
+/* Keep the account footer and mobile drawer in the same charcoal palette. */
+.dashboard-sidebar {
+  --sidebar: #1d1d1e;
+  --foreground: #ffffff;
+  --card: #27272a;
+  --card-foreground: #ffffff;
+  --muted: #353538;
+  --muted-foreground: #b5b5ba;
+  --border: #424247;
+  --primary: #a31e21;
+  --primary-soft: #3d2222;
+  --ring: #ffffff;
+  color: var(--foreground);
+  color-scheme: dark;
+}
+.dashboard-sidebar .text-primary {
+  color: #f6bec0;
+}
